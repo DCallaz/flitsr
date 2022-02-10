@@ -1,0 +1,40 @@
+#!/bin/bash
+for dir in *-fault; do
+  cd "$dir"
+  if [ ! -f "results" ]; then
+    for file in *.txt; do echo $file; feedback "$file" tcm tarantula first avg last; echo "--------------------------"; done > tar_weff
+    echo "Done tar in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm ochai first avg last; echo "--------------------------"; done > och_weff
+    echo "Done och in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm jaccard first avg last; echo "--------------------------"; done > jac_weff
+    echo "Done jac in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm dstar first avg last; echo "--------------------------"; done > dst_weff
+    echo "Done dst in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback tarantula first avg last; echo "--------------------------"; done > feed_tar_weff
+    echo "Done ftar in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback ochai first avg last; echo "--------------------------"; done > feed_och_weff
+    echo "Done foch in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback jaccard first avg last; echo "--------------------------"; done > feed_jac_weff
+    echo "Done fjac in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback dstar first avg last; echo "--------------------------"; done > feed_dst_weff
+    echo "Done fdst in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback tiebrk tarantula first avg last; echo "--------------------------"; done > feed_tie_tar_weff
+    echo "Done fttar in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback tiebrk ochai first avg last; echo "--------------------------"; done > feed_tie_och_weff
+    echo "Done ftoch in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback tiebrk jaccard first avg last; echo "--------------------------"; done > feed_tie_jac_weff
+    echo "Done ftjac in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback tiebrk dstar first avg last; echo "--------------------------"; done > feed_tie_dst_weff
+    echo "Done ftdst in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback multi tarantula first avg last; echo "--------------------------"; done > feed_multi_tar_weff
+    echo "Done fmtar in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback multi ochai first avg last; echo "--------------------------"; done > feed_multi_och_weff
+    echo "Done fmoch in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback multi jaccard first avg last; echo "--------------------------"; done > feed_multi_jac_weff
+    echo "Done fmjac in $dir"
+    for file in *.txt; do echo $file; feedback "$file" tcm feedback multi dstar first avg last; echo "--------------------------"; done > feed_multi_dst_weff
+    echo "Done fmdst in $dir"
+    merge > results
+  fi
+  cd ../
+done
