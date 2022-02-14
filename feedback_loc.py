@@ -117,12 +117,61 @@ def print_table(table):
 #  ..., ...
 #]
 
+def run(table, details, groups, mode='t', feedback=False, tiebrk=False,
+        multi=False, weff=None, top1=None, file=sys.stdout):
+    sort = localize(table, mode, tiebrk)
+    if (feedback):
+        faulty = []
+        val = sys.float_info.max
+        while (True):
+            faulty2 = feedback_loc(table, mode, tiebrk, faulty)
+            #print(faulty)
+            if (not faulty2 == []):
+                for x in sort:
+                    if (x[1] in faulty2):
+                        x[0] = val
+            if (not (multi and len(faulty2) == 1)):
+                #print("breaking")
+                break
+            #print("not breaking")
+            faulty += faulty2
+            val = val/10
+            reset(table)
+        sort = loc_sort(sort, table, True, tiebrk)
+    if (weff or top1):
+        faults = find_faults(details)
+        if (weff):
+            if ("first" in weff):
+                print("wasted effort (first):", weffort.first(faults, sort,
+                    groups), file=file)
+            if ("avg" in weff):
+                print("wasted effort (avg):", weffort.average(faults, sort,
+                    groups), file=file)
+            if ("last" in weff):
+                print("wasted effort (last):", weffort.last(faults, sort,
+                    groups), file=file)
+        if (top1):
+            if ("one" in top1):
+                print("at least 1 ranked #1:", top.one_top1(faults, sort,
+                    groups), file=file)
+            if ("all" in top1):
+                print("all ranked #1:", top.all_top1(faults, sort, groups),
+                        file=file)
+            if ("perc" in top1):
+                print("percentage ranked #1:", top.percent_top1(faults, sort,
+                    groups), file=file)
+    else:
+        names = []
+        for x in sort:
+            names.append(x[1])
+        print_names(details, names, groups, sort, file)
+
 if __name__ == "__main__":
     # Initial variables
     if (len(sys.argv) < 2):
         print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/feedback]"
                 +" [tcm] [first/avg/last] [one_top1/all_top1/perc_top1] [tiebrk]"
-                +" [multi]")
+                +" [multi] [all]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -133,6 +182,7 @@ if __name__ == "__main__":
     top1 = []
     tiebrk = False
     multi = False
+    all = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "tarantula"):
@@ -163,56 +213,32 @@ if __name__ == "__main__":
                 tiebrk = True
             elif (sys.argv[i] == "multi"):
                 multi = True
+            elif (sys.argv[i] == "all"):
+                all = True
             i += 1
         else:
             break
     if (input_m):
-        print("Using TCM input method")
+        if (not all):
+            print("Using TCM input method")
         from tcm_input import read_table, print_names, find_faults
     else:
-        print("Using gzoltar input method")
+        if (not all):
+            print("Using gzoltar input method")
         from input import read_table, print_names, find_faults
     table,num_locs,num_tests,details = read_table(d)
     groups = merge_equivs(table, num_locs)
     #print_table(table)
-    #Running the program
-    sort = localize(table, mode, tiebrk)
-    if (feedback):
-        faulty = []
-        val = sys.float_info.max
-        while (True):
-            faulty2 = feedback_loc(table, mode, tiebrk, faulty)
-            #print(faulty)
-            if (not faulty2 == []):
-                for x in sort:
-                    if (x[1] in faulty2):
-                        x[0] = val
-            if (not (multi and len(faulty2) == 1)):
-                #print("breaking")
-                break
-            #print("not breaking")
-            faulty += faulty2
-            val = val/10
-            reset(table)
-        sort = loc_sort(sort, table, True, tiebrk)
-    if (weff or top1):
-        faults = find_faults(details)
-        if (weff):
-            if ("first" in weff):
-                print("wasted effort (first):", weffort.first(faults, sort, groups))
-            if ("avg" in weff):
-                print("wasted effort (avg):", weffort.average(faults, sort, groups))
-            if ("last" in weff):
-                print("wasted effort (last):", weffort.last(faults, sort, groups))
-        if (top1):
-            if ("one" in top1):
-                print("at least 1 ranked #1:", top.one_top1(faults, sort, groups))
-            if ("all" in top1):
-                print("all ranked #1:", top.all_top1(faults, sort, groups))
-            if ("perc" in top1):
-                print("percentage ranked #1:", top.percent_top1(faults, sort, groups))
+    if (all):
+        types = ["", "feed_", "feed_tie_", "feed_multi_"]
+        modes = ["tar_", "och_", "jac_", "dst_"]
+        for m in modes:
+            for i in range(4):
+                file = open(types[i]+m+d, "x")
+                run(table, details, groups, m[0], i>=1, i==2, i==3,
+                        weff=["first", "avg", "last"], file=file)
+                file.close()
+                reset(table)
+
     else:
-        names = []
-        for x in sort:
-            names.append(x[1])
-        print_names(details, names, groups, sort)
+        run(table, details, groups, mode, feedback, tiebrk, multi, weff, top1)

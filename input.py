@@ -68,18 +68,20 @@ def find_names(details, faulties, groups):
         ret.append(group)
     return ret
 
-def print_names(details, faulty, groups, scores=None):
+def print_names(details, faulty, groups, scores=None, file=sys.stdout):
     names = find_names(details, faulty, groups)
     i = 0
     for group in names:
         if (scores == None):
-            print("Faulty grouping ("+str(faulty[i])+"): ","[")
+            print("Faulty grouping ("+str(faulty[i])+"): ","[", file=file)
         else:
-            print("Faulty grouping ("+str(faulty[i])+"):", scores[i][0],"[")
+            print("Faulty grouping ("+str(faulty[i])+"):", scores[i][0],"[",
+                    file=file)
         i += 1
         for name in group:
-            print("("+str(name[2])+")","File:",name[0]," | line",name[1])
-        print("]")
+            print("("+str(name[2])+")","File:",name[0]," | line",name[1],
+                    file=file)
+        print("]", file=file)
 
 def print_table(table):
     for row in table:

@@ -1,12 +1,5 @@
 #!/bin/bash
 
-run_one() {
-  echo "$1"
-  feedback "$1" tcm "${@:2}" first avg last
-  echo "--------------------------"
-}
-
-
 open_sem() {
   mkfifo pipe-$$
   exec 3<>pipe-$$
@@ -33,70 +26,20 @@ open_sem $N
 for dir in *-fault; do
   cd "$dir"
   if [ ! -f "results" ]; then
-    for file in *.txt; do run_with_lock run_one $file tarantula > "out_$file"; done
+    for file in *.txt; do run_with_lock feedback "$file" tcm all; done
     wait
-    for file in out_*; do cat $file; rm $file; done > tar_weff
-    echo "Done tar in $dir"
-    for file in *.txt; do run_with_lock run_one $file ochai > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > och_weff
-    echo "Done och in $dir"
-    for file in *.txt; do run_with_lock run_one $file jaccard > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > jac_weff
-    echo "Done jac in $dir"
-    for file in *.txt; do run_with_lock run_one $file dstar > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > dst_weff
-    echo "Done dst in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback tarantula > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_tar_weff
-    echo "Done ftar in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback ochai > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_och_weff
-    echo "Done foch in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback jaccard > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_jac_weff
-    echo "Done fjac in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback dstar > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_dst_weff
-    echo "Done fdst in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback tiebrk tarantula > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_tie_tar_weff
-    echo "Done fttar in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback tiebrk ochai > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_tie_och_weff
-    echo "Done ftoch in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback tiebrk jaccard > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_tie_jac_weff
-    echo "Done ftjac in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback tiebrk dstar > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_tie_dst_weff
-    echo "Done ftdst in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback multi tarantula > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_multi_tar_weff
-    echo "Done fmtar in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback multi ochai > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_multi_och_weff
-    echo "Done fmoch in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback multi jaccard > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_multi_jac_weff
-    echo "Done fmjac in $dir"
-    for file in *.txt; do run_with_lock run_one $file feedback multi dstar > "out_$file"; done
-    wait
-    for file in out_*; do cat $file; rm $file; done > feed_multi_dst_weff
-    echo "Done fmdst in $dir"
+    for m in tar_ och_ jac_ dst_; do
+      for t in "" feed_ feed_tie_ feed_multi_; do
+        for file in $t$m*.txt; do
+          orig=${file#"$t$m"}
+          echo "$orig"
+          echo "Using TCM input method"
+          cat $file; rm $file;
+          echo "--------------------------"
+        done > $t$m"weff"
+      done
+    done
+    echo "Done in $dir"
     merge > results
   fi
   cd ../
