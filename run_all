@@ -26,7 +26,7 @@ open_sem $N
 for dir in *-fault; do
   cd "$dir"
   if [ ! -f "results" ]; then
-    for file in *.txt; do run_with_lock feedback "$file" tcm all; done
+    for file in *.txt; do run_with_lock feedback "$file" tcm only_fail all; done
     wait
     for m in tar_ och_ jac_ dst_; do
       for t in "" feed_ feed_tie_ feed_multi_; do
@@ -34,7 +34,7 @@ for dir in *-fault; do
           orig=${file#"$t$m"}
           echo "$orig"
           echo "Using TCM input method"
-          cat $file; rm $file;
+          cat "$file"; rm "$file";
           echo "--------------------------"
         done > $t$m"weff"
       done

@@ -42,11 +42,11 @@ def all_passing(table, list=None):
             return False
     return True
 
-def remove_from_tests(rule, table):
+def remove_from_tests(rule, table, only_fail=False):
     """Removes all the test cases executing the given rule"""
     tests = []
     for i in range(0, len(table)):
-        if (table[i][0] == True and table[i][rule+2] == True):
+        if (table[i][0] and (not (only_fail and table[i][1])) and table[i][rule+2] == True):
             table[i][0] = False
             tests.append(i)
     return tests
@@ -70,7 +70,7 @@ def reset(table):
         table[i][0] = True
 
 spaces = -1
-def feedback_loc(table, formula, tiebrk, deleted):
+def feedback_loc(table, formula, tiebrk, only_fail, deleted):
     """Executes the recursive feedback algorithm to identify faulty rules"""
     global spaces
     if (all_passing(table)):
@@ -87,9 +87,9 @@ def feedback_loc(table, formula, tiebrk, deleted):
         #print(" "*spaces,rule,"has zero score, returning")
         return []
     #print(" "*spaces, rule,"with score",sort[i][0])
-    tests_removed = remove_from_tests(rule, table)
+    tests_removed = remove_from_tests(rule, table, only_fail)
     #print(" "*spaces, "removed:",tests_removed)
-    faulty = feedback_loc(table, formula, tiebrk, deleted)
+    faulty = feedback_loc(table, formula, tiebrk, only_fail, deleted)
     remove_faulty_rules(table, tests_removed, faulty)
     if (all_passing(table, tests_removed)):
         #print(" "*spaces, rule, "all passing")
@@ -117,14 +117,14 @@ def print_table(table):
 #  ..., ...
 #]
 
-def run(table, details, groups, mode='t', feedback=False, tiebrk=False,
+def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=False,
         multi=False, weff=None, top1=None, file=sys.stdout):
     sort = localize(table, mode, tiebrk)
     if (feedback):
         faulty = []
         val = sys.float_info.max
         while (True):
-            faulty2 = feedback_loc(table, mode, tiebrk, faulty)
+            faulty2 = feedback_loc(table, mode, tiebrk, only_fail, faulty)
             #print(faulty)
             if (not faulty2 == []):
                 for x in sort:
@@ -167,11 +167,10 @@ def run(table, details, groups, mode='t', feedback=False, tiebrk=False,
         print_names(details, names, groups, sort, file)
 
 if __name__ == "__main__":
-    # Initial variables
     if (len(sys.argv) < 2):
         print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/feedback]"
                 +" [tcm] [first/avg/last] [one_top1/all_top1/perc_top1] [tiebrk]"
-                +" [multi] [all]")
+                +" [multi] [all] [only_fail]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -183,6 +182,7 @@ if __name__ == "__main__":
     tiebrk = False
     multi = False
     all = False
+    only_fail = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "tarantula"):
@@ -215,6 +215,8 @@ if __name__ == "__main__":
                 multi = True
             elif (sys.argv[i] == "all"):
                 all = True
+            elif (sys.argv[i] == "only_fail"):
+                only_fail = True
             i += 1
         else:
             break
@@ -235,10 +237,10 @@ if __name__ == "__main__":
         for m in modes:
             for i in range(4):
                 file = open(types[i]+m+d, "x")
-                run(table, details, groups, m[0], i>=1, i==2, i==3,
+                run(table, details, groups, only_fail, m[0], i>=1, i==2, i==3,
                         weff=["first", "avg", "last"], file=file)
                 file.close()
                 reset(table)
 
     else:
-        run(table, details, groups, mode, feedback, tiebrk, multi, weff, top1)
+        run(table, details, groups, only_fail, mode, feedback, tiebrk, multi, weff, top1)
