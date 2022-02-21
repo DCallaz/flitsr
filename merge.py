@@ -9,6 +9,11 @@ if __name__ == "__main__":
     files = []
     total = 0
     avgs = []
+    rel = False
+    if (len(sys.argv) > 1 and sys.argv[1] == "rel"):
+        size = int(open("../size").readline())
+        rel = True
+
     for metric in metrics:
         for mode in modes:
             files.append(open(mode[0]+metric[0]+"weff"))
@@ -27,7 +32,11 @@ if __name__ == "__main__":
             break
         total += 1
         for i in range(0, len(lines)):
-             avgs[i] += float(lines[i].split(": ")[1])
+            if (rel):
+                avgs[i] += float(lines[i].split(": ")[1])*100/size
+            else:
+                avgs[i] += float(lines[i].split(": ")[1])
+
     i = 0
     for metric in metrics:
         print(metric[1])
@@ -35,5 +44,8 @@ if __name__ == "__main__":
             print('\t', mode[1])
             for calc in calcs:
                 avgs[i] = avgs[i]/total
-                print("\t\t",calc+":", avgs[i])
+                if (rel):
+                    print("\t\t",calc+":", str(avgs[i])+"%")
+                else:
+                    print("\t\t",calc+":", avgs[i])
                 i += 1

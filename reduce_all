@@ -1,0 +1,15 @@
+#!/bin/bash
+for i in 90 80 70 60 50 40 30 20 10 5; do
+  for dir in *-fault; do
+    mkdir -p rand_reductions/$i"_perc/""$dir"
+    cd "$dir" || exit
+    for file in *.txt; do
+      timeout 30s ~/subjects/masters/feedback_localizer/reduce "$file" $i% > ../rand_reductions/$i"_perc"/"$dir"/"$file"
+      #s=$'\n'
+      #str="${str//$s/d;}d"
+      #echo "$file"
+      #sed $str "$file" > ../reductions/$i"_perc"/"$dir"/"$file"
+    done
+    cd ../
+  done
+done

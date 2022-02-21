@@ -35,6 +35,16 @@ def apply_formula(counts, formula):
             scores.append(sus.jaccard())
         elif (formula == 'd'):
             scores.append(sus.dstar())
+        elif (formula == 'g'):
+            scores.append(sus.gp13())
+        elif (formula == 'n'):
+            scores.append(sus.naish2())
+        elif (formula == 'w'):
+            scores.append(sus.wong2())
+        elif (formula == 'v'):
+            scores.append(sus.overlap())
+        elif (formula == 'h'):
+            scores.append(sus.harmonic())
     return scores
 
 def get_exec(counts):

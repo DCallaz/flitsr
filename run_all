@@ -21,11 +21,11 @@ run_with_lock() {
   )&
 }
 
-N=8
+N=4
 open_sem $N
 for dir in *-fault; do
   cd "$dir"
-  if [ ! -f "results" ]; then
+  #if [ ! -f "results" ]; then
     for file in *.txt; do run_with_lock feedback "$file" tcm only_fail all; done
     wait
     for m in tar_ och_ jac_ dst_; do
@@ -41,6 +41,7 @@ for dir in *-fault; do
     done
     echo "Done in $dir"
     merge > results
-  fi
+    merge rel > results_rel
+  #fi
   cd ../
 done

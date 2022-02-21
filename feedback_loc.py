@@ -83,7 +83,7 @@ def feedback_loc(table, formula, tiebrk, only_fail, deleted):
         #print(" "*spaces, rule,"with score",sort[i][0],"[deleted]")
         i += 1
         rule = sort[i][1]
-    if (sort[i][0] == 0.0):
+    if (sort[i][0] <= 0.0):
         #print(" "*spaces,rule,"has zero score, returning")
         return []
     #print(" "*spaces, rule,"with score",sort[i][0])
@@ -147,6 +147,9 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
             if ("avg" in weff):
                 print("wasted effort (avg):", weffort.average(faults, sort,
                     groups), file=file)
+            if ("med" in weff):
+                print("wasted effort (median):", weffort.median(faults, sort,
+                    groups), file=file)
             if ("last" in weff):
                 print("wasted effort (last):", weffort.last(faults, sort,
                     groups), file=file)
@@ -168,9 +171,9 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
-        print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/feedback]"
-                +" [tcm] [first/avg/last] [one_top1/all_top1/perc_top1] [tiebrk]"
-                +" [multi] [all] [only_fail]")
+        print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/gp13/naish2/wong2]"
+                +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
+                +" [tiebrk] [multi] [all] [only_fail]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -193,6 +196,16 @@ if __name__ == "__main__":
                 mode = 'j'
             elif (sys.argv[i] == "dstar"):
                 mode = 'd'
+            elif (sys.argv[i] == "gp13"):
+                mode = 'g'
+            elif (sys.argv[i] == "naish2"):
+                mode = 'n'
+            elif (sys.argv[i] == "wong2"):
+                mode = 'w'
+            elif (sys.argv[i] == "overlap"):
+                mode = 'v'
+            elif (sys.argv[i] == "harmonic"):
+                mode = 'h'
             elif (sys.argv[i] == "feedback"):
                 feedback = True
             elif (sys.argv[i] == "tcm"):
@@ -201,6 +214,8 @@ if __name__ == "__main__":
                 weff.append("first")
             elif (sys.argv[i] == "avg"):
                 weff.append("avg")
+            elif (sys.argv[i] == "med"):
+                weff.append("med")
             elif (sys.argv[i] == "last"):
                 weff.append("last")
             elif (sys.argv[i] == "one_top1"):

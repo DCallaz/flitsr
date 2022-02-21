@@ -4,6 +4,15 @@ def first(faults, sort, groups):
 def average(faults, sort, groups):
     return method(faults, sort, groups, len(faults), True)
 
+def median(faults, sort, groups):
+    if (len(faults)%2 == 1):
+        return method(faults, sort, groups, int((len(faults)+1)/2), False)
+    else:
+        m1 = method(faults, sort, groups, int(len(faults)/2), False)
+        m2 = method(faults, sort, groups, int(len(faults)/2)+1, False)
+        return (m1+m2)/2
+
+
 def last(faults, sort, groups):
     return method(faults, sort, groups, len(faults))
 
@@ -38,11 +47,11 @@ def method(faults, sort, groups, target, avg=False):
                 found = (actual >= target)
         if (avg):
             for j in range(0, curr_faults):
-                efforts.append(effort+(len(uuts)-curr_faults+1)/(2))
+                efforts.append(effort+(len(uuts)-curr_faults)/(2))
         if (not found):
             effort += len(uuts)-curr_faults
         else:
-            effort += (len(uuts)-curr_faults+1)/(curr_faults+1)
+            effort += (len(uuts)-curr_faults)/(curr_faults+1)
     if (avg):
         return sum(efforts)/target
     else:

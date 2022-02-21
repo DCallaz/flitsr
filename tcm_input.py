@@ -53,6 +53,7 @@ def read_table(file_loc):
         elif (line.startswith("#matrix")):
             # Filling the table
             fill_table(table, file)
+    file.close()
     return table,num_locs,num_tests,details
 
 def find_names(details, faulties, groups):
