@@ -1,4 +1,5 @@
 from tcm_input import read_table, print_names, find_faults
+from multiprocessing import Process, Event, Queue
 import sys
 import random
 import math
@@ -78,10 +79,14 @@ def delete_tests(file_name, subset):
         print(line, end='')
     file.close()
 
-def reduce_formal(table, details, tests, num_tests):
+def reduce_formal(event, q, table, details, tests, num_tests):
     passing, failing = partition(table)
+    #print("passing", passing)
+    #print("failing", failing)
     faulty = get_faulty(details)
+    #print("faults", faulty)
     fail_tests = math.ceil((len(failing)/num_tests)*tests)
+    #print("number of tests needed:", fail_tests)
     # set up map between faults and failing tests
     test_map = {}
     for fault in faulty:
@@ -90,14 +95,31 @@ def reduce_formal(table, details, tests, num_tests):
         for fault in faulty:
             if (table[fail][fault+2]):
                 test_map[fault].append(fail)
+    #print("Test map", test_map)
+    subset = failing.copy()
     # shuffle the list so that results vary on different executions
     random.shuffle(failing)
+    #print("shuffled", failing)
     # run the reduction
-    subset = []
-    res = reduce_recursive(0, failing, subset, test_map, fail_tests)
-    subset.extend(random.sample(passing, tests - fail_tests)))
+    res = False
+    for i in range(0, len(failing)):
+        res = reduce_recursive(event, i, failing, subset, test_map, fail_tests)
+        if (res or event.is_set()):
+            break
+    if (not res):
+        # no solution possible, so return
+        q.put(None)
+        return
+    subset.extend(random.sample(passing, tests - fail_tests))
+    #print("extended", subset)
+    q.put(subset)
+    event.set()
+    #print("formal finished")
 
-def reduce_recursive(i, failing, subset, test_map, fail_tests):
+def reduce_recursive(event, i, failing, subset, test_map, fail_tests):
+    if (event.is_set()):
+        return False
+    #print("attempting to remove", failing[i], "("+str(i)+")")
     # try to add i to subset testing test_map
     violation = False
     # check for non-materializing fault
@@ -105,23 +127,61 @@ def reduce_recursive(i, failing, subset, test_map, fail_tests):
         # if the test pool is a set of just this test, removing it will make the
         # test pool empty
         if (test_map[key] == [failing[i]]):
+            #print("violation at", key, test_map[key])
             violation = True
             break
     if (violation):
         return False
+    #print("no violations, continuing")
     # if no violation, remove test case
+    removed_from = []
     for key in test_map:
-        test_map[key].remove(failing[i])
-    subset.append(failing[i])
+        if (failing[i] in test_map[key]):
+            test_map[key].remove(failing[i])
+            removed_from.append(key)
+    subset.remove(failing[i])
+    #print("subset", subset)
+    #print("test map", test_map)
     # check if number of test cases is enough
     if (len(subset) == fail_tests):
+        #print("valid subset found")
         return True
     # iteratively try to recurse to the next position
     for j in range(i+1, len(failing)):
-        res = reduce_recursive(j, failing, subset, test_map, fail_tests)
+        res = reduce_recursive(event, j, failing, subset, test_map, fail_tests)
         if (res):
             return res
+    #print("could not find valid solution")
+    # add back this test and return to higher level
+    for key in removed_from:
+        test_map[key].append(failing[i])
+    subset.append(failing[i])
     return False
+
+def reduce_random(event, q, table, details, tests, num_tests):
+    passing, failing = partition(table)
+    #print("passing:",passing)
+    #print("failing:",failing)
+    ratio = len(failing)/num_tests
+    valid = False
+    while (not valid and not event.is_set()):
+        valid = True
+        #Generate random subset
+        subset = random.sample(failing, math.ceil(ratio*tests))
+        #print(subset)
+        #Uncomment the following for random subsets with no conditions
+        #break
+        #Check conditions
+        cond = cond2(subset, table, details)
+        valid = valid and cond
+        #if (not cond):
+            #print("Condition 2 violated")
+    if (event.is_set()):
+        return
+    subset.extend(random.sample(passing, tests - int(ratio*tests)))
+    q.put(subset)
+    event.set()
+    #print("random finished")
 
 if __name__ == "__main__":
     if (len(sys.argv) < 3):
@@ -135,22 +195,20 @@ if __name__ == "__main__":
         tests = int(num_tests*(float(sys.argv[2][:-1])/100))
     else:
         tests = int(sys.argv[2])
-    passing, failing = partition(table)
-    #print("passing:",passing)
-    #print("failing:",failing)
-    ratio = len(failing)/num_tests
-    valid = False
-    while (not valid):
-        valid = True
-        #Generate random subset
-        subset = random.sample(failing, math.ceil(ratio*tests))
-        #print(subset)
-        #Check conditions
-        break
-        cond = cond2(subset, table, details)
-        valid = valid and cond
-        #if (not cond):
-            #print("Condition 2 violated")
-    subset.extend(random.sample(passing, tests - int(ratio*tests)))
+    event = Event()
+    q = Queue()
+    p1 = Process(target=reduce_formal, args=(event, q, table, details, tests,
+        num_tests, ))
+    #subset = reduce_formal(table, details, tests, num_tests)
+    p2 = Process(target=reduce_random, args=(event, q, table, details, tests,
+        num_tests, ))
+    #subset = reduce_random(table, details, tests, num_tests)
+    p1.start()
+    p2.start()
+    subset = q.get()
+    p1.join()
+    p2.join()
     #print(subset)
+    if (subset == None):
+        quit()
     delete_tests(d, subset)

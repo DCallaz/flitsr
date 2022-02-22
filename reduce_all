@@ -1,10 +1,16 @@
 #!/bin/bash
 for i in 90 80 70 60 50 40 30 20 10 5; do
   for dir in *-fault; do
-    mkdir -p rand_reductions/$i"_perc/""$dir"
+    mkdir -p reductions/$i"_perc/""$dir"
     cd "$dir" || exit
     for file in *.txt; do
-      timeout 30s ~/subjects/masters/feedback_localizer/reduce "$file" $i% > ../rand_reductions/$i"_perc"/"$dir"/"$file"
+      for j in 1 2 3; do
+        res=""
+        res=`timeout 15s ~/subjects/masters/feedback_localizer/reduce "$file" $i%`
+        if [ ! -z "$res" ]; then
+          echo "$res" > ../reductions/$i"_perc"/"$dir"/"$file""_$j"
+        fi
+      done
       #s=$'\n'
       #str="${str//$s/d;}d"
       #echo "$file"
