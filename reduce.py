@@ -44,6 +44,13 @@ def partition(table):
             failing.append(i)
     return passing, failing
 
+def get_faulty(details):
+    faulty = []
+    for i in range(len(details)):
+        if details[i][1]:
+            faulty.append(i)
+    return faulty
+
 def delete_tests(file_name, subset):
     file = open(file_name)
     while (True):
@@ -71,7 +78,50 @@ def delete_tests(file_name, subset):
         print(line, end='')
     file.close()
 
+def reduce_formal(table, details, tests, num_tests):
+    passing, failing = partition(table)
+    faulty = get_faulty(details)
+    fail_tests = math.ceil((len(failing)/num_tests)*tests)
+    # set up map between faults and failing tests
+    test_map = {}
+    for fault in faulty:
+        test_map[fault] = []
+    for fail in failing:
+        for fault in faulty:
+            if (table[fail][fault+2]):
+                test_map[fault].append(fail)
+    # shuffle the list so that results vary on different executions
+    random.shuffle(failing)
+    # run the reduction
+    subset = []
+    res = reduce_recursive(0, failing, subset, test_map, fail_tests)
+    subset.extend(random.sample(passing, tests - fail_tests)))
 
+def reduce_recursive(i, failing, subset, test_map, fail_tests):
+    # try to add i to subset testing test_map
+    violation = False
+    # check for non-materializing fault
+    for key in test_map:
+        # if the test pool is a set of just this test, removing it will make the
+        # test pool empty
+        if (test_map[key] == [failing[i]]):
+            violation = True
+            break
+    if (violation):
+        return False
+    # if no violation, remove test case
+    for key in test_map:
+        test_map[key].remove(failing[i])
+    subset.append(failing[i])
+    # check if number of test cases is enough
+    if (len(subset) == fail_tests):
+        return True
+    # iteratively try to recurse to the next position
+    for j in range(i+1, len(failing)):
+        res = reduce_recursive(j, failing, subset, test_map, fail_tests)
+        if (res):
+            return res
+    return False
 
 if __name__ == "__main__":
     if (len(sys.argv) < 3):
