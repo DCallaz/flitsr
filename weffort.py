@@ -1,10 +1,16 @@
 def first(faults, sort, groups):
+    if (len(faults) == 0):
+        return 0
     return method(faults, sort, groups, 1)
 
 def average(faults, sort, groups):
+    if (len(faults) == 0):
+        return 0
     return method(faults, sort, groups, len(faults), True)
 
 def median(faults, sort, groups):
+    if (len(faults) == 0):
+        return 0
     if (len(faults)%2 == 1):
         return method(faults, sort, groups, int((len(faults)+1)/2), False)
     else:
@@ -14,6 +20,8 @@ def median(faults, sort, groups):
 
 
 def last(faults, sort, groups):
+    if (len(faults) == 0):
+        return 0
     return method(faults, sort, groups, len(faults))
 
 #<---------------- Helper functions --------------->

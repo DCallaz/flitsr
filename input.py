@@ -1,19 +1,21 @@
 import sys
 
 def construct_details(f):
-    details = {"files":[], "testCases":[],"fileOffsets":[],"testCaseDataSize":0}
+    details = {"files":[], "testCases":[],"fileOffsets":[],"testCaseDataSize":0,
+            "faults": []}
     i = -1
     f.readline()
     for line in f:
         l = line.strip().split(":")
         if (i >= 0 and l[0] == details["files"][i]["fileName"]):
             details["files"][i]["lineNumbers"].append(float(l[1]))
-            details["testCaseDataSize"] += 1
         else:
             details["files"].append({"fileName":l[0], "lineNumbers":[float(l[1])]})
             details["fileOffsets"].append(details["testCaseDataSize"])
-            details["testCaseDataSize"] += 1
             i += 1
+        details["testCaseDataSize"] += 1
+        if (len(l) > 2 and l[2] == "FAULT"):
+            details["faults"].append(details["testCaseDataSize"]-1)
     return details
 
 def construct_table(num_locs, tests_reader):
@@ -45,6 +47,7 @@ def fill_table(table, locs, bin_file):
 
 def read_table(directory):
     # Getting the details of the project
+    print(directory)
     details = construct_details(open(directory+"/spectra.csv"))
     num_locs = details['testCaseDataSize']
     # Constructing the table
@@ -63,7 +66,8 @@ def find_names(details, faulties, groups):
                     file = details['files'][i]
                     filename = file['fileName'].split("/")[-1]
                     line = file['lineNumbers'][elem - offsets[i]]
-                    group.append((filename, line, elem))
+                    fault = elem in details["faults"]
+                    group.append((filename, line, elem, fault))
                     break
         ret.append(group)
     return ret
@@ -80,7 +84,7 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
         i += 1
         for name in group:
             print("("+str(name[2])+")","File:",name[0]," | line",name[1],
-                    file=file)
+                "(FAULTY)" * name[3], file=file)
         print("]", file=file)
 
 def print_table(table):
@@ -99,9 +103,7 @@ def print_table(table):
             print('-')
 
 def find_faults(details):
-    actual_faults = []
-    #TODO
-    return actual_faults
+    return details["faults"]
 
 if __name__ == "__main__":
     d = sys.argv[1]

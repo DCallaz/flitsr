@@ -239,10 +239,12 @@ if __name__ == "__main__":
         if (not all):
             print("Using TCM input method")
         from tcm_input import read_table, print_names, find_faults
+        d_p = d
     else:
         if (not all):
             print("Using gzoltar input method")
         from input import read_table, print_names, find_faults
+        d_p = d.split("/")[0] + ".txt"
     table,num_locs,num_tests,details = read_table(d)
     groups = merge_equivs(table, num_locs)
     #print_table(table)
@@ -251,7 +253,7 @@ if __name__ == "__main__":
         modes = ["tar_", "och_", "jac_", "dst_"]
         for m in modes:
             for i in range(4):
-                file = open(types[i]+m+d, "x")
+                file = open(types[i]+m+d_p, "x")
                 run(table, details, groups, only_fail, m[0], i>=1, i==2, i==3,
                         weff=["first", "avg", "last"], file=file)
                 file.close()
