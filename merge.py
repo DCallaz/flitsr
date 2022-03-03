@@ -24,7 +24,6 @@ if __name__ == "__main__":
         lines = []
         for f in files:
             f.readline()
-            f.readline()
             for calc in calcs:
                 lines.append(f.readline())
             f.readline()

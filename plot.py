@@ -11,21 +11,34 @@ if __name__ == "__main__":
     rel = False
     if (len(sys.argv) > 2 and sys.argv[2] == "rel"):
         rel = True
+    if (len(sys.argv) <= 3 or sys.argv[3] == "tcm"):
+        tcm = True
+    else:
+        tcm = False
     faults = []
     total = 0
     num_locs = int(open("size").readline())
     proj = os.getcwd().split("/")[-1].capitalize()
     for d in os.scandir():
-        if (d.is_dir() and d.name.endswith("-fault")):
+        if (tcm and d.is_dir() and d.name.endswith("_Chart")):
+            num = int(d.name.split('_')[0])
+            faults.append(num)
+        elif (d.is_dir() and d.name.endswith("-fault")):
             num = int(d.name.split('-')[0])
             faults.append(num)
     faults.sort()
     names = {}
     for f in faults:
         if (rel):
-            file = open(str(f)+"-fault/results_rel")
+            if (tcm):
+                file = open(str(f)+"-fault/results_rel")
+            else:
+                file = open(str(f)+"_fault_versions_Chart/results_rel")
         else:
-            file = open(str(f)+"-fault/results")
+            if (tcm):
+                file = open(str(f)+"-fault/results")
+            else:
+                file = open(str(f)+"_fault_versions_Chart/results")
         line = file.readline()
         while (not line == ""):
             metric = line.strip()

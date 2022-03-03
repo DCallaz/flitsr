@@ -6,7 +6,7 @@ import top
 
 #<------------------ Setup methods ----------------------->
 
-def merge_equivs(table, locs):
+def merge_equivs_old(table, locs):
     """Merges groups of rules with identical spectra"""
     names = [[i] for i in range(0, locs)]
     i = 0
@@ -28,6 +28,34 @@ def merge_equivs(table, locs):
         i += 1
         l = len(table[0])-2
     return names
+
+def merge_equivs(table, locs):
+    """Merges groups of rules with identical spectra"""
+    groups = [[i for i in range(0, locs)]]
+    for row in table:
+        new_groups = []
+        for group in groups:
+            eq = [group[0]]
+            neq = []
+            for elem in group[1:]:
+                if (row[2+elem] == row[2+group[0]]):
+                    eq.append(elem)
+                else:
+                    neq.append(elem)
+            if (eq != []):
+                new_groups.append(eq)
+            if (neq != []):
+                new_groups.append(neq)
+        groups = new_groups
+    groups.sort(key=lambda group: group[0])
+    remove = []
+    for group in groups:
+        remove.extend(group[1:])
+    remove.sort(reverse=True)
+    for row in table:
+        for rem in remove:
+            row.pop(rem+2)
+    return groups
 
 #<------------------ Feedback methods ----------------------->
 
@@ -236,17 +264,16 @@ if __name__ == "__main__":
         else:
             break
     if (input_m):
-        if (not all):
-            print("Using TCM input method")
         from tcm_input import read_table, print_names, find_faults
         d_p = d
     else:
-        if (not all):
-            print("Using gzoltar input method")
         from input import read_table, print_names, find_faults
         d_p = d.split("/")[0] + ".txt"
+    #print("reading table")
     table,num_locs,num_tests,details = read_table(d)
+    #print("merging equivs")
     groups = merge_equivs(table, num_locs)
+    #print("merged")
     #print_table(table)
     if (all):
         types = ["", "feed_", "feed_tie_", "feed_multi_"]

@@ -47,11 +47,13 @@ def fill_table(table, locs, bin_file):
 
 def read_table(directory):
     # Getting the details of the project
-    print(directory)
+    #print("constructing details")
     details = construct_details(open(directory+"/spectra.csv"))
     num_locs = details['testCaseDataSize']
     # Constructing the table
+    #print("constructing table")
     table,num_tests = construct_table(num_locs, open(directory+"/tests.csv"))
+    #print("filling table")
     fill_table(table, num_locs, open(directory+"/matrix.txt"))
     return table,num_locs,num_tests,details
 

@@ -8,7 +8,7 @@ for i in 90 80 70 60 50 40 30 20 10 5; do
         res=""
         res=`timeout 15s ~/subjects/masters/feedback_localizer/reduce "$file" $i%`
         if [ ! -z "$res" ]; then
-          echo "$res" > ../reductions/$i"_perc"/"$dir"/"$file""_$j"
+          echo "$res" > ../reductions/$i"_perc"/"$dir"/"${file%.txt}""_$j".txt
         fi
       done
       #s=$'\n'
@@ -18,4 +18,5 @@ for i in 90 80 70 60 50 40 30 20 10 5; do
     done
     cd ../
   done
+  cp size reductions/$i"_perc/"
 done

@@ -21,19 +21,32 @@ run_with_lock() {
   )&
 }
 
-N=4
+N=8
 open_sem $N
-for dir in *-fault; do
+if [ $1 = "tcm" ]; then
+  dir_type=*-fault
+  echo "tcm"
+else
+  dir_type=*/
+  echo "gzoltar"
+fi
+
+for dir in $dir_type; do
   cd "$dir"
-  #if [ ! -f "results" ]; then
-    for file in *.txt; do run_with_lock feedback "$file" tcm only_fail all; done
+  if [ ! -f "results" ]; then
+    if [ "$1" = "tcm" ]; then
+      for file in *.txt; do
+        run_with_lock feedback "$file" tcm only_fail all;
+      done
+    else
+      for file in *; do run_with_lock feedback "$file/sfl/txt" only_fail all; done
+    fi
     wait
     for m in tar_ och_ jac_ dst_; do
       for t in "" feed_ feed_tie_ feed_multi_; do
         for file in $t$m*.txt; do
           orig=${file#"$t$m"}
           echo "$orig"
-          echo "Using TCM input method"
           cat "$file"; rm "$file";
           echo "--------------------------"
         done > $t$m"weff"
@@ -41,7 +54,9 @@ for dir in *-fault; do
     done
     echo "Done in $dir"
     merge > results
-    merge rel > results_rel
-  #fi
+    if [ $1 = "tcm" ]; then
+      merge rel > results_rel
+    fi
+  fi
   cd ../
 done
