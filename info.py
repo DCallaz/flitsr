@@ -1,4 +1,5 @@
 from tcm_input import read_table, print_names, find_faults
+from feedback_loc import merge_equivs
 from matplotlib import pyplot as plt
 import sys
 
@@ -40,13 +41,28 @@ if __name__ == "__main__":
             if (c not in uut_execs):
                 uut_execs[c] = 0
             uut_execs[c] += 1
+        group_sizes = {}
+        groups = merge_equivs(table, num_locs)
+        for group in groups:
+            l = len(group)
+            if (l not in group_sizes):
+                group_sizes[l] = 0
+            group_sizes[l] += 1
+
         plt.bar(test_execs.keys(), test_execs.values())
         plt.xticks(list(test_execs.keys()))
         plt.xlabel("Number UUTs that were executed by the test")
         plt.ylabel("Number of tests")
         plt.show()
+
         plt.bar(uut_execs.keys(), uut_execs.values())
         plt.xticks(list(uut_execs.keys()))
         plt.xlabel("Number tests that executed the UUT")
         plt.ylabel("Number of UUTs")
+        plt.show()
+
+        plt.bar(group_sizes.keys(), group_sizes.values())
+        plt.xticks(list(group_sizes.keys()))
+        plt.xlabel("Size of group")
+        plt.ylabel("Number of groups with given size")
         plt.show()
