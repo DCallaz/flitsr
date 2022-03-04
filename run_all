@@ -33,7 +33,7 @@ fi
 
 for dir in $dir_type; do
   cd "$dir"
-  if [ ! -f "results" ]; then
+  #if [ ! -f "results" ]; then
     if [ "$1" = "tcm" ]; then
       for file in *.txt; do
         run_with_lock feedback "$file" tcm only_fail all;
@@ -57,6 +57,6 @@ for dir in $dir_type; do
     if [ $1 = "tcm" ]; then
       merge rel > results_rel
     fi
-  fi
+  #fi
   cd ../
 done

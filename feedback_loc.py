@@ -282,9 +282,8 @@ if __name__ == "__main__":
             for i in range(4):
                 file = open(types[i]+m+d_p, "x")
                 run(table, details, groups, only_fail, m[0], i>=1, i==2, i==3,
-                        weff=["first", "avg", "last"], file=file)
+                        weff=["first", "avg", "med"], file=file)
                 file.close()
                 reset(table)
-
     else:
         run(table, details, groups, only_fail, mode, feedback, tiebrk, multi, weff, top1)

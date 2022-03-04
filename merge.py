@@ -5,7 +5,7 @@ if __name__ == "__main__":
             ("dst_", "dstar")]
     modes = [("", "localize"), ("feed_", "feedback"), ("feed_tie_", "feedback tie"),
             ("feed_multi_", "feedback multi")]
-    calcs = ["first", "avg", "last"]
+    calcs = ["first", "avg", "med"]
     files = []
     total = 0
     avgs = []

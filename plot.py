@@ -112,11 +112,11 @@ if __name__ == "__main__":
         if (not seperate):
             if (rel):
                 axs[int(ax/row), ax%row].set_title("Comparison of the relative wasted"+
-                    "effort for the first, average and last faults using the "+
+                    "effort for the first, average and med faults using the "+
                     metric+"\nmetric")
             else:
                 axs[int(ax/row), ax%row].set_title("Comparison of the wasted"+
-                    "effort for the first, average and last faults using the "+
+                    "effort for the first, average and med faults using the "+
                     metric+"\nmetric")
             axs[int(ax/row), ax%row].grid()
             axs[int(ax/row), ax%row].legend([x+" "+y for x in list(modes.keys())
