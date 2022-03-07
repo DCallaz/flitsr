@@ -146,7 +146,7 @@ def print_table(table):
 #]
 
 def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=False,
-        multi=False, weff=None, top1=None, file=sys.stdout):
+        multi=False, weff=None, top1=None, collapse=False, file=sys.stdout):
     sort = localize(table, mode, tiebrk)
     if (feedback):
         faulty = []
@@ -171,16 +171,16 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first):", weffort.first(faults, sort,
-                    groups), file=file)
+                    groups, collapse), file=file)
             if ("avg" in weff):
                 print("wasted effort (avg):", weffort.average(faults, sort,
-                    groups), file=file)
+                    groups, collapse), file=file)
             if ("med" in weff):
                 print("wasted effort (median):", weffort.median(faults, sort,
-                    groups), file=file)
+                    groups, collapse), file=file)
             if ("last" in weff):
                 print("wasted effort (last):", weffort.last(faults, sort,
-                    groups), file=file)
+                    groups, collapse), file=file)
         if (top1):
             if ("one" in top1):
                 print("at least 1 ranked #1:", top.one_top1(faults, sort,
@@ -214,6 +214,7 @@ if __name__ == "__main__":
     multi = False
     all = False
     only_fail = False
+    collapse = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "tarantula"):
@@ -246,6 +247,8 @@ if __name__ == "__main__":
                 weff.append("med")
             elif (sys.argv[i] == "last"):
                 weff.append("last")
+            elif (sys.argv[i] == "collapse"):
+                collapse = True
             elif (sys.argv[i] == "one_top1"):
                 top1.append("one")
             elif (sys.argv[i] == "all_top1"):
@@ -282,8 +285,9 @@ if __name__ == "__main__":
             for i in range(4):
                 file = open(types[i]+m+d_p, "x")
                 run(table, details, groups, only_fail, m[0], i>=1, i==2, i==3,
-                        weff=["first", "avg", "med"], file=file)
+                        weff=["first", "avg", "med"], collapse=collapse, file=file)
                 file.close()
                 reset(table)
     else:
-        run(table, details, groups, only_fail, mode, feedback, tiebrk, multi, weff, top1)
+        run(table, details, groups, only_fail, mode, feedback, tiebrk, multi,
+                weff, top1, collapse=collapse)
