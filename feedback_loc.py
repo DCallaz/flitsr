@@ -72,20 +72,22 @@ def all_passing(table, list=None):
 
 def remove_from_tests(rule, table, only_fail=False):
     """Removes all the test cases executing the given rule"""
-    tests = []
+    tests = set()
     for i in range(0, len(table)):
         if (table[i][0] and (not (only_fail and table[i][1])) and table[i][rule+2] == True):
             table[i][0] = False
-            tests.append(i)
+            tests.add(i)
     return tests
 
 def remove_faulty_rules(table, tests_removed, faulty):
     """Removes all tests that execute an 'actually' faulty rule"""
+    toRemove = []
     for i in tests_removed:
         for f in faulty:
             if (table[i][f+2] == True):
-                tests_removed.remove(i)
+                toRemove.append(i)
                 break
+    tests_removed.difference_update(toRemove)
 
 def add_back_tests(table, tests_removed):
     """Re-activates all the given tests"""
@@ -123,7 +125,7 @@ def feedback_loc(table, formula, tiebrk, only_fail, deleted):
         #print(" "*spaces, rule, "all passing")
         add_back_tests(table, tests_removed)
     else:
-        #print("Adding",rule)
+        #print(" "*spaces,"Adding",rule)
         faulty.append(rule)
     #print(" "*spaces, rule,"finished")
     spaces -= 1
