@@ -3,6 +3,7 @@ from localize import sort as loc_sort
 import sys
 import weffort
 import top
+import copy
 
 #<------------------ Setup methods ----------------------->
 
@@ -94,6 +95,29 @@ def add_back_tests(table, tests_removed):
     for i in tests_removed:
         table[i][0] = True
 
+def multiRemove(table, faulty):
+    nonFaulty = set(range(0, len(table[0])-2)).difference(faulty)
+    i = 0
+    multiFault = False
+    for i in range(len(table)-1, -1, -1):
+        row = table[i]
+        if (True):#TODO: check if failing?
+            remove = True
+            for elem in nonFaulty:
+                if (row[elem+2]):
+                    remove = False
+                    break
+            if (remove):#this test case can be removed
+                #print("removed test case", i)
+                multiFault = True
+                table.pop(i)
+            else:#need to remove all faults from this test case
+                for elem in faulty:
+                    row[elem+2] = False
+                    #print("removed elem", elem, "in test case", i)
+        i += 1
+    return multiFault
+
 def reset(table):
     """Re-activates all the tests"""
     for i in range(len(table)):
@@ -153,20 +177,28 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
     if (feedback):
         faulty = []
         val = sys.float_info.max
-        while (True):
-            faulty2 = feedback_loc(table, mode, tiebrk, only_fail, faulty)
-            #print(faulty)
+        newTable = table
+        while (not all_passing(newTable)):
+            faulty2 = feedback_loc(newTable, mode, tiebrk, only_fail, faulty)
+            #print(faulty2)
             if (not faulty2 == []):
                 for x in sort:
                     if (x[1] in faulty2):
                         x[0] = val
-            if (not (multi and len(faulty2) == 1)):
+            # Update the coverage matrix
+            newTable = copy.deepcopy(newTable)#TODO: do we need to copy?
+            reset(newTable)
+            # The next iteration can be either multi-fault, or multi-explanation
+            # multi-fault -> we assume multiple faults exist
+            # multi-explanation -> we assume there are multiple explanations for
+            # the same faults
+            multiFault = multiRemove(newTable, faulty2)
+            if (not (multiFault or multi)):
                 #print("breaking")
                 break
             #print("not breaking")
             faulty += faulty2
             val = val/10
-            reset(table)
         sort = loc_sort(sort, table, True, tiebrk)
     if (weff or top1):
         faults = find_faults(details)

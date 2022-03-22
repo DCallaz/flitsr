@@ -33,7 +33,9 @@ class Suspicious() :
         if self.ef == 0 :
             return  0.0
         nominator = self.ef / self.tf
-        passed_component = self.ep / self.tp
+        passed_component = self.ep
+        if (self.ep):
+            passed_component /= self.tp
         denominator = nominator + passed_component
         score = nominator / denominator
         return round(score, 4)
