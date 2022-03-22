@@ -124,26 +124,21 @@ def reset(table):
         table[i][0] = True
 
 spaces = -1
-def feedback_loc(table, formula, tiebrk, only_fail, deleted):
+def feedback_loc(table, formula, tiebrk, only_fail):
     """Executes the recursive feedback algorithm to identify faulty rules"""
     global spaces
     if (all_passing(table)):
         return []
     sort = localize(table, formula, tiebrk)
-    i = 0
-    rule = sort[i][1]
+    rule = sort[0][1]
     spaces += 1
-    while (rule in deleted):
-        #print(" "*spaces, rule,"with score",sort[i][0],"[deleted]")
-        i += 1
-        rule = sort[i][1]
-    if (sort[i][0] <= 0.0):
+    if (sort[0][0] <= 0.0):
         #print(" "*spaces,rule,"has zero score, returning")
         return []
-    #print(" "*spaces, rule,"with score",sort[i][0])
+    #print(" "*spaces, rule,"with score",sort[0][0])
     tests_removed = remove_from_tests(rule, table, only_fail)
     #print(" "*spaces, "removed:",tests_removed)
-    faulty = feedback_loc(table, formula, tiebrk, only_fail, deleted)
+    faulty = feedback_loc(table, formula, tiebrk, only_fail)
     remove_faulty_rules(table, tests_removed, faulty)
     if (all_passing(table, tests_removed)):
         #print(" "*spaces, rule, "all passing")
@@ -175,15 +170,14 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
         multi=False, weff=None, top1=None, collapse=False, file=sys.stdout):
     sort = localize(table, mode, tiebrk)
     if (feedback):
-        faulty = []
         val = sys.float_info.max
         newTable = table
         while (not all_passing(newTable)):
-            faulty2 = feedback_loc(newTable, mode, tiebrk, only_fail, faulty)
-            #print(faulty2)
-            if (not faulty2 == []):
+            faulty = feedback_loc(newTable, mode, tiebrk, only_fail)
+            #print(faulty)
+            if (not faulty == []):
                 for x in sort:
-                    if (x[1] in faulty2):
+                    if (x[1] in faulty):
                         x[0] = val
             # Update the coverage matrix
             newTable = copy.deepcopy(newTable)#TODO: do we need to copy?
@@ -192,12 +186,11 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=Fals
             # multi-fault -> we assume multiple faults exist
             # multi-explanation -> we assume there are multiple explanations for
             # the same faults
-            multiFault = multiRemove(newTable, faulty2)
+            multiFault = multiRemove(newTable, faulty)
             if (not (multiFault or multi)):
                 #print("breaking")
                 break
             #print("not breaking")
-            faulty += faulty2
             val = val/10
         sort = loc_sort(sort, table, True, tiebrk)
     if (weff or top1):
