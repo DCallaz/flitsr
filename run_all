@@ -39,10 +39,11 @@ for dir in $dir_type; do
         run_with_lock feedback "$file" tcm only_fail all;
       done
     else
-      for file in *; do run_with_lock feedback "$file/" only_fail all; done
+      for file in *; do run_with_lock feedback "$file" only_fail all; done
     fi
     wait
     for m in tar_ och_ jac_ dst_; do
+      #for t in feed_rndm_; do
       for t in "" feed_ feed_tie_ feed_multi_; do
         for file in $t$m*.txt; do
           orig=${file#"$t$m"}

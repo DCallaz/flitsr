@@ -130,6 +130,7 @@ def feedback_loc(table, formula, tiebrk, only_fail):
     if (all_passing(table)):
         return []
     sort = localize(table, formula, tiebrk)
+    #print(sort)
     rule = sort[0][1]
     spaces += 1
     if (sort[0][0] <= 0.0):
@@ -166,13 +167,14 @@ def print_table(table):
 #  ..., ...
 #]
 
-def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=False,
+def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=0,
         multi=False, weff=None, top1=None, collapse=False, file=sys.stdout):
     sort = localize(table, mode, tiebrk)
     if (feedback):
         val = sys.float_info.max
         newTable = table
         while (not all_passing(newTable)):
+            #print(newTable)
             faulty = feedback_loc(newTable, mode, tiebrk, only_fail)
             #print(faulty)
             if (not faulty == []):
@@ -228,7 +230,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/gp13/naish2/wong2]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [tiebrk] [multi] [all] [only_fail]")
+                +" [tiebrk/rndm] [multi] [all] [only_fail]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -237,7 +239,7 @@ if __name__ == "__main__":
     i = 2
     weff = []
     top1 = []
-    tiebrk = False
+    tiebrk = 0
     multi = False
     all = False
     only_fail = False
@@ -283,7 +285,9 @@ if __name__ == "__main__":
             elif (sys.argv[i] == "perc_top1"):
                 top1.append("perc")
             elif (sys.argv[i] == "tiebrk"):
-                tiebrk = True
+                tiebrk = 1
+            elif (sys.argv[i] == "rndm"):
+                tiebrk = 2
             elif (sys.argv[i] == "multi"):
                 multi = True
             elif (sys.argv[i] == "all"):
@@ -309,9 +313,11 @@ if __name__ == "__main__":
         types = ["", "feed_", "feed_tie_", "feed_multi_"]
         modes = ["tar_", "och_", "jac_", "dst_"]
         for m in modes:
-            for i in range(4):
-                file = open(types[i]+m+d_p, "x")
-                run(table, details, groups, only_fail, m[0], i>=1, i==2, i==3,
+            #for i in range(4):
+            for i in range(100):
+                d_p_s = d_p.split('.')
+                file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
+                run(table, details, groups, only_fail, m[0], True, 2, False,
                         weff=["first", "avg", "med"], collapse=collapse, file=file)
                 file.close()
                 reset(table)

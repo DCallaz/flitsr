@@ -1,0 +1,20 @@
+#!/bin/bash
+metric="tar"
+j=0
+echo "variant, mean, std_dev"
+for metric in tar och jac dst; do
+  for variant in *.txt; do
+    for c in 1 2 3; do
+      vals=""
+      for i in {0..99}; do
+        x=$(expr $j \* 500 + $i \* 5 + $c + 1)
+        vals+="$(sed "${x}q;d" "feed_rndm_"$metric"_weff" | sed 's/.*: //g')"$'\n'
+      done
+      vals=${vals%$'\n'}
+      mean="$(echo "$vals" | datamash mean 1)"
+      stddev="$(echo "$vals" | datamash pstdev 1)"
+      echo "$variant, $mean, $stddev"
+    done
+    j=$(expr $j + 1)
+  done
+done
