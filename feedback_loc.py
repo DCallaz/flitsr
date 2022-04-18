@@ -1,5 +1,6 @@
 from localize import localize
 from localize import sort as loc_sort
+from localize import orig
 import sys
 import weffort
 import top
@@ -166,10 +167,12 @@ def print_table(table):
 #[ <Switch>, <pass/fail>, <line 1 exe>, ..., <line n exe>
 #  ..., ...
 #]
-
 def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=0,
         multi=False, weff=None, top1=None, collapse=False, file=sys.stdout):
+    global orig
     sort = localize(table, mode, tiebrk)
+    orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
+    #print(orig)
     if (feedback):
         val = sys.float_info.max
         newTable = table
@@ -230,7 +233,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/gp13/naish2/wong2]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [tiebrk/rndm] [multi] [all] [only_fail]")
+                +" [tiebrk/rndm/otie] [multi] [all] [only_fail]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -288,6 +291,8 @@ if __name__ == "__main__":
                 tiebrk = 1
             elif (sys.argv[i] == "rndm"):
                 tiebrk = 2
+            elif (sys.argv[i] == "otie"):
+                tiebrk = 3
             elif (sys.argv[i] == "multi"):
                 multi = True
             elif (sys.argv[i] == "all"):
@@ -313,11 +318,14 @@ if __name__ == "__main__":
         types = ["", "feed_", "feed_tie_", "feed_multi_"]
         modes = ["tar_", "och_", "jac_", "dst_"]
         for m in modes:
-            #for i in range(4):
-            for i in range(100):
-                d_p_s = d_p.split('.')
-                file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
-                run(table, details, groups, only_fail, m[0], True, 2, False,
+            for i in range(4):
+            #for i in range(100):
+                #d_p_s = d_p.split('.')
+                #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
+                file = open(types[i]+m+d_p, "x")
+                #run(table, details, groups, only_fail, m[0], True, 2, False,
+                        #weff=["first", "avg", "med"], collapse=collapse, file=file)
+                run(table, details, groups, only_fail, m[0], i>=1, (i==2)*2, i==3,
                         weff=["first", "avg", "med"], collapse=collapse, file=file)
                 file.close()
                 reset(table)

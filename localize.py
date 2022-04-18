@@ -55,6 +55,8 @@ def get_exec(counts):
     return execs
 
 
+orig = None
+
 def sort(zipped, table, order, tiebrk):
     if (tiebrk == 1):#Sorted by execution counts
         sort = sorted(zipped, key=lambda x: x[2], reverse=order)
@@ -62,6 +64,11 @@ def sort(zipped, table, order, tiebrk):
     elif (tiebrk == 2):#random ordering
         random.shuffle(zipped)
         sort = sorted(zipped, key=lambda x: x[0], reverse=order)
+    elif (tiebrk == 3):#original ranking tie break
+        sort = zipped
+        if (orig != None):
+            sort = sorted(zipped, key=lambda x: orig[x[1]][0], reverse=order)
+        sort = sorted(sort, key=lambda x: x[0], reverse=order)
     else:
         sort = sorted(zipped, key=lambda x: x[0], reverse=order)
     return sort
