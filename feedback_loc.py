@@ -319,13 +319,13 @@ if __name__ == "__main__":
         modes = ["tar_", "och_", "jac_", "dst_"]
         for m in modes:
             for i in range(4):
-            #for i in range(100):
+            #for i in range(10):
                 #d_p_s = d_p.split('.')
                 #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
                 file = open(types[i]+m+d_p, "x")
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
-                run(table, details, groups, only_fail, m[0], i>=1, (i==2)*2, i==3,
+                run(table, details, groups, only_fail, m[0], i>=1, (i==2)*3, i==3,
                         weff=["first", "avg", "med"], collapse=collapse, file=file)
                 file.close()
                 reset(table)

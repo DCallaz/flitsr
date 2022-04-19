@@ -64,7 +64,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False):
                 if (collapse):
                     efforts.append(effort+(group_len-curr_faulty_groups)/(2))
                 else:
-                    efforts.append(effort+(len(uuts)-curr_faults)/(2))
+                    efforts.append(effort+(len(uuts)+1)/(curr_faults+1)-1)
         if (not found):
             if (collapse):
                 effort += group_len-curr_faulty_groups
@@ -72,9 +72,9 @@ def method(faults, sort, groups, target, avg=False, collapse=False):
                 effort += len(uuts)-curr_faults
         else:
             if (collapse):
-                effort += (group_len-curr_faulty_groups)/(curr_faulty_groups+1)
+                effort += (group_len)/(curr_faulty_groups+1)
             else:
-                effort += (len(uuts)-curr_faults)/(curr_faults+1)
+                effort += (len(uuts)+1)/(curr_faults+1)-1
     if (avg):
         return sum(efforts)/target
     else:

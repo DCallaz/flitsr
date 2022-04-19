@@ -36,7 +36,7 @@ if __name__ == "__main__":
                 file = open(str(f)+"_fault_versions_Chart/results_rel")
         else:
             if (tcm):
-                file = open(str(f)+"-fault/results")
+                file = open(str(f)+"-fault/results_rndm")
             else:
                 file = open(str(f)+"_fault_versions_Chart/results")
         line = file.readline()
@@ -61,7 +61,7 @@ if __name__ == "__main__":
                     else:
                         mod[calc[0]].append(float(calc[1]))
                     line = file.readline()
-    color = ['r', 'b', 'g', 'y', 'm', 'c']
+    color = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
     shape = ['^', '.', 'v']
     if (seperate):
         fig, axs = plt.subplots(3,4, sharey='row',

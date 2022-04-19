@@ -4,7 +4,9 @@ if __name__ == "__main__":
     metrics = [("tar_", "tarantula"), ("och_", "ochai"), ("jac_", "jaccard"),
             ("dst_", "dstar")]
     modes = [("", "localize"), ("feed_", "feedback"), ("feed_tie_", "feedback tie"),
-            ("feed_multi_", "feedback multi")]
+            ("feed_multi_", "feedback multi"),
+            ("feed_rndm_max_", "feedback random max"), ("feed_rndm_avg_",
+            "feedback random average"), ("feed_rndm_min_", "feedback random min")]
     calcs = ["first", "avg", "med"]
     files = []
     total = 0
