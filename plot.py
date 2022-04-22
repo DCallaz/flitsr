@@ -36,7 +36,7 @@ if __name__ == "__main__":
                 file = open(str(f)+"_fault_versions_Chart/results_rel")
         else:
             if (tcm):
-                file = open(str(f)+"-fault/results_rndm")
+                file = open(str(f)+"-fault/results")
             else:
                 file = open(str(f)+"_fault_versions_Chart/results")
         line = file.readline()
