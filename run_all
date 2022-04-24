@@ -45,7 +45,7 @@ for dir in $dir_type; do
     for m in tar_ och_ jac_ dst_; do
       #for t in feed_rndm_; do
       #for t in ""; do
-      for t in "" feed_ feed_tie_ feed_multi_; do
+      for t in "" feed_ feed_multi_ feed_multi2_; do
         for file in $t$m*.txt; do
           orig=${file#"$t$m"}
           echo "$orig"

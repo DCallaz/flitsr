@@ -133,6 +133,9 @@ def feedback_loc(table, formula, tiebrk, only_fail):
     sort = localize(table, formula, tiebrk)
     #print(sort)
     rule = sort[0][1]
+    #if (sort[0][0] == sort[1][0] and orig[sort[0][1]][0] == orig[sort[1][1]][0]
+            #and orig[sort[0][1]][2] == orig[sort[1][1]][2]):
+        #print("Found absolute tie:", sort[0], sort[1], orig[sort[0][1]], orig[sort[1][1]])
     spaces += 1
     if (sort[0][0] <= 0.0):
         #print(" "*spaces,rule,"has zero score, returning")
@@ -168,7 +171,7 @@ def print_table(table):
 #  ..., ...
 #]
 def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=0,
-        multi=False, weff=None, top1=None, collapse=False, file=sys.stdout):
+        multi=0, weff=None, top1=None, collapse=False, file=sys.stdout):
     global orig
     sort = localize(table, mode, tiebrk)
     orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -192,7 +195,7 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=0,
             # multi-explanation -> we assume there are multiple explanations for
             # the same faults
             multiFault = multiRemove(newTable, faulty)
-            if (not (multiFault or multi)):
+            if (not multi or (multi == 1 and not multiFault)):
                 #print("breaking")
                 break
             #print("not breaking")
@@ -233,7 +236,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("Usage: feedback <input file> [tarantula/ochai/jaccard/dstar/gp13/naish2/wong2]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [tiebrk/rndm/otie] [multi] [all] [only_fail]")
+                +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
         exit()
     d = sys.argv[1]
     mode = 't'
@@ -243,7 +246,7 @@ if __name__ == "__main__":
     weff = []
     top1 = []
     tiebrk = 0
-    multi = False
+    multi = 0
     all = False
     only_fail = False
     collapse = False
@@ -294,7 +297,9 @@ if __name__ == "__main__":
             elif (sys.argv[i] == "otie"):
                 tiebrk = 3
             elif (sys.argv[i] == "multi"):
-                multi = True
+                multi = 1
+            elif (sys.argv[i] == "multi2"):
+                multi = 2
             elif (sys.argv[i] == "all"):
                 all = True
             elif (sys.argv[i] == "only_fail"):
@@ -315,7 +320,7 @@ if __name__ == "__main__":
     #print("merged")
     #print_table(table)
     if (all):
-        types = ["", "feed_", "feed_tie_", "feed_multi_"]
+        types = ["", "feed_", "feed_multi_", "feed_multi2_"]
         modes = ["tar_", "och_", "jac_", "dst_"]
         for m in modes:
             for i in range(4):
@@ -325,8 +330,8 @@ if __name__ == "__main__":
                 file = open(types[i]+m+d_p, "x")
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
-                run(table, details, groups, only_fail, m[0], i>=1, (i==2)*3, i==3,
-                        weff=["first", "avg", "med"], collapse=collapse, file=file)
+                run(table, details, groups, only_fail, m[0], i>=1, 3, (i==2) + (i==3)*2,
+                        weff=["first", "avg", "med"],top1=["perc"], collapse=collapse, file=file)
                 file.close()
                 reset(table)
     else:

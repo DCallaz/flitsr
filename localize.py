@@ -65,9 +65,11 @@ def sort(zipped, table, order, tiebrk):
         random.shuffle(zipped)
         sort = sorted(zipped, key=lambda x: x[0], reverse=order)
     elif (tiebrk == 3):#original ranking tie break
-        sort = zipped
-        if (orig != None):
-            sort = sorted(zipped, key=lambda x: orig[x[1]][0], reverse=order)
+        if (orig != None):#sort by original ranking, then execution count
+            sort = sorted(zipped, key=lambda x: orig[x[1]][2], reverse=order)
+            sort = sorted(sort, key=lambda x: orig[x[1]][0], reverse=order)
+        else:#if no orig, still sort by current execution count
+            sort = sorted(zipped, key=lambda x: x[2], reverse=order)
         sort = sorted(sort, key=lambda x: x[0], reverse=order)
     else:
         sort = sorted(zipped, key=lambda x: x[0], reverse=order)

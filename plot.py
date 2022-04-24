@@ -62,16 +62,16 @@ if __name__ == "__main__":
                         mod[calc[0]].append(float(calc[1]))
                     line = file.readline()
     color = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
-    shape = ['^', '.', 'v']
+    shape = ['^', '.', 'v', '-']
     if (seperate):
-        fig, axs = plt.subplots(3,4, sharey='row',
+        fig, axs = plt.subplots(4,4, sharey='row',
                 gridspec_kw={"left": 0.028,
                  "bottom": 0.05,
                  "right":0.981,
                  "top": 0.90,
                  "wspace": 0.2,
                  "hspace": 0.316})
-        row = 3
+        row = 4
     else:
         fig, axs = plt.subplots(2,2, sharey=True, sharex=True,
                 gridspec_kw={"left": 0.035,
