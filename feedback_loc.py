@@ -226,6 +226,9 @@ def run(table, details, groups, only_fail, mode='t', feedback=False, tiebrk=0,
             if ("perc" in top1):
                 print("percentage ranked #1:", top.percent_top1(faults, sort,
                     groups), file=file)
+            if ("size" in top1):
+                print("size of #1:", top.size_top1(faults, sort,
+                    groups), file=file)
     else:
         names = []
         for x in sort:
@@ -290,6 +293,8 @@ if __name__ == "__main__":
                 top1.append("all")
             elif (sys.argv[i] == "perc_top1"):
                 top1.append("perc")
+            elif (sys.argv[i] == "size_top1"):
+                top1.append("size")
             elif (sys.argv[i] == "tiebrk"):
                 tiebrk = 1
             elif (sys.argv[i] == "rndm"):
@@ -331,7 +336,7 @@ if __name__ == "__main__":
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
                 run(table, details, groups, only_fail, m[0], i>=1, 3, (i==2) + (i==3)*2,
-                        weff=["first", "avg", "med"],top1=["perc"], collapse=collapse, file=file)
+                        weff=["first", "avg", "med", "last"],top1=["perc", "size"], collapse=collapse, file=file)
                 file.close()
                 reset(table)
     else:
