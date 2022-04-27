@@ -21,7 +21,7 @@ run_with_lock() {
   )&
 }
 
-N=8
+N=70
 open_sem $N
 if [ $1 = "tcm" ]; then
   dir_type=*-fault
@@ -31,34 +31,39 @@ else
   echo "gzoltar"
 fi
 
-for dir in $dir_type; do
-  cd "$dir"
-  #if [ ! -f "results" ]; then
-    if [ "$1" = "tcm" ]; then
-      for file in *.txt; do
-        run_with_lock feedback "$file" tcm only_fail all;
+for proj in *; do
+  echo "Running $proj..."
+  cd "$proj"
+  for dir in $dir_type; do
+    cd "$dir"
+    #if [ ! -f "results" ]; then
+      if [ "$1" = "tcm" ]; then
+        for file in *.txt; do
+          run_with_lock feedback "$file" tcm only_fail all;
+        done
+      else
+        for file in */; do run_with_lock feedback "${file%/}" only_fail all; done
+      fi
+      wait
+      for m in tar_ och_ jac_ dst_; do
+        #for t in feed_rndm_; do
+        #for t in ""; do
+        for t in "" feed_ feed_multi_ feed_multi2_; do
+          for file in $t$m*.txt; do
+            orig=${file#"$t$m"}
+            echo "$orig"
+            cat "$file"; rm "$file";
+            echo "--------------------------"
+          done > $t$m"weff"
+        done
       done
-    else
-      for file in */; do run_with_lock feedback "${file%/}" only_fail all; done
-    fi
-    wait
-    for m in tar_ och_ jac_ dst_; do
-      #for t in feed_rndm_; do
-      #for t in ""; do
-      for t in "" feed_ feed_multi_ feed_multi2_; do
-        for file in $t$m*.txt; do
-          orig=${file#"$t$m"}
-          echo "$orig"
-          cat "$file"; rm "$file";
-          echo "--------------------------"
-        done > $t$m"weff"
-      done
-    done
-    echo "Done in $dir"
-    merge > results
-    if [ $1 = "tcm" ]; then
-      merge rel > results_rel
-    fi
-  #fi
+      echo "Done in $dir"
+      merge > results
+      if [ $1 = "tcm" ]; then
+        merge rel > results_rel
+      fi
+    #fi
+    cd ../
+  done
   cd ../
 done
