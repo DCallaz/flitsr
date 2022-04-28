@@ -7,7 +7,7 @@ if __name__ == "__main__":
             ("feed_multi_", "feedback multi"), ("feed_multi2_", "feedback multi2")]
             #("feed_rndm_max_", "feedback random max"), ("feed_rndm_avg_",
             #"feedback random average"), ("feed_rndm_min_", "feedback random min")]
-    calcs = ["first", "avg", "med", "top1"]
+    calcs = ["first", "avg", "med", "last", "top1", "sizet1"]
     files = []
     total = 0
     avgs = []
