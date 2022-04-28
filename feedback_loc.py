@@ -309,6 +309,9 @@ if __name__ == "__main__":
                 all = True
             elif (sys.argv[i] == "only_fail"):
                 only_fail = True
+            else:
+                print("Unknown option:", sys.argv[i])
+                return
             i += 1
         else:
             break

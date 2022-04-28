@@ -6,15 +6,26 @@ import sys
 
 if __name__ == "__main__":
     seperate = False
-    if (len(sys.argv) > 1 and sys.argv[1] == "sep"):
-        seperate = True
     rel = False
-    if (len(sys.argv) > 2 and sys.argv[2] == "rel"):
-        rel = True
-    if (len(sys.argv) <= 3 or sys.argv[3] == "tcm"):
-        tcm = True
-    else:
-        tcm = False
+    tcm = True
+    custom = None
+    i = 1
+    while (True):
+        if (len(sys.argv) > i):
+            if (sys.argv[i] == "sep"):
+                seperate = True
+            elif (sys.argv[i] == "rel"):
+                rel = True
+            elif (sys.argv[i] == "tcm"):
+                tcm = True
+            elif (sys.argv[i].startswith("[")):
+                custom = [x.strip() for x in sys.argv[i][1:-1].split(",")]
+            else:
+                print("Unknown option:", sys.argv[i])
+                exit(1)
+            i += 1
+        else:
+            break
     faults = []
     total = 0
     num_locs = int(open("size").readline())
@@ -28,6 +39,7 @@ if __name__ == "__main__":
             faults.append(num)
     faults.sort()
     names = {}
+    size = 0
     for f in faults:
         if (rel):
             if (tcm):
@@ -56,6 +68,7 @@ if __name__ == "__main__":
                     calc = line.strip().split(": ")
                     if (not calc[0] in mod):
                         mod[calc[0]] = []
+                        size += 1
                     if (rel):
                         mod[calc[0]].append(float(calc[1][:-1]))
                     else:
@@ -64,14 +77,16 @@ if __name__ == "__main__":
     color = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
     shape = ['^', '.', 'v', '-']
     if (seperate):
-        fig, axs = plt.subplots(4,4, sharey='row',
+        if (custom):
+            size = len(custom)
+        fig, axs = plt.subplots(size,4, sharey='row',
                 gridspec_kw={"left": 0.028,
                  "bottom": 0.05,
                  "right":0.981,
                  "top": 0.90,
                  "wspace": 0.2,
                  "hspace": 0.316})
-        row = 4
+        row = size
     else:
         fig, axs = plt.subplots(2,2, sharey=True, sharex=True,
                 gridspec_kw={"left": 0.035,
@@ -89,12 +104,14 @@ if __name__ == "__main__":
         for mode in modes.keys():
             #print(mode)
             calcs = modes[mode]
+            if (not custom):
+                custom = calcs.keys()
             j = 0
-            for calc in calcs.keys():
+            for calc in custom:
                 values = calcs[calc]
                 #print(faults, values)
                 if (seperate):
-                    axs[j, ax].plot(faults, values, str(color[i])+str(shape[j])+"-")
+                    axs[j, ax].plot(faults, values, str(color[i])+".-")
                     if (rel):
                         axs[j, ax].set_title("Comparison of the relative wasted"
                                 +" effort for the \n"+calc +" fault using the "+
@@ -106,7 +123,7 @@ if __name__ == "__main__":
                     axs[j, ax].legend([x for x in list(modes.keys())],
                             prop={"size":10})
                 else:
-                    axs[int(ax/row), ax%row].plot(faults, values, str(color[i])+str(shape[j])+"-")
+                    axs[int(ax/row), ax%row].plot(faults, values, str(color[i])+".-")
                 j += 1
             i += 1
         if (not seperate):
