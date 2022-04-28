@@ -39,7 +39,7 @@ for dir in $dir_type; do
         run_with_lock feedback "$file" tcm only_fail all;
       done
     else
-      for file in */; do run_with_lock feedback "${file%/}" only_fail all; done
+      for file in *; do run_with_lock feedback "$file" only_fail all; done
     fi
     wait
     for m in tar_ och_ jac_ dst_; do
