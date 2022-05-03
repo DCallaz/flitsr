@@ -311,7 +311,7 @@ if __name__ == "__main__":
                 only_fail = True
             else:
                 print("Unknown option:", sys.argv[i])
-                return
+                quit()
             i += 1
         else:
             break
