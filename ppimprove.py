@@ -1,9 +1,11 @@
 from matplotlib import pyplot as plt
 plt.rcParams["figure.figsize"] = (7, 5)
 import sys
+import distro
 
-imprvs = sys.stdin.readlines()
-n = 11
+imprvs = open(sys.argv[1]).readlines()
+x,y = distro.distro(sys.argv[2])
+n = int(sys.argv[3])
 m = {
     "tar": "Tarantula",
     "och": "Ochiai",
@@ -56,18 +58,23 @@ for line in imprvs:
     line = line.strip()
     f = line.split(",")
     data[f[3]][m[f[2]]][m[f[1]]][int(f[0])-1] = float(f[4])
+fig, ax1 = plt.subplots()
+ax1.bar(x, y, color='#e6e6e6')
+ax2 = ax1.twinx()
+ax1.yaxis.tick_right()
+ax2.yaxis.tick_left()
 x = list(range(1, n+1))
 for measure in data.keys():
-    plt.axhline(y=0, color='k', label='_nolegend_')
+    ax2.axhline(y=0, color='k', label='_nolegend_')
     legend=[]
     metrics = data[measure]
     for metric in metrics.keys():
         methods = metrics[metric]
         for method in methods.keys():
-            plt.plot(x, methods[method], colors[metric]+styles[method])
+            ax2.plot(x, methods[method], colors[metric]+styles[method])
             legend.append(method+" "+metric)
     #plt.title(m[measure]+" fault")
-    plt.legend(legend, fontsize=9.5, loc='lower right')
+    #ax2.legend(legend, fontsize=9.5, loc='lower right')
     plt.ylim([-1, 1])
     plt.grid()
     plt.show()
