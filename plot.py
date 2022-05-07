@@ -79,13 +79,13 @@ if __name__ == "__main__":
     if (seperate):
         if (custom):
             size = len(custom)
-        fig, axs = plt.subplots(size,4, sharey='row',
-                gridspec_kw={"left": 0.028,
-                 "bottom": 0.05,
-                 "right":0.981,
-                 "top": 0.90,
-                 "wspace": 0.2,
-                 "hspace": 0.316})
+        fig, axs = plt.subplots(size,3, sharey='row',
+                gridspec_kw={"left": 0.022,
+                 "bottom": 0.027,
+                 "right":0.994,
+                 "top": 0.932,
+                 "wspace": 0.09,
+                 "hspace": 0.131})
         row = size
     else:
         fig, axs = plt.subplots(2,2, sharey=True, sharex=True,
@@ -97,9 +97,16 @@ if __name__ == "__main__":
                  "hspace": 0.215})
         row = 2
     ax = 0
+
+    #remove unused things
+    #del names['jaccard']
     for metric in names.keys():
         #print(metric)
         modes = names[metric]
+        #del modes['feedback multi']
+        #modes[metric.capitalize()] = modes.pop('localize')
+        #modes['FLITSR'] = modes.pop('feedback')
+        #modes['FLITSR*'] = modes.pop('feedback multi2')
         i = 0
         for mode in modes.keys():
             #print(mode)
@@ -112,16 +119,17 @@ if __name__ == "__main__":
                 #print(faults, values)
                 if (seperate):
                     axs[j, ax].plot(faults, values, str(color[i])+".-")
-                    if (rel):
-                        axs[j, ax].set_title("Comparison of the relative wasted"
-                                +" effort for the \n"+calc +" fault using the "+
-                                metric+" metric")
-                    else:
-                        axs[j, ax].set_title("Comparison of the wasted effort for the "+calc
-                            +"\nfault using the "+metric+" metric")
+                    #if (rel):
+                        #axs[j, ax].set_title("Comparison of the relative wasted"
+                                #+" effort for the \n"+calc +" fault using the "+
+                                #metric+" metric")
+                    #else:
+                        #axs[j, ax].set_title("Comparison of the wasted effort for the "+calc
+                            #+"\nfault using the "+metric+" metric")
                     axs[j, ax].grid(True)
+                    #legendloc = "upper left" if j == 1 else "upper right"
                     axs[j, ax].legend([x for x in list(modes.keys())],
-                            prop={"size":10})
+                            prop={"size":12})
                 else:
                     axs[int(ax/row), ax%row].plot(faults, values, str(color[i])+".-")
                 j += 1
@@ -148,5 +156,5 @@ if __name__ == "__main__":
                 ax.yaxis.set_major_formatter(yticks)
 
 
-    fig.suptitle(proj+" (size: "+str(num_locs)+")", fontsize=16)
+    fig.suptitle(proj+" (size: "+str(num_locs)+")", fontsize=18)
     plt.show()

@@ -21,7 +21,7 @@ run_with_lock() {
   )&
 }
 
-N=70
+N=8
 open_sem $N
 if [ $1 = "tcm" ]; then
   dir_type=*-fault
@@ -31,11 +31,11 @@ else
   echo "gzoltar"
 fi
 
-for proj in *; do
-  echo "Running $proj..."
-  cd "$proj"
-  for dir in $dir_type; do
-    cd "$dir"
+#for proj in *; do
+  #echo "Running $proj..."
+  #cd "$proj"
+  #for dir in $dir_type; do
+    #cd "$dir"
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
@@ -45,10 +45,10 @@ for proj in *; do
         for file in */; do run_with_lock feedback "${file%/}" only_fail all; done
       fi
       wait
-      for m in tar_ och_ jac_ dst_; do
+      for m in tar_ och_ dst_; do
         #for t in feed_rndm_; do
         #for t in ""; do
-        for t in "" feed_ feed_multi_ feed_multi2_; do
+        for t in "" flitsr_ flitsr_multi_; do
           for file in $t$m*.txt; do
             orig=${file#"$t$m"}
             echo "$orig"
@@ -63,7 +63,7 @@ for proj in *; do
         merge rel > results_rel
       fi
     #fi
-    cd ../
-  done
-  cd ../
-done
+    #cd ../
+  #done
+  #cd ../
+#done

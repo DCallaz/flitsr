@@ -328,18 +328,18 @@ if __name__ == "__main__":
     #print("merged")
     #print_table(table)
     if (all):
-        types = ["", "feed_", "feed_multi_", "feed_multi2_"]
-        modes = ["tar_", "och_", "jac_", "dst_"]
+        types = ["", "flitsr_", "flitsr_multi_"]
+        modes = ["tar_", "och_", "dst_"]
         for m in modes:
-            for i in range(4):
+            for i in range(3):
             #for i in range(10):
                 #d_p_s = d_p.split('.')
                 #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
                 file = open(types[i]+m+d_p, "x")
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
-                run(table, details, groups, only_fail, m[0], i>=1, 3, (i==2) + (i==3)*2,
-                        weff=["first", "avg", "med", "last"],top1=["perc", "size"], collapse=collapse, file=file)
+                run(table, details, groups, only_fail, m[0], i>=1, 3, (i==2)*2,
+                        weff=["first", "med"],top1=["perc", "size"], collapse=collapse, file=file)
                 file.close()
                 reset(table)
     else:

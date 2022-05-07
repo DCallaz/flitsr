@@ -1,0 +1,12 @@
+#!/bin/bash
+for proj in */; do
+  cd "$proj"
+  distro=""
+  for dir in *-fault; do
+    fault=${dir%\-fault}
+    distro+="$(ls -q $dir/*.txt | wc -l) $fault"$'\n'
+  done
+  name=$(pwd | sed 's/.*\///')
+  python3 ~/subjects/masters/feedback_localizer/distro.py "$name" <<< "$distro" &
+  cd ../
+done

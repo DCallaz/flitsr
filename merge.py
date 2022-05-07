@@ -1,13 +1,16 @@
 import sys
 
 if __name__ == "__main__":
-    metrics = [("tar_", "tarantula"), ("och_", "ochai"), ("jac_", "jaccard"),
-            ("dst_", "dstar")]
-    modes = [("", "localize"), ("feed_", "feedback"), #("feed_tie_", "feedback tie"),
-            ("feed_multi_", "feedback multi"), ("feed_multi2_", "feedback multi2")]
+    metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
+    modes = [("", "Base metric"), ("flitsr_", "FLITSR"), #("feed_tie_", "feedback tie"),
+            #("feed_multi_", "feedback multi"),
+            ("flitsr_multi_", "FLITSR*")]
             #("feed_rndm_max_", "feedback random max"), ("feed_rndm_avg_",
             #"feedback random average"), ("feed_rndm_min_", "feedback random min")]
-    calcs = ["first", "avg", "med", "last", "top1", "sizet1"]
+    calcs = ["first",
+            #"avg", "last",
+            #"top1", "sizet1",
+            "med"]
     files = []
     total = 0
     avgs = []
