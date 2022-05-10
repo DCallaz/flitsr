@@ -1,12 +1,16 @@
 #!/bin/bash
+declare -A distro
+declare -A faults
 for proj in */; do
   cd "$proj"
-  distro=""
   for dir in *-fault; do
     fault=${dir%\-fault}
-    distro+="$(ls -q $dir/*.txt | wc -l) $fault"$'\n'
+    distro+=([$fault]=$(expr ${distro[$fault]} + $(ls -q $dir/*.txt | wc -l)))
+    faults+=([$fault]=$fault)
   done
-  name=$(pwd | sed 's/.*\///')
-  python3 ~/subjects/masters/feedback_localizer/distro.py "$name" <<< "$distro" &
+  #name=$(pwd | sed 's/.*\///')
+  #python3 ~/subjects/masters/feedback_localizer/distro.py "$name" <<< "$distro" &
+  #echo "$distro" >> "distro.txt"
+  echo "$(paste <(echo "${faults[*]}" | tr ' ' '\n') <(echo "${distro[*]}" | tr ' ' '\n'))" > distro.txt
   cd ../
 done

@@ -64,17 +64,33 @@ ax2 = ax1.twinx()
 ax1.yaxis.tick_right()
 ax2.yaxis.tick_left()
 x = list(range(1, n+1))
-for measure in data.keys():
-    ax2.axhline(y=0, color='k', label='_nolegend_')
-    legend=[]
-    metrics = data[measure]
-    for metric in metrics.keys():
-        methods = metrics[metric]
-        for method in methods.keys():
-            ax2.plot(x, methods[method], colors[metric]+styles[method])
-            legend.append(method+" "+metric)
-    #plt.title(m[measure]+" fault")
-    #ax2.legend(legend, fontsize=9.5, loc='lower right')
-    plt.ylim([-1, 1])
-    plt.grid()
-    plt.show()
+
+measure = list(data.keys())[0]
+ax2.axhline(y=0, color='k', label='_nolegend_')
+legend=[]
+metrics = data[measure]
+for metric in metrics.keys():
+    methods = metrics[metric]
+    for method in methods.keys():
+        ax2.plot(x, methods[method], colors[metric]+styles[method])
+        legend.append(method+" "+metric)
+plt.title(m[measure]+" fault")
+#plt.legend(legend, fontsize=9.5, loc='lower right')
+plt.ylim([-1, 1])
+plt.grid()
+plt.show()
+
+measure = list(data.keys())[1]
+plt.axhline(y=0, color='k', label='_nolegend_')
+legend=[]
+metrics = data[measure]
+for metric in metrics.keys():
+    methods = metrics[metric]
+    for method in methods.keys():
+        plt.plot(x, methods[method], colors[metric]+styles[method])
+        legend.append(method+" "+metric)
+plt.title(m[measure]+" fault")
+plt.legend(legend, fontsize=9.5, loc='lower right')
+plt.ylim([-1, 1])
+plt.grid()
+plt.show()

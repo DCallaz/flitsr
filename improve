@@ -1,0 +1,66 @@
+#!/bin/bash
+script="
+  function max(i,j) {
+    if (i > j) {
+      return i
+    } else {
+      return j
+    }
+  }
+  function absminus(i,j) {
+    if (i > j) {
+      return i - j
+    } else {
+      return j - i
+    }
+  }
+  function ret(i,j) {
+    if(max(i,j) == 0) {
+      return 0
+    } else {
+      return  (i-j)/max(i,j)
+    }
+  }
+  {print ret(\$1, \$2)}
+"
+for metric in tar dst och; do
+  flitsr_first=()
+  multi_first=()
+  flitsr_med=()
+  multi_med=()
+  declare -A fs
+  for proj in */; do
+    cd "$proj"
+    for dir in *-fault; do
+        f=${dir%\-fault}
+        fs+=([$f]=$f)
+        base=$(grep "first" $dir/${metric}_weff | sed 's/.*: //')
+        flitsr=$(grep "first" $dir/feed_${metric}_weff | sed 's/.*: //')
+        multi=$(grep "first" $dir/feed_multi2_${metric}_weff | sed 's/.*: //')
+
+        flitsr_first[$f]+=$'\n'"$(paste <(echo "$base") <(echo "$flitsr") | awk "$script")"
+        multi_first[$f]+=$'\n'"$(paste <(echo "$base") <(echo "$multi") | awk "$script")"
+
+        base=$(grep "med" $dir/${metric}_weff | sed 's/.*: //')
+        flitsr=$(grep "med" $dir/feed_${metric}_weff | sed 's/.*: //')
+        multi=$(grep "med" $dir/feed_multi2_${metric}_weff | sed 's/.*: //')
+
+        flitsr_med[$f]+=$'\n'"$(paste <(echo "$base") <(echo "$flitsr") | awk "$script")"
+        multi_med[$f]+=$'\n'"$(paste <(echo "$base") <(echo "$multi") | awk "$script")"
+    done
+    cd ../
+  done
+  for f in "${fs[@]}"; do
+    if [ "${flitsr_first[$f]}" != "" ]; then
+      echo "$f,flitsr,$metric,first,$(echo ${flitsr_first[$f]} | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,multi,$metric,first,$(echo ${multi_first[$f]} | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,flitsr,$metric,med,$(echo ${flitsr_med[$f]} | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,multi,$metric,med,$(echo ${multi_med[$f]} | tr ' ' '\n' | datamash mean 1)"
+    else
+      echo "$f,flitsr,$metric,first,$(echo 0 | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,multi,$metric,first,$(echo 0 | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,flitsr,$metric,med,$(echo 0 | tr ' ' '\n' | datamash mean 1)"
+      echo "$f,multi,$metric,med,$(echo 0 | tr ' ' '\n' | datamash mean 1)"
+    fi
+  done
+done

@@ -1,0 +1,49 @@
+#!/bin/bash
+script="
+  function max(i,j) {
+    if (i > j) {
+      return i
+    } else {
+      return j
+    }
+  }
+  function ret(i,j) {
+    if(!max(i,j)) {
+      return 0
+    } else {
+      return  (i-j)/max(i,j)
+    }
+  }
+  {print ret(\$1, \$2)}
+"
+for metric in tar dst och; do
+  flitsr_first=""
+  multi_first=""
+  flitsr_med=""
+  multi_med=""
+  for proj in jaxen/; do
+    cd "$proj"
+    for dir in *-fault; do
+      if [ "$dir" != "1-fault" ]; then
+          base=$(grep "first" $dir/${metric}_weff | sed 's/.*: //')
+          flitsr=$(grep "first" $dir/feed_${metric}_weff | sed 's/.*: //')
+          multi=$(grep "first" $dir/feed_multi2_${metric}_weff | sed 's/.*: //')
+
+          flitsr_first+=$'\n'"$(paste <(echo "$base") <(echo "$flitsr") | awk "$script")"
+          multi_first+=$'\n'"$(paste <(echo "$base") <(echo "$multi") | awk "$script")"
+
+          base=$(grep "med" $dir/${metric}_weff | sed 's/.*: //')
+          flitsr=$(grep "med" $dir/feed_${metric}_weff | sed 's/.*: //')
+          multi=$(grep "med" $dir/feed_multi2_${metric}_weff | sed 's/.*: //')
+
+          flitsr_med+=$'\n'"$(paste <(echo "$base") <(echo "$flitsr") | awk "$script")"
+          multi_med+=$'\n'"$(paste <(echo "$base") <(echo "$multi") | awk "$script")"
+      fi
+    done
+    cd ../
+  done
+  echo "flitsr $metric first: $(echo $flitsr_first | tr ' ' '\n' | datamash mean 1)"
+  echo "multi $metric first: $(echo $multi_first | tr ' ' '\n' | datamash mean 1)"
+  echo "flitsr $metric med: $(echo $flitsr_med | tr ' ' '\n' | datamash mean 1)"
+  echo "multi $metric med: $(echo $multi_med | tr ' ' '\n' | datamash mean 1)"
+done

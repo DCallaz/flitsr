@@ -1,0 +1,14 @@
+#!/bin/bash
+for proj in */; do
+  cd $proj
+  for file in *_weff; do
+    size=$(wc -l < $file)
+    for ((i=1; i<$size; i+=6)); do
+      f=$(sed "${i}q;d" $file | sed 's/[^\-]*-//' | sed 's/.txt//' | sed 's/-/ /g' | wc -w)
+      mkdir -p $f-fault/
+      j=$(expr $i + 5)
+      sed -n "$i,${j}p" $file >> $f-fault/$file
+    done
+  done
+  cd ../
+done
