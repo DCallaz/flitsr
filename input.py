@@ -1,4 +1,5 @@
 import sys
+from merge_equiv import merge_on_row, remove_from_table
 
 def construct_details(f):
     details = {"files":[], "testCases":[],"fileOffsets":[],"testCaseDataSize":0,
@@ -18,32 +19,43 @@ def construct_details(f):
             details["faults"].append(details["testCaseDataSize"]-1)
     return details
 
-def construct_table(num_locs, tests_reader):
-    table = []
+def construct_tests(tests_reader):
+    tests = []
+    num_tests = 0
     tests_reader.readline()
-    i = 0
     for r in tests_reader:
         row = r.strip().split(",")
-        table.append([True] + [row[1] == 'PASS'] + [False]*(num_locs))
-        i += 1
-    return table, i
+        tests.append(row[1] == 'PASS')
+        num_tests += 1
+    return tests, num_tests
 
-def fill_table(table, locs, bin_file):
-    j = 0
-    for row in table:
+def fill_table(tests, num_tests, locs, bin_file):
+    table = []
+    groups = [[i for i in range(0, locs)]]
+    counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
+    for r in range(0, num_tests):
+        row = [True] + [False]*locs
         line = bin_file.readline()
         arr = line.strip().split()
-        if (not len(arr)-1 == locs):
-            print("WARING number of locations != line, locs:",locs,"line:",len(arr)-1)
         for i in range(0, locs):
-            n = arr[i]
-            row[i+2] = True if (float(n) == 1) else False
-        if (not (arr[-1] == '+') == row[1]):
-            print("WARNING: test file and matrix do not agree on line",j)
-            print("Test file has",row[1], "and matrix has", arr[-1])
-            print("Keeping matrix result")
-            row[1] = (arr[-1] == '+')
-        j = j+1
+            if (arr[i] != "0"):
+                row[i+1] = True
+                if (tests[r]):
+                    counts["p"][i] += 1
+                else:
+                    counts["f"][i] += 1
+        # Use row to merge equivalences
+        groups = merge_on_row(row, groups)
+        # Increment total counts, and append row to table
+        if (tests[r]):
+            counts["tp"] += 1
+        else:
+            counts["tf"] += 1
+            table.append(row)
+    groups.sort(key=lambda group: group[0])
+    # Remove groupings from table
+    remove_from_table(groups, table, counts)
+    return table,groups,counts
 
 def read_table(directory):
     # Getting the details of the project
@@ -52,10 +64,10 @@ def read_table(directory):
     num_locs = details['testCaseDataSize']
     # Constructing the table
     #print("constructing table")
-    table,num_tests = construct_table(num_locs, open(directory+"/tests.csv"))
+    tests,num_tests = construct_tests(open(directory+"/tests.csv"))
     #print("filling table")
-    fill_table(table, num_locs, open(directory+"/matrix.txt"))
-    return table,num_locs,num_tests,details
+    table,groups,counts = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
+    return table,counts,groups,details
 
 def find_names(details, faulties, groups):
     ret = []

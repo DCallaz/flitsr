@@ -9,7 +9,7 @@ if __name__ == "__main__":
             #"feedback random average"), ("feed_rndm_min_", "feedback random min")]
     calcs = ["first",
             #"avg", "last",
-            #"top1", "sizet1",
+            "top1", "sizet1",
             "med"]
     files = []
     total = 0

@@ -39,10 +39,10 @@ fi
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
-          run_with_lock feedback "$file" tcm only_fail all;
+          run_with_lock feedback "$file" tcm all;
         done
       else
-        for file in */; do run_with_lock feedback "${file%/}" only_fail all; done
+        for file in */; do run_with_lock feedback "${file%/}" all; done
       fi
       wait
       for m in tar_ och_ dst_; do

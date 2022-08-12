@@ -26,8 +26,8 @@ def get_counts(table):
 
 def apply_formula(counts, formula):
     scores = []
-    for loc in counts:
-        sus = Suspicious(loc[1], loc[3]+loc[1], loc[0], loc[2]+loc[0])
+    for i in range(0, counts["locs"]):
+        sus = Suspicious(counts["f"][i], counts["tf"], counts["p"][i], counts["tp"])
         if (formula == 't'):
             scores.append(sus.tarantula())
         elif (formula == 'o'):
@@ -50,14 +50,14 @@ def apply_formula(counts, formula):
 
 def get_exec(counts):
     execs = []
-    for loc in counts:
-       execs.append(loc[0]+loc[1])
+    for i in range(counts["locs"]):
+       execs.append(counts["p"][i]+counts["f"][i])
     return execs
 
 
 orig = None
 
-def sort(zipped, table, order, tiebrk):
+def sort(zipped, order, tiebrk):
     if (tiebrk == 1):#Sorted by execution counts
         sort = sorted(zipped, key=lambda x: x[2], reverse=order)
         sort = sorted(sort, key=lambda x: x[0], reverse=order)
@@ -67,18 +67,21 @@ def sort(zipped, table, order, tiebrk):
     elif (tiebrk == 3):#original ranking tie break
         if (orig != None):#sort by original ranking, then execution count
             sort = sorted(zipped, key=lambda x: orig[x[1]][2], reverse=order)
+            #print("sort1:",sort)
             sort = sorted(sort, key=lambda x: orig[x[1]][0], reverse=order)
+            #print("sort2:",sort)
         else:#if no orig, still sort by current execution count
             sort = sorted(zipped, key=lambda x: x[2], reverse=order)
         sort = sorted(sort, key=lambda x: x[0], reverse=order)
+        #print("sort3:",sort)
     else:
         sort = sorted(zipped, key=lambda x: x[0], reverse=order)
     return sort
 
 #Assumes the table is not empty
-def localize(table, formula, tiebrk, order=True):
-    counts = get_counts(table)
+def localize(counts, formula, tiebrk, order=True):
+    #counts = get_counts(table)
     scores = apply_formula(counts, formula)
     execs = get_exec(counts)
-    zipped = list(map(list, zip(scores, range(len(table[0])-2), execs)))
-    return sort(zipped, table, order, tiebrk)
+    zipped = list(map(list, zip(scores, range(counts["locs"]), execs)))
+    return sort(zipped, order, tiebrk)

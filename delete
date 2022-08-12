@@ -1,22 +1,25 @@
 #!/bin/bash
 #file=$1
-for j in 1 2 4 8 16 32; do
-  cd "$j-fault"
-  for file in *.txt; do
-    res=$(python3 ~/subjects/masters/feedback_localizer/find_unex.py "$file")
+#for j in 1 2 4 8 16 32; do
+  #cd "$j-fault"
+  for file in */; do
+    res=$(python3 ~/subjects/masters/feedback_localizer/find_unex.py "$file" gzoltar)
     if [ "$res" != "" ]; then
-      readarray -d   -t arr <<<"$res"
-      for fault in $arr; do
-        line=$(grep -n -F "$fault" "$file" | cut -f1 -d:)
-        sed -i $line"s/ |.*$//" "$file"
+      #readarray -d   -t arr <<<"$res"
+      readarray -t arr <<<"$res"
+      for line in $arr; do
+        line=$(expr $line + 2)
+        #line=$(grep -n -F "$fault" "$file" | cut -f1 -d:)
+        #echo "Should be removing fault on line $line from $file"
+        sed -i $line"s/ |.*$//" "${file}spectra.csv"
       done
-      echo "Modified '$file'"
-      res=$(python3 ~/subjects/masters/feedback_localizer/find_unex.py "$file")
-      if [ "$res" == "no faults found" ]; then
-        rm "$file"
-        echo "Removed $file (no faults left)"
-      fi
+      echo "Modified '${file}spectra.csv'"
+      #res=$(python3 ~/subjects/masters/feedback_localizer/find_unex.py "$file")
+      #if [ "$res" == "no faults found" ]; then
+        #rm "$file"
+        #echo "Removed $file (no faults left)"
+      #fi
     fi
   done
-  cd ../
-done
+  #cd ../
+#done

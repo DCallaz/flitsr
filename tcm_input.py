@@ -1,4 +1,5 @@
 import sys
+from merge_equiv import merge_on_row, remove_from_table
 
 def construct_details(f):
     uuts = []
@@ -11,29 +12,53 @@ def construct_details(f):
         line = f.readline()
     return uuts, num_locs
 
-def construct_table(f):
-    table = []
+def construct_tests(f):
+    tests = []
     num_tests = 0
     line = f.readline()
     while (not line == '\n'):
         row = line.strip().split(" ")
-        table.append([True] + [row[1] == 'PASSED'])
+        tests.append(row[1] == 'PASSED')
         num_tests += 1
         line = f.readline()
-    return table, num_tests
+    return tests, num_tests
 
-def fill_table(table, f):
-    for row in table:
+def fill_table(tests, num_tests, locs, f):
+    table = []
+    groups = [[i for i in range(0, locs)]]
+    counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
+    for r in range(0, num_tests):
+        row = [True] + [False]*locs
+        # Construct the table row
         line = f.readline()
         arr = line.strip().split(' ')
         for i in range(0, int(len(arr)/2)):
-            row[int(arr[i*2])+2] = True
+            pos = int(arr[i*2])
+            row[pos+1] = True
+            if (tests[r]):
+                counts["p"][pos] += 1
+            else:
+                counts["f"][pos] += 1
+        # Use row to merge equivalences
+        groups = merge_on_row(row, groups)
+        # Increment total counts, and append row to table
+        if (tests[r]):
+            counts["tp"] += 1
+        else:
+            counts["tf"] += 1
+            table.append(row)
+    groups.sort(key=lambda group: group[0])
+    # Remove groupings from table
+    remove_from_table(groups, table, counts)
+    return table,groups,counts
 
 def read_table(file_loc):
     table = None
+    tests = None
     num_locs = 0
     num_tests = 0
     details = None
+    groups = None
     file = open(file_loc)
     while (True):
         line = file.readline()
@@ -44,17 +69,15 @@ def read_table(file_loc):
                 line = file.readline()
         elif (line.startswith("#tests")):
             # Constructing the table
-            table, num_tests = construct_table(file)
+            tests, num_tests = construct_tests(file)
         elif (line.startswith("#uuts")):
             # Getting the details of the project
             details,num_locs = construct_details(file)
-            for row in table:
-                row.extend([False] * num_locs)
         elif (line.startswith("#matrix")):
             # Filling the table
-            fill_table(table, file)
+            table,groups,counts = fill_table(tests, num_tests, num_locs, file)
     file.close()
-    return table,num_locs,num_tests,details
+    return table,counts,groups,details
 
 def find_names(details, faulties, groups):
     ret = []
