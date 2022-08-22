@@ -1,5 +1,6 @@
 import sys
 from merge_equiv import merge_on_row, remove_from_table
+from split_faults import split
 
 def construct_details(f):
     uuts = []
@@ -82,6 +83,14 @@ def read_table(file_loc):
             # Filling the table
             table,groups,counts = fill_table(tests, num_tests, num_locs, file)
     file.close()
+    faults,unexposed = split(find_faults(details), table, groups)
+    for i in range(len(details)):
+        if (i in unexposed):
+            details[i] = (details[i][0], -1)
+            print("Dropped faulty UUT:", details[i][0], "due to unexposure")
+        for item in faults.items():
+            if (i in item[1]):
+                details[i] = (details[i][0], item[0])
     return table,counts,groups,details
 
 def find_names(details, faulties, groups):

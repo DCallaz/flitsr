@@ -1,24 +1,34 @@
 import sys
 
-def bit(i, equiv, table):
+def getMapping(faults, groups):
+    faults_comb = [i for l in faults.values() for i in l]
+    mapping = {}
+    for loc in faults_comb:
+        for i in range(len(groups)):
+            if loc in groups[i]:
+                mapping[loc] = i
+    return mapping
+
+def bit(i, equiv, mapping, table):
     b = False
     for fault in equiv:
-        b = b or table[i][fault+1]
+        b = b or table[i][mapping[fault]+1]
     return b
 
-def split(fault_groups, table):
-    if (fault_groups == {}):
+def split(faults, table, groups):
+    mapping = getMapping(faults, groups)
+    if (faults == {}):
         return
-    ftemp = [({i}, f[0], False) for f in fault_groups.items() for i in f[1]]
+    ftemp = [([i], f[0], False) for f in faults.items() for i in f[1]]
     #print("Failures before", failures)
     for i in range(len(table)):
         merge = {}
         remain = []
         for equiv in ftemp:
-            if (bit(i, equiv[0], table)):
+            if (bit(i, equiv[0], mapping, table)):
                 if (equiv[1] not in merge):
-                    merge[equiv[1]] = set()
-                merge[equiv[1]] = merge[equiv[1]].union(equiv[0])
+                    merge[equiv[1]] = []
+                merge[equiv[1]] += equiv[0]
             else:
                 remain.append(equiv)
         if (len(merge) != 0):
@@ -67,10 +77,10 @@ if __name__ == "__main__":
     else:
         from tcm_input import read_table, print_names, find_fault_groups, find_faults
     table,counts,groups,details = read_table(d)
-    faults = find_fault_groups(details, groups)
+    faults = find_faults(details)
     print("faults:",faults)
     #print(groups)
     #print(table)
-    faults,unexposed = split(faults, table)
+    faults,unexposed = split(faults, table, groups)
     print("split faults:",faults)
     print("unexposed:",unexposed)

@@ -1,5 +1,6 @@
 import sys
 from merge_equiv import merge_on_row, remove_from_table
+from split_faults import split
 
 def construct_details(f):
     details = {"files":[], "testCases":[],"fileOffsets":[],"testCaseDataSize":0,
@@ -72,28 +73,39 @@ def read_table(directory):
     tests,num_tests = construct_tests(open(directory+"/tests.csv"))
     #print("filling table")
     table,groups,counts = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
+    faults,unexposed = split(details["faults"], table, groups)
+    details["faults"] = faults
+    for unex in unexposed:
+        print("Dropped faulty UUT due to unexposure:")
+        print_name(find_name(details, unex, groups))
     return table,counts,groups,details
+
+def find_name(details, elem, groups):
+    offsets = details['fileOffsets']
+    for i in range(0, len(offsets)):
+        if (i+1 >= len(offsets) or offsets[i+1] > elem):
+            file = details['files'][i]
+            filename = file['fileName'].split("/")[-1]
+            line = file['lineNumbers'][elem - offsets[i]]
+            fault = -1
+            for item in details["faults"].items():
+                if (elem in item[1]):
+                    fault = item[0]
+                    break
+            return (filename, line, elem, fault)
 
 def find_names(details, faulties, groups):
     ret = []
     for faulty in faulties:
         group = []
         for elem in groups[faulty]:
-            offsets = details['fileOffsets']
-            for i in range(0, len(offsets)):
-                if (i+1 >= len(offsets) or offsets[i+1] > elem):
-                    file = details['files'][i]
-                    filename = file['fileName'].split("/")[-1]
-                    line = file['lineNumbers'][elem - offsets[i]]
-                    fault = -1
-                    for item in details["faults"].items():
-                        if (elem in item[1]):
-                            fault = item[0]
-                            break
-                    group.append((filename, line, elem, fault))
-                    break
+            group.append(find_name(details,elem,groups))
         ret.append(group)
     return ret
+
+def print_name(name, file=sys.stdout, indent=False):
+    print("("+str(name[2])+")","File:",name[0]," | line",name[1],
+        "(FAULT {})".format(name[3]) if (name[3] != -1) else "", file=file)
 
 def print_names(details, faulty, groups, scores=None, file=sys.stdout):
     names = find_names(details, faulty, groups)
@@ -106,8 +118,7 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
                     file=file)
         i += 1
         for name in group:
-            print("("+str(name[2])+")","File:",name[0]," | line",name[1],
-                "(FAULT {})".format(name[3]) if (name[3] != -1) else "", file=file)
+            print_name(name, file, indent=True)
         print("]", file=file)
 
 def print_table(table):

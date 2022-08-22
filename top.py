@@ -1,4 +1,3 @@
-#TODO: HANDLE MULTI-LOCATION FAULTS FOR ALL OF THE BELOW
 def one_top1(faults, sort, groups):
     i = 0
     score = sort[i][0]
@@ -8,9 +7,10 @@ def one_top1(faults, sort, groups):
         #print(i, sort[i][1])
         uuts.extend(groups[sort[i][1]])
         i += 1
-    for fault in faults:
-        if (fault in uuts):
-            return True
+    for fault in faults.values():
+        for loc in fault:
+            if (loc in uuts):
+                return True
     return False
 
 def all_top1(faults, sort, groups):
@@ -23,9 +23,11 @@ def all_top1(faults, sort, groups):
         #print(i, sort[i][1])
         uuts.extend(groups[sort[i][1]])
         i += 1
-    for fault in faults:
-        if (fault in uuts):
-            count += 1
+    for fault in faults.values():
+        for loc in fault:
+            if (loc in uuts):
+                count += 1
+                break # Only consider first location of fault
     return (count == len(faults))
 
 def percent_top1(faults, sort, groups):
@@ -38,9 +40,11 @@ def percent_top1(faults, sort, groups):
         #print(i, sort[i][1])
         uuts.extend(groups[sort[i][1]])
         i += 1
-    for fault in faults:
-        if (fault in uuts):
-            count += 1
+    for fault in faults.values():
+        for loc in fault:
+            if (loc in uuts):
+                count += 1
+                break
     if (len(faults) == 0):
         return 100
     else:
