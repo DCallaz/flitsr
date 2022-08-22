@@ -5,9 +5,14 @@ def construct_details(f):
     uuts = []
     num_locs = 0
     line = f.readline()
+    bugs = 0
     while (not line == '\n'):
-        l = line.split(' ')
-        uuts.append((l[0], len(l) > 1))
+        l = line.strip().split(' | ')
+        fault = -1
+        if (len(l) > 1):
+            fault = bugs if (len(l) > 2 or not l[1].isdigit()) else int(l[1])
+            bugs += 1
+        uuts.append((l[0], fault))
         num_locs += 1
         line = f.readline()
     return uuts, num_locs
@@ -99,8 +104,8 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
                     file=file)
         i += 1
         for name in group:
-            print("\t("+str(name[1])+")","uut:",name[0][0], "(FAULTY)" *
-                    name[0][1], file=file)
+            print("\t("+str(name[1])+")","uut:",name[0][0], "(FAULT {})".format(name[0][1])
+                    if (name[0][1] != -1) else "", file=file)
         print("]", file=file)
 
 def print_table(table):
@@ -119,13 +124,30 @@ def print_table(table):
             print('-')
 
 def find_faults(details):
-    actual_faults = []
+    actual_faults = {}
     i = 0
     for uut in details:
-        if (uut[1]):
-            actual_faults.append(i)
+        if (uut[1] != -1):
+            if (uut[1] not in actual_faults):
+                actual_faults[uut[1]] = []
+            actual_faults[uut[1]].append(i)
         i += 1
     return actual_faults
+
+def find_fault_groups(details, groups):
+    faults = find_faults(details)
+    fault_groups = {}
+    for i in range(len(groups)):
+        for item in faults.items():
+            fault_num = item[0]
+            for loc in item[1]:
+                if (loc in groups[i]):
+                    if (fault_num not in fault_groups):
+                        fault_groups[fault_num] = set()
+                    fault_groups[fault_num].add(i)
+                    break
+    return fault_groups
+
 
 if __name__ == "__main__":
     d = sys.argv[1]

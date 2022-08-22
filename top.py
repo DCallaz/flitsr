@@ -1,3 +1,4 @@
+#TODO: HANDLE MULTI-LOCATION FAULTS FOR ALL OF THE BELOW
 def one_top1(faults, sort, groups):
     i = 0
     score = sort[i][0]

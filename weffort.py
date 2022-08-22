@@ -1,3 +1,5 @@
+import copy
+
 def first(faults, sort, groups, c):
     if (len(faults) == 0):
         return 0
@@ -25,8 +27,9 @@ def last(faults, sort, groups, c):
     return method(faults, sort, groups, len(faults), collapse=c)
 
 #<---------------- Helper functions --------------->
-def method(faults, sort, groups, target, avg=False, collapse=False):
+def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort=False):
     #print("faults:", faults)
+    faults = copy.deepcopy(faults) # needed to remove groups of fault locations
     found = False
     actual = 0
     effort = 0
@@ -48,16 +51,29 @@ def method(faults, sort, groups, target, avg=False, collapse=False):
             group_len += 1
             # Check if fault is in group
             faulty_group = False
-            for fault in faults:
-                if (fault in groups[sort[i][1]]):
-                    #print("found fault", fault)
-                    actual += 1
-                    curr_faults += 1
-                    if (not faulty_group):
-                        curr_faulty_groups += 1
-                        faulty_group = True
-                    #faults.remove(fault)
-                    found = (actual >= target)
+            toRemove = []
+            for item in faults.items():
+                worst_toRemove = []
+                locs = item[1]
+                for loc in locs:
+                    if (loc in groups[sort[i][1]]):
+                        if (worst_effort and len(locs) > 1):
+                            worst_toRemove.append(loc)
+                            continue
+                        #print("found fault", fault)
+                        actual += 1
+                        curr_faults += 1
+                        if (not faulty_group):
+                            curr_faulty_groups += 1
+                            faulty_group = True
+                        #faults.remove(fault)
+                        found = (actual >= target)
+                        toRemove.append(item[0])
+                if (worst_effort):
+                    for loc in worst_toRemove:
+                        locs.remove(loc)
+            for fault in toRemove:
+                faults.pop(fault)
             i += 1
         if (avg):
             for j in range(0, curr_faults):

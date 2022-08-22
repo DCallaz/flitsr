@@ -3,9 +3,10 @@ from merge_equiv import merge_on_row, remove_from_table
 
 def construct_details(f):
     details = {"files":[], "testCases":[],"fileOffsets":[],"testCaseDataSize":0,
-            "faults": []}
+            "faults": {}}
     i = -1
     f.readline()
+    bugs = 0
     for line in f:
         l = line.strip().split(":")
         if (i >= 0 and l[0] == details["files"][i]["fileName"]):
@@ -15,8 +16,12 @@ def construct_details(f):
             details["fileOffsets"].append(details["testCaseDataSize"])
             i += 1
         details["testCaseDataSize"] += 1
-        if (len(l) > 2 and l[2] == "FAULT"):
-            details["faults"].append(details["testCaseDataSize"]-1)
+        if (len(l) > 2):
+            fault = bugs if (not l[2].isdigit()) else int(l[2])
+            if (fault not in details["faults"]):
+                details["faults"][fault] = set()
+            details["faults"][fault].add(details["testCaseDataSize"]-1)
+            bugs += 1
     return details
 
 def construct_tests(tests_reader):
@@ -80,7 +85,11 @@ def find_names(details, faulties, groups):
                     file = details['files'][i]
                     filename = file['fileName'].split("/")[-1]
                     line = file['lineNumbers'][elem - offsets[i]]
-                    fault = elem in details["faults"]
+                    fault = -1
+                    for item in details["faults"].items():
+                        if (elem in item[1]):
+                            fault = item[0]
+                            break
                     group.append((filename, line, elem, fault))
                     break
         ret.append(group)
@@ -98,7 +107,7 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
         i += 1
         for name in group:
             print("("+str(name[2])+")","File:",name[0]," | line",name[1],
-                "(FAULTY)" * name[3], file=file)
+                "(FAULT {})".format(name[3]) if (name[3] != -1) else "", file=file)
         print("]", file=file)
 
 def print_table(table):
@@ -118,6 +127,20 @@ def print_table(table):
 
 def find_faults(details):
     return details["faults"]
+
+def find_fault_groups(details, groups):
+    faults = find_faults(details)
+    fault_groups = {}
+    for i in range(len(groups)):
+        for item in faults.items():
+            fault_num = item[0]
+            for loc in item[1]:
+                if (loc in groups[i]):
+                    if (fault_num not in fault_groups):
+                        fault_groups[fault_num] = set()
+                    fault_groups[fault_num].add(i)
+                    break
+    return fault_groups
 
 if __name__ == "__main__":
     d = sys.argv[1]

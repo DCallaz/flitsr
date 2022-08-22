@@ -4,7 +4,7 @@ import weffort
 import top
 import copy
 
-#<------------------ Setup methods ----------------------->
+#<------------------ Outdated methods ----------------------->
 
 def merge_equivs_old(table, locs):
     """Merges groups of rules with identical spectra"""
@@ -57,6 +57,11 @@ def merge_equivs(table, locs):
             row.pop(rem+2)
     return groups
 
+def add_back_tests(tests_removed, table, counts):
+    """Re-activates all the given tests"""
+    for t in tests_removed:
+        add_test(t, table, counts)
+
 #<------------------ Feedback methods ----------------------->
 
 def all_passing(table, list=None):
@@ -103,11 +108,6 @@ def remove_faulty_rules(table, tests_removed, faulty):
                 toRemove.append(i)
                 break
     tests_removed.difference_update(toRemove)
-
-def add_back_tests(tests_removed, table, counts):
-    """Re-activates all the given tests"""
-    for t in tests_removed:
-        add_test(t, table, counts)
 
 def multiRemove(table, counts, faulty):
     nonFaulty = set(range(0, counts["locs"])).difference(faulty)
