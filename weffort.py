@@ -51,7 +51,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
             group_len += 1
             # Check if fault is in group
             faulty_group = False
-            toRemove = {}
+            toRemove = set()
             for item in faults.items():
                 worst_toRemove = []
                 locs = item[1]
