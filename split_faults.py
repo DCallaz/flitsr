@@ -18,7 +18,7 @@ def bit(i, equiv, mapping, table):
 def split(faults, table, groups):
     mapping = getMapping(faults, groups)
     if (faults == {}):
-        return
+        return {}, []
     ftemp = [([i], f[0], False) for f in faults.items() for i in f[1]]
     #print("Failures before", failures)
     for i in range(len(table)):

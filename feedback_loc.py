@@ -278,6 +278,8 @@ if __name__ == "__main__":
                 mode = 'v'
             elif (sys.argv[i] == "harmonic"):
                 mode = 'h'
+            elif (sys.argv[i] == "zoltar"):
+                mode = 'z'
             elif (sys.argv[i] == "feedback"):
                 feedback = True
             elif (sys.argv[i] == "tcm"):

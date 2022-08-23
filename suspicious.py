@@ -84,6 +84,16 @@ class Suspicious() :
         score = nominator / denominator
         return round(score, 4)
 
+    def zoltar(self):
+        if self.ef == 0 :
+            return  0.0
+        nominator = self.ef
+        multifault_component = 10000*(self.nf*self.ep)/self.ef
+        denominator = multifault_component + self.ef + self.nf + self.ep
+        score = nominator / denominator
+        return round(score, 4)
+
+
     def gp13(self) :
         """
         Yoo, S. Evolving human competitive spectra-based fault localisation

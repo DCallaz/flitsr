@@ -51,7 +51,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
             group_len += 1
             # Check if fault is in group
             faulty_group = False
-            toRemove = []
+            toRemove = {}
             for item in faults.items():
                 worst_toRemove = []
                 locs = item[1]
@@ -68,7 +68,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
                             faulty_group = True
                         #faults.remove(fault)
                         found = (actual >= target)
-                        toRemove.append(item[0])
+                        toRemove.add(item[0])
                 if (worst_effort):
                     for loc in worst_toRemove:
                         locs.remove(loc)

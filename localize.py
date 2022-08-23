@@ -46,6 +46,8 @@ def apply_formula(counts, formula):
             scores.append(sus.overlap())
         elif (formula == 'h'):
             scores.append(sus.harmonic())
+        elif (formula == 'z'):
+            scores.append(sus.zoltar())
     return scores
 
 def get_exec(counts):
