@@ -3,6 +3,7 @@ import sys
 import weffort
 import top
 import copy
+import percent_at_n
 
 #<------------------ Outdated methods ----------------------->
 
@@ -178,7 +179,7 @@ def print_table(table):
 #  ..., ...
 #]
 def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
-        multi=0, weff=None, top1=None, collapse=False, file=sys.stdout):
+        multi=0, weff=None, top1=None, perc_at_n=False, collapse=False, file=sys.stdout):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -207,7 +208,7 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
             #print("not breaking")
             val = val/10
         sort = localize.sort(sort, True, tiebrk)
-    if (weff or top1):
+    if (weff or top1 or perc_at_n):
         faults = find_faults(details)
         if (weff):
             if ("first" in weff):
@@ -235,6 +236,11 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
             if ("size" in top1):
                 print("size of #1:", top.size_top1(faults, sort,
                     groups), file=file)
+        if (perc_at_n):
+            bumps = percent_at_n.getBumps(faults, sort, groups,
+                    collapse=collapse)
+            form = ','.join(['{:.8%}']*len(bumps))
+            print("percentage at n:", form.format(*bumps), file=file)
     else:
         names = []
         for x in sort:
@@ -243,8 +249,9 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
-        print("Usage: feedback <input file> [tarantula/ochiai/jaccard/dstar/gp13/naish2/wong2]"
+        print("Usage: feedback <input file> [tarantula/ochiai/jaccard/dstar/zoltar]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
+                +" [perc@n]"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
         exit()
     d = sys.argv[1]
@@ -254,6 +261,7 @@ if __name__ == "__main__":
     i = 2
     weff = []
     top1 = []
+    perc_at_n = False
     tiebrk = 3
     multi = 0
     all = False
@@ -302,6 +310,8 @@ if __name__ == "__main__":
                 top1.append("perc")
             elif (sys.argv[i] == "size_top1"):
                 top1.append("size")
+            elif (sys.argv[i] == "perc@n"):
+                perc_at_n = True
             elif (sys.argv[i] == "tiebrk"):
                 tiebrk = 1
             elif (sys.argv[i] == "rndm"):
@@ -347,9 +357,10 @@ if __name__ == "__main__":
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
                 run(table, counts, details, groups, m[0], i>=1, 3, (i==2)*2,
-                    weff=["first", "med"],top1=["perc", "size"], collapse=collapse, file=file)
+                    weff=["first", "med"],top1=["perc", "size"],perc_at_n=True,
+                    collapse=collapse, file=file)
                 file.close()
                 reset(table, counts)
     else:
         run(table, counts, details, groups, mode, feedback, tiebrk, multi, weff,
-                top1, collapse=collapse)
+                top1, perc_at_n, collapse=collapse)

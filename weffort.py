@@ -39,42 +39,10 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
     #print("Length:",len(groups))
     #print("Sort:",sort)
     while (not found):
-        score = sort[i][0]
-        uuts = []
-        group_len = 0
-        curr_faults = 0
-        curr_faulty_groups = 0
-        # Get all UUTs with same score
-        while (i < len(sort) and sort[i][0] == score):
-            #print(i, sort[i][1])
-            uuts.extend(groups[sort[i][1]])
-            group_len += 1
-            # Check if fault is in group
-            faulty_group = False
-            toRemove = set()
-            for item in faults.items():
-                worst_toRemove = []
-                locs = item[1]
-                for loc in locs:
-                    if (loc in groups[sort[i][1]]):
-                        if (worst_effort and len(locs) > 1):
-                            worst_toRemove.append(loc)
-                            continue
-                        #print("found fault", fault)
-                        actual += 1
-                        curr_faults += 1
-                        if (not faulty_group):
-                            curr_faulty_groups += 1
-                            faulty_group = True
-                        #faults.remove(fault)
-                        found = (actual >= target)
-                        toRemove.add(item[0])
-                if (worst_effort):
-                    for loc in worst_toRemove:
-                        locs.remove(loc)
-            for fault in toRemove:
-                faults.pop(fault)
-            i += 1
+        uuts,group_len,curr_faults,curr_faulty_groups,i = getTie(i, faults, sort,
+                groups, worst_effort)
+        actual += curr_faults
+        found = (actual >= target)
         if (avg):
             for j in range(0, curr_faults):
                 if (collapse):
@@ -95,3 +63,40 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
         return sum(efforts)/target
     else:
         return effort
+
+def getTie(i, faults, sort, groups, worst_effort):
+    score = sort[i][0]
+    uuts = []
+    group_len = 0
+    curr_faults = 0
+    curr_faulty_groups = 0
+    # Get all UUTs with same score
+    while (i < len(sort) and sort[i][0] == score):
+        #print(i, sort[i][1])
+        uuts.extend(groups[sort[i][1]])
+        group_len += 1
+        # Check if fault is in group
+        faulty_group = False
+        toRemove = set()
+        for item in faults.items():
+            worst_toRemove = []
+            locs = item[1]
+            for loc in locs:
+                if (loc in groups[sort[i][1]]):
+                    if (worst_effort and len(locs) > 1):
+                        worst_toRemove.append(loc)
+                        continue
+                    #print("found fault", fault)
+                    curr_faults += 1
+                    if (not faulty_group):
+                        curr_faulty_groups += 1
+                        faulty_group = True
+                    #faults.remove(fault)
+                    toRemove.add(item[0])
+            if (worst_effort):
+                for loc in worst_toRemove:
+                    locs.remove(loc)
+        for fault in toRemove:
+            faults.pop(fault)
+        i += 1
+    return uuts,group_len,curr_faults,curr_faulty_groups,i

@@ -1,4 +1,5 @@
 import sys
+from percent_at_n import combine
 
 if __name__ == "__main__":
     metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
@@ -12,8 +13,10 @@ if __name__ == "__main__":
             #"avg",
             #"last",
             "top1",
-            "sizet1"
+            "sizet1",
+            "perc@n"
             ]
+    perc_file = open("perc_at_n_results", "w")
     files = []
     total = 0
     avgs = []
@@ -26,7 +29,10 @@ if __name__ == "__main__":
         for mode in modes:
             files.append(open(mode[0]+metric[0]+"weff"))
             for calc in calcs:
-                avgs.append(0)
+                if (calc == "perc@n"):
+                    avgs.append([])
+                else:
+                    avgs.append(0)
 
     while (True):
         lines = []
@@ -39,7 +45,9 @@ if __name__ == "__main__":
             break
         total += 1
         for i in range(0, len(lines)):
-            if (rel):
+            if (type(avgs[i]) == list):
+                avgs[i].append([float(x) for x in lines[i].strip().split(": ")[1][:-1].split("%,")])
+            elif (rel):
                 avgs[i] += float(lines[i].split(": ")[1])*100/size
             else:
                 avgs[i] += float(lines[i].split(": ")[1])
@@ -50,9 +58,15 @@ if __name__ == "__main__":
         for mode in modes:
             print('\t', mode[1])
             for calc in calcs:
-                avgs[i] = avgs[i]/total
-                if (rel):
+                if (calc == "perc@n"):
+                    comb = combine(avgs[i])
+                    print(metric[1], file=perc_file)
+                    print('\t', mode[1], file=perc_file)
+                    print("\t\t",calc+":", comb, file=perc_file)
+                elif (rel):
+                    avgs[i] = avgs[i]/total
                     print("\t\t",calc+":", str(avgs[i])+"%")
                 else:
+                    avgs[i] = avgs[i]/total
                     print("\t\t",calc+":", avgs[i])
                 i += 1
