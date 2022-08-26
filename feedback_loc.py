@@ -184,17 +184,19 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
     if (feedback):
-        val = sys.float_info.max
+        val = 2**64
         newTable = copy.deepcopy(table)
         newCounts = copy.deepcopy(counts)
         while (newCounts["tf"] > 0):
             #print(newTable)
             faulty = feedback_loc(newTable, newCounts, mode, tiebrk)
+            faulty.reverse()
             #print("faulty:",faulty)
             if (not faulty == []):
                 for x in sort:
                     if (x[1] in faulty):
                         x[0] = val
+                        val = val-1
             # The next iteration can be either multi-fault, or multi-explanation
             # multi-fault -> we assume multiple faults exist
             # multi-explanation -> we assume there are multiple explanations for
@@ -206,7 +208,7 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
                 #print("breaking")
                 break
             #print("not breaking")
-            val = val/10
+            val = val-1
         sort = localize.sort(sort, True, tiebrk)
     if (weff or top1 or perc_at_n):
         faults = find_faults(details)
