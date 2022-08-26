@@ -1,5 +1,6 @@
 import sys
 from percent_at_n import combine
+import os
 
 if __name__ == "__main__":
     metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
@@ -17,40 +18,67 @@ if __name__ == "__main__":
             "perc@n"
             ]
     perc_file = open("perc_at_n_results", "w")
-    files = []
+    files = {}
     total = 0
     avgs = []
     rel = False
-    if (len(sys.argv) > 1 and sys.argv[1] == "rel"):
-        size = int(open("../size").readline())
-        rel = True
+    recurse = False
+    i = 1
+    while (True):
+        if (len(sys.argv) > i):
+            if (sys.argv[i] == "rel"):
+                size = int(open("../size").readline())
+                rel = True
+            elif (sys.argv[i] == "recurse"):
+                recurse = True
+            else:
+                print("Unknown option:", sys.argv[i])
+                quit()
+            i += 1
+        else:
+            break
+
+    dirs = [""]
+    if (recurse):
+        dirs = []
+        for d in os.scandir():
+            if (d.is_dir() and d.name.endswith("-fault")):
+                dirs.append(d.name+"/")
 
     for metric in metrics:
         for mode in modes:
-            files.append(open(mode[0]+metric[0]+"weff"))
             for calc in calcs:
                 if (calc == "perc@n"):
                     avgs.append([])
                 else:
                     avgs.append(0)
 
-    while (True):
-        lines = []
-        for f in files:
-            f.readline()
-            for calc in calcs:
-                lines.append(f.readline())
-            f.readline()
-        if (lines[0] == ''):
-            break
-        total += 1
-        for i in range(0, len(lines)):
-            if (type(avgs[i]) == list):
-                avgs[i].append([float(x) for x in lines[i].strip().split(": ")[1][:-1].split("%,")])
-            elif (rel):
-                avgs[i] += float(lines[i].split(": ")[1])*100/size
-            else:
-                avgs[i] += float(lines[i].split(": ")[1])
+    for d in dirs:
+        files[d] = []
+        for metric in metrics:
+            for mode in modes:
+                files[d].append(open(d+mode[0]+metric[0]+"weff"))
+
+    end = False
+    while (not end):
+        for d in dirs:
+            lines = []
+            for f in files[d]:
+                f.readline()
+                for calc in calcs:
+                    lines.append(f.readline())
+                f.readline()
+            if (lines[0] == ''):
+                end = True
+                break
+            total += 1
+            for i in range(0, len(lines)):
+                if (type(avgs[i]) == list):
+                    avgs[i].append([float(x) for x in lines[i].strip().split(": ")[1][:-1].split("%,")])
+                elif (rel):
+                    avgs[i] += float(lines[i].split(": ")[1])*100/size
+                else:
+                    avgs[i] += float(lines[i].split(": ")[1])
 
     i = 0
     for metric in metrics:

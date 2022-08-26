@@ -21,12 +21,12 @@ def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
                 ranking, groups, worst_effort)
         if (collapse):
             for f in range(curr_fault_groups):
-                expect_value = (group_len+1)/(curr_fault_groups+1) - 1
+                expect_value = (group_len+1)/(curr_fault_groups+1) # - 1
                 bumps.append((total+(f+1)*expect_value)/size)
             total += group_len
         else:
             for f in range(curr_faults):
-                expect_value = (len(uuts)+1)/(curr_faults+1) - 1
+                expect_value = (len(uuts)+1)/(curr_faults+1) # - 1
                 bumps.append((total+(f+1)*expect_value)/size)
             total += len(uuts)
     return bumps
@@ -41,9 +41,10 @@ def combine(results):
         curr = [(math.inf if (pointers[i] == len(results[i])) else results[i][pointers[i]])
                 for i in range(size)]
         min_ = min(curr)
-        i = curr.index(min_)
-        pointers[i] += 1
-        total += 100/(len(results[i])*size)
+        indexes = [i for i,x in enumerate(curr) if x == min_]
+        for i in indexes:
+            pointers[i] += 1
+            total += 100/(len(results[i])*size)
         combined.append((min_, round(total, 8)))
     return combined
 

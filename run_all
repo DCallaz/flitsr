@@ -21,7 +21,7 @@ run_with_lock() {
   )&
 }
 
-N=8
+N=5
 open_sem $N
 if [ $1 = "tcm" ]; then
   dir_type=*-fault
@@ -39,7 +39,7 @@ fi
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
-          run_with_lock feedback "$file" tcm all;
+          run_with_lock feedback "$file" tcm all collapse;
         done
       else
         for file in */; do run_with_lock feedback "${file%/}" all; done
