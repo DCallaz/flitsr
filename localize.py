@@ -48,6 +48,10 @@ def apply_formula(counts, formula):
             scores.append(sus.harmonic())
         elif (formula == 'z'):
             scores.append(sus.zoltar())
+        elif (formula == 'y'):
+            scores.append(sus.hyperbolic())
+        elif (formula == 'b'):
+            scores.append(sus.barinel())
     return scores
 
 def get_exec(counts):

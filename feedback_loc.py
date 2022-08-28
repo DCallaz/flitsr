@@ -4,6 +4,8 @@ import weffort
 import top
 import copy
 import percent_at_n
+import parallel
+import precision_recall
 
 #<------------------ Outdated methods ----------------------->
 
@@ -179,7 +181,7 @@ def print_table(table):
 #  ..., ...
 #]
 def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
-        multi=0, weff=None, top1=None, perc_at_n=False, collapse=False, file=sys.stdout):
+        multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None, collapse=False, file=sys.stdout):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -210,7 +212,10 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
             #print("not breaking")
             val = val-1
         sort = localize.sort(sort, True, tiebrk)
-    if (weff or top1 or perc_at_n):
+    output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
+
+def output(sort, details, groups, weff, top1, perc_at_n, prec_rec, collapse, file):
+    if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(details)
         if (weff):
             if ("first" in weff):
@@ -243,6 +248,14 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
                     collapse=collapse)
             form = ','.join(['{:.8%}']*len(bumps))
             print("percentage at n:", form.format(*bumps), file=file)
+        if (prec_rec):
+            for entry in prec_rec:
+                if (entry[0] == 'p'):
+                    p = precision_recall.precision(entry[1], faults, sort, groups, collapse)
+                    print("precision at {}: {}".format(entry[1], p))
+                elif (entry[0] == 'r'):
+                    r = precision_recall.recall(entry[1], faults, sort, groups, collapse)
+                    print("recall at {}: {}".format(entry[1], r))
     else:
         names = []
         for x in sort:
@@ -251,9 +264,9 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
-        print("Usage: feedback <input file> [tarantula/ochiai/jaccard/dstar/zoltar]"
+        print("Usage: feedback <input file> [tarantula/ochiai/jaccard/dstar/zoltar/barinel/hyperbolic]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [perc@n]"
+                +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
         exit()
     d = sys.argv[1]
@@ -263,11 +276,13 @@ if __name__ == "__main__":
     i = 2
     weff = []
     top1 = []
+    prec_rec = []
     perc_at_n = False
     tiebrk = 3
     multi = 0
     all = False
     collapse = False
+    parallell = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "tarantula"):
@@ -290,6 +305,12 @@ if __name__ == "__main__":
                 mode = 'h'
             elif (sys.argv[i] == "zoltar"):
                 mode = 'z'
+            elif (sys.argv[i] == "hyperbolic"):
+                mode = 'y'
+            elif (sys.argv[i] == "barinel"):
+                mode = 'b'
+            elif (sys.argv[i] == "parallel"):
+                parallell = True
             elif (sys.argv[i] == "feedback"):
                 feedback = True
             elif (sys.argv[i] == "tcm"):
@@ -314,6 +335,18 @@ if __name__ == "__main__":
                 top1.append("size")
             elif (sys.argv[i] == "perc@n"):
                 perc_at_n = True
+            elif ("precision@" in sys.argv[i]):
+                n = sys.argv[i].split("@")[1]
+                if (n == "b" or n == "f"):
+                    prec_rec.append(('p', n))
+                else:
+                    prec_rec.append(('p', float(n)))
+            elif ("recall@" in sys.argv[i]):
+                n = sys.argv[i].split("@")[1]
+                if (n == "b" or n == "f"):
+                    prec_rec.append(('r', n))
+                else:
+                    prec_rec.append(('r', float(n)))
             elif (sys.argv[i] == "tiebrk"):
                 tiebrk = 1
             elif (sys.argv[i] == "rndm"):
@@ -339,7 +372,14 @@ if __name__ == "__main__":
         from input import read_table, print_names, find_faults
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
-    table,counts,groups,details = read_table(d)
+    table,counts,groups,details,test_map = read_table(d)
+    sort_par = None
+    if (parallell or all):
+        sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)
+        if (parallell):
+            output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
+                    collapse, sys.stdout)
+            quit()
     #print(table)
     #print(counts)
     #print(groups)
@@ -359,10 +399,10 @@ if __name__ == "__main__":
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
                 run(table, counts, details, groups, m[0], i>=1, 3, (i==2)*2,
-                    weff=["first", "med"],top1=["perc", "size"],perc_at_n=True,
+                    weff=["first", "med", "last"],top1=["perc", "size"],perc_at_n=True,
                     collapse=collapse, file=file)
                 file.close()
                 reset(table, counts)
     else:
         run(table, counts, details, groups, mode, feedback, tiebrk, multi, weff,
-                top1, perc_at_n, collapse=collapse)
+                top1, perc_at_n, prec_rec, collapse=collapse)

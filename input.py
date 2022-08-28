@@ -39,6 +39,7 @@ def fill_table(tests, num_tests, locs, bin_file):
     table = []
     groups = [[i for i in range(0, locs)]]
     counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
+    test_map = {}
     for r in range(0, num_tests):
         row = [True] + [False]*locs
         line = bin_file.readline()
@@ -58,10 +59,11 @@ def fill_table(tests, num_tests, locs, bin_file):
         else:
             counts["tf"] += 1
             table.append(row)
+            test_map[r] = len(table)-1
     groups.sort(key=lambda group: group[0])
     # Remove groupings from table
     remove_from_table(groups, table, counts)
-    return table,groups,counts
+    return table,groups,counts,test_map
 
 def read_table(directory):
     # Getting the details of the project
@@ -72,13 +74,13 @@ def read_table(directory):
     #print("constructing table")
     tests,num_tests = construct_tests(open(directory+"/tests.csv"))
     #print("filling table")
-    table,groups,counts = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
+    table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
     faults,unexposed = split(details["faults"], table, groups)
     details["faults"] = faults
     for unex in unexposed:
         print("Dropped faulty UUT due to unexposure:")
         print_name(find_name(details, unex, groups))
-    return table,counts,groups,details
+    return table,counts,groups,details,test_map
 
 def find_name(details, elem, groups):
     offsets = details['fileOffsets']

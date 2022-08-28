@@ -33,6 +33,7 @@ def fill_table(tests, num_tests, locs, f):
     table = []
     groups = [[i for i in range(0, locs)]]
     counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
+    test_map = {}
     for r in range(0, num_tests):
         row = [True] + [False]*locs
         # Construct the table row
@@ -53,10 +54,11 @@ def fill_table(tests, num_tests, locs, f):
         else:
             counts["tf"] += 1
             table.append(row)
+            test_map[r] = len(table)-1
     groups.sort(key=lambda group: group[0])
     # Remove groupings from table
     remove_from_table(groups, table, counts)
-    return table,groups,counts
+    return table,groups,counts,test_map
 
 def read_table(file_loc):
     table = None
@@ -81,7 +83,7 @@ def read_table(file_loc):
             details,num_locs = construct_details(file)
         elif (line.startswith("#matrix")):
             # Filling the table
-            table,groups,counts = fill_table(tests, num_tests, num_locs, file)
+            table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, file)
     file.close()
     faults,unexposed = split(find_faults(details), table, groups)
     for i in range(len(details)):
@@ -91,7 +93,7 @@ def read_table(file_loc):
         for item in faults.items():
             if (i in item[1]):
                 details[i] = (details[i][0], item[0])
-    return table,counts,groups,details
+    return table,counts,groups,details,test_map
 
 def find_names(details, faulties, groups):
     ret = []

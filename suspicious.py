@@ -89,10 +89,9 @@ class Suspicious() :
             return  0.0
         nominator = self.ef
         multifault_component = 10000*(self.nf*self.ep)/self.ef
-        denominator = multifault_component + self.ef + self.nf + self.ep
+        denominator = multifault_component + self.tf + self.ep
         score = nominator / denominator
         return round(score, 4)
-
 
     def gp13(self) :
         """
@@ -103,8 +102,6 @@ class Suspicious() :
         if self.ef == 0 :
             return 0.0
         denominator = self.ef + 2*self.ep
-        if denominator == 0:
-            return math.inf
         score = self.ef * (1 + 1/denominator)
         return round(score, 4)
 
@@ -120,11 +117,7 @@ class Suspicious() :
         Ref: Naish, L., Lee, H. J., Ramamohanarao, K. A model for spectra-based software
         diagnosis. ACM Trans. Softw. Eng. Methodol. (2011), 20(3):1-32
         """
-        nominator = self.ep
-        denominator = self.np + self.ep + 1
-        if denominator == 0:
-            return math.inf
-        score = self.ef - (nominator/denominator)
+        score = self.ef - (self.ep/(self.tp+1))
         return round(score, 4)
 
     def overlap(self):
@@ -144,10 +137,27 @@ class Suspicious() :
         ???
         """
         n1 = (self.ef*self.np-self.nf*self.ep)
-        n2 = ((self.ef+self.ep)*(self.np+self.nf)+(self.ef+self.nf)*(self.ep+self.np))
+        n2 = ((self.ef+self.ep)*(self.np+self.nf)+(self.tf)*(self.tp))
         nominator = n1*n2
-        denominator = (self.ef+self.ep)*(self.np+self.nf)*(self.ef+self.nf)*(self.ep+self.np)+1
+        denominator = (self.ef+self.ep)*(self.np+self.nf)*(self.tf)*(self.tp)+1
         if denominator == 0:
             return math.inf
         score = nominator / denominator
+        return round(score, 4)
+
+    def hyperbolic(self):
+        K1 = 0.375
+        K2 = 0.768
+        K3 = 0.711
+        t1 = 1/(K1 + (self.nf/self.tf))
+        t2 = K3/(K2 + self.ep/(self.ef + self.ep))
+        score = t1 + t2
+        return round(score, 4)
+
+    def barinel(self):
+        denominator = self.ep + self.ef
+        if (denominator == 0):
+            return 0.0
+        h = self.ep/denominator
+        score = h**(self.ep) * (1-h)**(self.ef)
         return round(score, 4)
