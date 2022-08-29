@@ -146,6 +146,8 @@ class Suspicious() :
         return round(score, 4)
 
     def hyperbolic(self):
+        if (self.ef + self.ep == 0):
+            return 0.0
         K1 = 0.375
         K2 = 0.768
         K3 = 0.711

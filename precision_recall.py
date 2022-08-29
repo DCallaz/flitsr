@@ -3,10 +3,14 @@ import copy
 from weffort import getTie
 
 def precision(n, faults, ranking, groups, perc=False, worst_effort=False, collapse=False):
+    if (len(faults) == 0):
+        return 0.0
     fault_num,total = method(n,perc, faults, ranking, groups, worst_effort, collapse)
     return fault_num/total
 
 def recall(n, faults, ranking, groups, perc=False, worst_effort=False, collapse=False):
+    if (len(faults) == 0):
+        return 0.0
     fault_num,total = method(n,perc, faults, ranking, groups, worst_effort, collapse)
     return fault_num/len(faults)
 
@@ -38,9 +42,10 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
                     expected_value = (i+1)*(group_len+1)/(curr_fault_groups+1)
                     if (expected_value <= x):
                         add += 1
+                total += x
             else:
                 add = curr_fault_groups
-            total += group_len
+                total += group_len
             fault_num += add
         else:
             add = 0
@@ -50,8 +55,9 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
                     expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
                     if (expected_value <= x):
                         add += 1
+                total += x
             else:
                 add = curr_faults
-            total += len(uuts)
+                total += len(uuts)
             fault_num += add
     return fault_num,total

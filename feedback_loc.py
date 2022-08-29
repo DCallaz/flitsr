@@ -150,11 +150,16 @@ def feedback_loc(table, counts, formula, tiebrk):
     #print(sort)
     rule = sort[0][1]
     spaces += 1
-    if (sort[0][0] <= 0.0):
+    #if (sort[0][0] <= 0.0):
         #print(" "*spaces,rule,"has zero score, returning")
-        return []
+        #return []
     #print(" "*spaces, rule,"with score",sort[0][0])
     tests_removed = remove_from_tests(rule, table, counts)
+    i = 1
+    while (len(tests_removed) == 0): # sanity check
+        rule = sort[i][1]
+        tests_removed = remove_from_tests(rule, table, counts)
+        i += 1
     #print(" "*spaces, "removed:",tests_removed)
     faulty = feedback_loc(table, counts, formula, tiebrk)
     remove_faulty_rules(table, tests_removed, faulty)
@@ -214,7 +219,8 @@ def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
         sort = localize.sort(sort, True, tiebrk)
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
 
-def output(sort, details, groups, weff, top1, perc_at_n, prec_rec, collapse, file):
+def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
+        prec_rec=None, collapse=False, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(details)
         if (weff):
@@ -252,10 +258,10 @@ def output(sort, details, groups, weff, top1, perc_at_n, prec_rec, collapse, fil
             for entry in prec_rec:
                 if (entry[0] == 'p'):
                     p = precision_recall.precision(entry[1], faults, sort, groups, collapse)
-                    print("precision at {}: {}".format(entry[1], p))
+                    print("precision at {}: {}".format(entry[1], p), file=file)
                 elif (entry[0] == 'r'):
                     r = precision_recall.recall(entry[1], faults, sort, groups, collapse)
-                    print("recall at {}: {}".format(entry[1], r))
+                    print("recall at {}: {}".format(entry[1], r), file=file)
     else:
         names = []
         for x in sort:
@@ -378,7 +384,7 @@ if __name__ == "__main__":
         sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)
         if (parallell):
             output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
-                    collapse, sys.stdout)
+                    collapse)
             quit()
     #print(table)
     #print(counts)
@@ -389,18 +395,28 @@ if __name__ == "__main__":
     #print_table(table)
     if (all):
         types = ["", "flitsr_", "flitsr_multi_"]
-        modes = ["tar_", "och_", "dst_"]
-        for m in modes:
+        modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
+                 "ovr_", "harm_", "zol_", "hyp_", "bar_", "par_"]
+        chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b', 'p']
+        for m in range(len(modes)):
             for i in range(3):
             #for i in range(10):
                 #d_p_s = d_p.split('.')
                 #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
-                file = open(types[i]+m+d_p, "x")
+                file = open(types[i]+modes[m]+d_p, "x")
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
-                run(table, counts, details, groups, m[0], i>=1, 3, (i==2)*2,
-                    weff=["first", "med", "last"],top1=["perc", "size"],perc_at_n=True,
-                    collapse=collapse, file=file)
+                if (chs[m] == 'p'):
+                    output(sort_par, details, groups, weff=["first","med","last"],
+                            perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
+                            ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
+                            collapse=collapse, file=file)
+                else:
+                    run(table, counts, details, groups, chs[m], i>=1, 3, (i==2)*2,
+                        weff=["first", "med", "last"],
+                        perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
+                            ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
+                        collapse=collapse, file=file)
                 file.close()
                 reset(table, counts)
     else:

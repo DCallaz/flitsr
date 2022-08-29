@@ -93,6 +93,9 @@ def read_table(file_loc):
         for item in faults.items():
             if (i in item[1]):
                 details[i] = (details[i][0], item[0])
+    if (len(faults) == 0):
+        print("No exposable faults in", file_loc)
+        quit()
     return table,counts,groups,details,test_map
 
 def find_names(details, faulties, groups):

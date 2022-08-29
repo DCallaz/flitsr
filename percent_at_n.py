@@ -6,6 +6,8 @@ import copy
 import ast
 
 def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
+    if (len(faults) == 0):
+        return [0.0]
     faults = copy.deepcopy(faults) # needed to remove groups of fault locations
     i = 0
     total = 0
@@ -55,7 +57,7 @@ def plot(plot_file):
     i = 0
     j = 0
     labels = []
-    fig, axs = plt.subplots(1,3)
+    fig, axs = plt.subplots(1,12)
     for line in lines:
         if (line.startswith("\t\t")):
             comb = ast.literal_eval(line.strip().split(": ")[1])
@@ -92,6 +94,12 @@ def plot(plot_file):
         #plt.xlim(0, 100)
         ax.grid()
     plt.show()
+
+def auc_calc(points):
+    auc = 0
+    for i in range(1, len(points)):
+        auc += (points[i][0] - points[i-1][0]) * points[i-1][1]
+    return auc
 
 if __name__ == "__main__":
     if (len(sys.argv) > 1):

@@ -3,7 +3,11 @@ from percent_at_n import combine
 import os
 
 if __name__ == "__main__":
-    metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
+    #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
+    metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar"),
+               ("jac_", "Jaccard"), ("gp13_", "GP13"), ("nai_", "naish2"),
+               ("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
+               ("hyp_", "Hyperbolic"), ("bar_", "Barinel"), ("par_", "Parallel")]
     modes = [("", "Base metric"), ("flitsr_", "FLITSR"), #("feed_tie_", "feedback tie"),
             #("feed_multi_", "feedback multi"),
             ("flitsr_multi_", "FLITSR*")]
@@ -11,11 +15,19 @@ if __name__ == "__main__":
             #"feedback random average"), ("feed_rndm_min_", "feedback random min")]
     calcs = ["first",
             "med",
+            "last",
             #"avg",
-            #"last",
-            "top1",
-            "sizet1",
-            "perc@n"
+            #"top1",
+            #"sizet1",
+            "perc@n",
+            "precision at 1",
+            "precision at 5",
+            "precision at 10",
+            "precision at num faults",
+            "recall at 1",
+            "recall at 5",
+            "recall at 10",
+            "recall at num faults"
             ]
     perc_file = open("perc_at_n_results", "w")
     files = {}
