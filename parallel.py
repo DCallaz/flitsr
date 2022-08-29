@@ -11,7 +11,7 @@ def parallel(d, table, test_map, counts, tiebrk):
 def partition_table(d, table, test_map, counts):
     output = subprocess.check_output(['java', '-jar',
         '/home/21831599/subjects/masters/feedback_localizer/parallel-1.0-SNAPSHOT-jar-with-dependencies.jar', d]).decode('utf-8')
-    partitions = re.split("partition \d\n", output)[1:]
+    partitions = re.split("partition \d+\n", output)[1:]
     tables = []
     count_arr = []
     for partition in partitions:
