@@ -7,7 +7,7 @@ if __name__ == "__main__":
     metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar"),
                ("jac_", "Jaccard"), ("gp13_", "GP13"), ("nai_", "naish2"),
                ("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
-               ("hyp_", "Hyperbolic"), ("bar_", "Barinel"), ("par_", "Parallel")]
+               ("hyp_", "Hyperbolic"), ("bar_", "Barinel")]#, ("par_", "Parallel")]
     modes = [("", "Base metric"), ("flitsr_", "FLITSR"), #("feed_tie_", "feedback tie"),
             #("feed_multi_", "feedback multi"),
             ("flitsr_multi_", "FLITSR*")]
@@ -35,14 +35,17 @@ if __name__ == "__main__":
     avgs = []
     rel = False
     recurse = False
+    max = None
     i = 1
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "rel"):
                 size = int(open("../size").readline())
                 rel = True
-            elif (sys.argv[i] == "recurse"):
+            elif (sys.argv[i].startswith("recurse")):
                 recurse = True
+                if ("=" in sys.argv[i]):
+                    max = int(sys.argv[i].split("=")[1])
             else:
                 print("Unknown option:", sys.argv[i])
                 quit()
@@ -50,12 +53,19 @@ if __name__ == "__main__":
         else:
             break
 
+    def find_dirs(dirs, path, depth=1, max=None):
+        for dir in os.scandir(path):
+            if (dir.is_dir()):
+                new_path = dir.path
+                if ((max and depth >= max) or (not max and dir.name.endswith("-fault"))):
+                    dirs.append(new_path+"/")
+                else:
+                    find_dirs(dirs, new_path, depth=depth+1, max=max)
+
     dirs = [""]
     if (recurse):
         dirs = []
-        for d in os.scandir():
-            if (d.is_dir() and d.name.endswith("-fault")):
-                dirs.append(d.name+"/")
+        find_dirs(dirs, ".", max=max)
 
     for metric in metrics:
         for mode in modes:
@@ -95,13 +105,15 @@ if __name__ == "__main__":
     i = 0
     for metric in metrics:
         print(metric[1])
+        if ("perc@n" in calcs):
+            print(metric[1], file=perc_file)
         for mode in modes:
             print('\t', mode[1])
+            if ("perc@n" in calcs):
+                print('\t', mode[1], file=perc_file)
             for calc in calcs:
                 if (calc == "perc@n"):
                     comb = combine(avgs[i])
-                    print(metric[1], file=perc_file)
-                    print('\t', mode[1], file=perc_file)
                     print("\t\t",calc+":", comb, file=perc_file)
                 elif (rel):
                     avgs[i] = avgs[i]/total

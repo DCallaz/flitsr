@@ -56,9 +56,11 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
                 effort += len(uuts)-curr_faults
         else:
             if (collapse):
-                effort += (group_len)/(curr_faulty_groups+1)
+                k = target + curr_faults - actual
+                effort += k*((group_len+1)/(curr_faulty_groups+1) - 1)
             else:
-                effort += (len(uuts)+1)/(curr_faults+1)-1
+                k = target + curr_faults - actual
+                effort += k*((len(uuts)+1)/(curr_faults+1)-1)
     if (avg):
         return sum(efforts)/target
     else:

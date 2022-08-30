@@ -9,6 +9,7 @@ if __name__ == "__main__":
     rel = False
     tcm = True
     custom = None
+    metrics = []
     i = 1
     while (True):
         if (len(sys.argv) > i):
@@ -18,8 +19,12 @@ if __name__ == "__main__":
                 rel = True
             elif (sys.argv[i] == "tcm"):
                 tcm = True
-            elif (sys.argv[i].startswith("[")):
-                custom = [x.strip() for x in sys.argv[i][1:-1].split(",")]
+            elif (sys.argv[i].startswith("[") or sys.argv[i].startswith("e[")):
+                index = sys.argv[i].index("[")+1
+                custom = [x.strip() for x in sys.argv[i][index:-1].split(",")]
+            elif (sys.argv[i].startswith("m[")):
+                index = sys.argv[i].index("[")+1
+                metrics = [x.strip() for x in sys.argv[i][index:-1].split(",")]
             else:
                 print("Unknown option:", sys.argv[i])
                 exit(1)
@@ -28,7 +33,9 @@ if __name__ == "__main__":
             break
     faults = []
     total = 0
-    num_locs = int(open("size").readline())
+    num_locs = 0
+    if (os.path.isfile("size")):
+        num_locs = int(open("size").readline())
     proj = os.getcwd().split("/")[-1].capitalize()
     for d in os.scandir():
         if (tcm and d.is_dir() and d.name.endswith("_Chart")):
@@ -74,12 +81,14 @@ if __name__ == "__main__":
                     else:
                         mod[calc[0]].append(float(calc[1]))
                     line = file.readline()
+    if (len(metrics) == 0):
+        metrics = names.keys()
     color = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
     shape = ['^', '.', 'v', '-']
     if (seperate):
         if (custom):
             size = len(custom)
-        fig, axs = plt.subplots(size,3, sharey='row',
+        fig, axs = plt.subplots(size,len(metrics), sharey='row',
                 gridspec_kw={"left": 0.022,
                  "bottom": 0.027,
                  "right":0.994,
@@ -100,7 +109,7 @@ if __name__ == "__main__":
 
     #remove unused things
     #del names['jaccard']
-    for metric in names.keys():
+    for metric in metrics:
         #print(metric)
         modes = names[metric]
         #del modes['feedback multi']
@@ -126,6 +135,7 @@ if __name__ == "__main__":
                     #else:
                         #axs[j, ax].set_title("Comparison of the wasted effort for the "+calc
                             #+"\nfault using the "+metric+" metric")
+                    axs[j, ax].set_title(metric+" "+calc)
                     axs[j, ax].grid(True)
                     #legendloc = "upper left" if j == 1 else "upper right"
                     axs[j, ax].legend([x for x in list(modes.keys())],

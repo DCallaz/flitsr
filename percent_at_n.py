@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import sys
 import copy
 import ast
+from enum import Enum
 
 def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
     if (len(faults) == 0):
@@ -50,54 +51,80 @@ def combine(results):
         combined.append((min_, round(total, 8)))
     return combined
 
-def plot(plot_file):
-    lines = plot_file.readlines()
+plot_type = Enum("plot_type", "metric mode")
+
+def read_comb_file(comb_file):
+    lines = open(comb_file).readlines()
     metrics = []
     modes = []
-    i = 0
-    j = 0
-    labels = []
-    fig, axs = plt.subplots(1,12)
+    metric = None
+    mode = None
+    points = {}
     for line in lines:
         if (line.startswith("\t\t")):
             comb = ast.literal_eval(line.strip().split(": ")[1])
-            x = [0]
-            y = [0]
-            for inc in comb:
-                x.append(inc[0])
-                y.append(inc[1])
-            x.append(100)
-            y.append(100)
-            axs[i].plot(x, y)
+            comb.append((100.0, 100.0))
+            points[(metric, mode)] = comb
         elif (line.startswith("\t")):
             mode = line.strip()
             if (mode not in modes):
-                j = len(modes)
                 modes.append(mode)
-            else:
-                j = modes.index(mode)
         else:
             metric = line.strip()
             if (metric not in metrics):
-                i = len(metrics)
                 metrics.append(metric)
+    return metrics, modes, points
+
+def plot(plot_file, type=plot_type.metric, metrics=None):
+    modes = []
+    comb_points = {}
+    if (metrics == None):
+        metrics,modes,comb_points = read_comb_file(plot_file)
+    else:
+        _,modes,comb_points = read_comb_file(plot_file)
+    points = {}
+    for item in comb_points.items():
+        key = item[0]
+        x = [0]
+        y = [0]
+        for inc in item[1]:
+            x.append(inc[0])
+            y.append(inc[1])
+        #x.append(100)
+        #y.append(100)
+        points[key] = (x, y)
+    split = metrics
+    merged = modes
+    if (type == plot_type.mode):
+        split = modes
+        merged = metrics
+    fig, axs = plt.subplots(1,len(split))
+    i = 0
+    for s in split:
+        for m in merged:
+            if (type == plot_type.mode):
+                point = points[(m, s)]
             else:
-                i = metrics.index(metric)
+                point = points[(s, m)]
+            axs[i].plot(point[0], point[1])
+        i += 1
     #plt.step(x,y)
     for i in range(len(axs)):
         ax = axs[i]
-        ax.set_xticks([0.01, 0.1, 1, 10, 100])
-        ax.legend(modes)
-        ax.set_xscale("log")
-        ax.set_title(metrics[i])
+        ax.legend(merged)
+        #ax.set_xscale("log")
+        #ax.set_xticks([0.01, 0.1, 1, 10, 100])
+        ax.set_title(split[i])
         #plt.ylim(0, 100)
         #plt.xlim(0, 100)
         ax.grid()
     plt.show()
 
-def auc_calc(points):
+def auc_calc(points, cut_off):
     auc = 0
     for i in range(1, len(points)):
+        if (points[i][0] >= cut_off):
+            break
         auc += (points[i][0] - points[i-1][0]) * points[i-1][1]
     return auc
 
@@ -108,5 +135,45 @@ if __name__ == "__main__":
             infile = sys.argv[2]
             lines = open(infile).readlines()
         elif (mode == "plot"):
-            plot_file = open(sys.argv[2])
-            plot(plot_file)
+            plot_file = sys.argv[2]
+            split = plot_type.metric
+            metrics = None
+            i = 3
+            while (True):
+                if (len(sys.argv) > i):
+                    if (sys.argv[i] == "mode"):
+                        split = plot_type.mode
+                    elif (sys.argv[i].startswith("[")):
+                        metrics = [x.strip() for x in
+                                sys.argv[i][1:-1].split(",")]
+                    else:
+                        print("Unknown option:", sys.argv[i])
+                        exit(1)
+                    i += 1
+                else:
+                    break
+            plot(plot_file, type=split, metrics=metrics)
+        elif (mode == "auc"):
+            comb_file = sys.argv[2]
+            metrics,modes,points = read_comb_file(comb_file)
+            cutoff = 101.0
+            i = 3
+            while (True):
+                if (len(sys.argv) > i):
+                    if (sys.argv[i].startswith("[")):
+                        metrics = [x.strip() for x in
+                                sys.argv[i][1:-1].split(",")]
+                    elif (sys.argv[i].startswith("cutoff=")):
+                        cutoff = float(sys.argv[i].split("=")[1])
+                    else:
+                        print("Unknown option:", sys.argv[i])
+                        exit(1)
+                    i += 1
+                else:
+                    break
+            for metric in metrics:
+                base = auc_calc(points[(metric, "Base metric")], cutoff)
+                flitsr = auc_calc(points[(metric, "FLITSR")], cutoff)
+                flitsr_m = auc_calc(points[(metric, "FLITSR*")], cutoff)
+                print("{} FLITSR imprv: {:.6%}".format(metric, flitsr/base))
+                print("{} FLITSR* imprv: {:.6%}".format(metric, flitsr_m/base))
