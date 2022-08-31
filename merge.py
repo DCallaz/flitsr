@@ -1,6 +1,7 @@
 import sys
 from percent_at_n import combine
 import os
+from file import File
 
 if __name__ == "__main__":
     #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
@@ -79,7 +80,7 @@ if __name__ == "__main__":
         files[d] = []
         for metric in metrics:
             for mode in modes:
-                files[d].append(open(d+mode[0]+metric[0]+"weff"))
+                files[d].append(File(d+mode[0]+metric[0]+"weff"))
 
     end = False
     while (not end):

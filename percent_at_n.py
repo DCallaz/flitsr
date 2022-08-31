@@ -75,7 +75,7 @@ def read_comb_file(comb_file):
                 metrics.append(metric)
     return metrics, modes, points
 
-def plot(plot_file, type=plot_type.metric, metrics=None):
+def plot(plot_file, log=True, type=plot_type.metric, metrics=None):
     modes = []
     comb_points = {}
     if (metrics == None):
@@ -112,8 +112,9 @@ def plot(plot_file, type=plot_type.metric, metrics=None):
     for i in range(len(axs)):
         ax = axs[i]
         ax.legend(merged)
-        #ax.set_xscale("log")
-        #ax.set_xticks([0.01, 0.1, 1, 10, 100])
+        if (log):
+            ax.set_xscale("log")
+            ax.set_xticks([0.01, 0.1, 1, 10, 100])
         ax.set_title(split[i])
         #plt.ylim(0, 100)
         #plt.xlim(0, 100)
@@ -138,6 +139,7 @@ if __name__ == "__main__":
             plot_file = sys.argv[2]
             split = plot_type.metric
             metrics = None
+            log = True
             i = 3
             while (True):
                 if (len(sys.argv) > i):
@@ -146,13 +148,17 @@ if __name__ == "__main__":
                     elif (sys.argv[i].startswith("[")):
                         metrics = [x.strip() for x in
                                 sys.argv[i][1:-1].split(",")]
+                    elif (sys.argv[i] == "linear"):
+                        log = False
+                    elif (sys.argv[i] == "log"):
+                        log = True
                     else:
                         print("Unknown option:", sys.argv[i])
                         exit(1)
                     i += 1
                 else:
                     break
-            plot(plot_file, type=split, metrics=metrics)
+            plot(plot_file, log=log, type=split, metrics=metrics)
         elif (mode == "auc"):
             comb_file = sys.argv[2]
             metrics,modes,points = read_comb_file(comb_file)
