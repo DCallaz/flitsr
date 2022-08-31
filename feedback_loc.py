@@ -396,8 +396,8 @@ if __name__ == "__main__":
     if (all):
         types = ["", "flitsr_", "flitsr_multi_"]
         modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
-                 "ovr_", "harm_", "zol_", "hyp_", "bar_", "par_"]
-        chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b', 'p']
+                 "ovr_", "harm_", "zol_", "hyp_", "bar_"]
+        chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b']
         for m in range(len(modes)):
             for i in range(3):
             #for i in range(10):
@@ -413,7 +413,7 @@ if __name__ == "__main__":
                             collapse=collapse, file=file)
                 else:
                     run(table, counts, details, groups, chs[m], i>=1, 3, (i==2)*2,
-                        weff=["first", "med", "last"],
+                        weff=["first", "avg", "med", "last"],
                         perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
                         collapse=collapse, file=file)

@@ -1,10 +1,12 @@
 from weffort import getTie
 import math
 from matplotlib import pyplot as plt
+import matplotlib.cm as cm
 import sys
 import copy
 import ast
 from enum import Enum
+import numpy as np
 
 def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
     if (len(faults) == 0):
@@ -75,7 +77,7 @@ def read_comb_file(comb_file):
                 metrics.append(metric)
     return metrics, modes, points
 
-def plot(plot_file, log=True, type=plot_type.metric, metrics=None):
+def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
     modes = []
     comb_points = {}
     if (metrics == None):
@@ -98,24 +100,50 @@ def plot(plot_file, log=True, type=plot_type.metric, metrics=None):
     if (type == plot_type.mode):
         split = modes
         merged = metrics
-    fig, axs = plt.subplots(1,len(split))
+    fig, axs = plt.subplots(1,1 if all else len(split),
+                gridspec_kw={"left": 0.024,
+                 "bottom": 0.038,
+                 "right":0.99,
+                 "top": 0.978,
+                 "wspace": 0.2,
+                 "hspace": 0.2})
+    color = list(cm.rainbow(np.linspace(0, 1, len(split))))
+    style = ["-", "--", ":"]
+    marker = ['v', 'o', '+', '8', 's', 'p', '*', '^', 'x', 'D', '<', '>']
     i = 0
+    labels = []
     for s in split:
+        j = 0
         for m in merged:
-            if (type == plot_type.mode):
-                point = points[(m, s)]
-            else:
-                point = points[(s, m)]
-            axs[i].plot(point[0], point[1])
+            if (m == "Base metric" or s == "Harmonic" or s == "Ochiai"
+                    or s == "Tarantula"):
+                if (type == plot_type.mode):
+                    point = points[(m, s)]
+                else:
+                    point = points[(s, m)]
+                if (all):
+                    labels.append(s + " " + (m if m != "Base metric" else ""))
+                    axs.plot(point[0], point[1], style[j], color=color[i],
+                            marker=marker[i], markevery=0.1)
+                else:
+                    axs[i].plot(point[0], point[1])
+            j += 1
         i += 1
     #plt.step(x,y)
-    for i in range(len(axs)):
-        ax = axs[i]
-        ax.legend(merged)
+    for i in range(1 if (all) else len(axs)):
+        if (all):
+            ax = axs
+        else:
+            ax = axs[i]
+        if (all):
+            ax.legend(labels)
+            #ax.set_title("")
+        else:
+            ax.legend(merged)
+            ax.set_title(split[i])
         if (log):
             ax.set_xscale("log")
             ax.set_xticks([0.01, 0.1, 1, 10, 100])
-        ax.set_title(split[i])
         #plt.ylim(0, 100)
         #plt.xlim(0, 100)
         ax.grid()
@@ -140,6 +168,7 @@ if __name__ == "__main__":
             split = plot_type.metric
             metrics = None
             log = True
+            all = False
             i = 3
             while (True):
                 if (len(sys.argv) > i):
@@ -152,13 +181,15 @@ if __name__ == "__main__":
                         log = False
                     elif (sys.argv[i] == "log"):
                         log = True
+                    elif (sys.argv[i] == "all"):
+                        all = True
                     else:
                         print("Unknown option:", sys.argv[i])
                         exit(1)
                     i += 1
                 else:
                     break
-            plot(plot_file, log=log, type=split, metrics=metrics)
+            plot(plot_file, log=log, all=all, type=split, metrics=metrics)
         elif (mode == "auc"):
             comb_file = sys.argv[2]
             metrics,modes,points = read_comb_file(comb_file)

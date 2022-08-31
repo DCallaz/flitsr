@@ -1,5 +1,5 @@
 import copy
-
+from math import comb,factorial
 from weffort import getTie
 
 def precision(n, faults, ranking, groups, perc=False, worst_effort=False, collapse=False):
@@ -34,7 +34,7 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
     while (i < len(ranking) and total < n):
         uuts,group_len,curr_faults,curr_fault_groups,i = getTie(i, faults,
                 ranking, groups, worst_effort)
-        if (collapse):
+        if (collapse):#TODO: actual calculation for collapse
             add = 0
             if (total+group_len > n and curr_fault_groups > 0):
                 x = n - total
@@ -50,12 +50,18 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
         else:
             add = 0
             if (total+len(uuts) > n and curr_faults > 0):
-                x = n - total
-                for i in range(curr_faults):
-                    expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
-                    if (expected_value <= x):
-                        add += 1
-                total += x
+                p = n - total
+                m = len(uuts)
+                n_f = curr_faults
+                outer_top = factorial(m-p) * factorial(p)
+                outer_bot = factorial(m)
+                for x in range(p):
+                    add += x*(comb(n_f, x) * comb(m, p - x) * outer_top)/outer_bot
+                #for i in range(curr_faults):
+                    #expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
+                    #if (expected_value <= x):
+                        #add += 1
+                total += p
             else:
                 add = curr_faults
                 total += len(uuts)
