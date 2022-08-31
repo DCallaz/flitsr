@@ -50,12 +50,12 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
         else:
             add = 0
             if (total+len(uuts) > n and curr_faults > 0):
-                p = n - total
+                p = int(n - total)
                 m = len(uuts)
                 n_f = curr_faults
                 outer_top = factorial(m-p) * factorial(p)
                 outer_bot = factorial(m)
-                for x in range(p):
+                for x in range(1, p+1):
                     add += x*(comb(n_f, x) * comb(m, p - x) * outer_top)/outer_bot
                 #for i in range(curr_faults):
                     #expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
