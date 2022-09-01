@@ -56,7 +56,7 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
                 outer_top = factorial(m-p) * factorial(p)
                 outer_bot = factorial(m)
                 for x in range(1, p+1):
-                    add += x*(comb(n_f, x) * comb(m, p - x) * outer_top)/outer_bot
+                    add += x*(comb(n_f, x) * comb(m - n_f, p - x) * outer_top)/outer_bot
                 #for i in range(curr_faults):
                     #expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
                     #if (expected_value <= x):
