@@ -1,5 +1,5 @@
 import sys
-from percent_at_n import combine
+from percent_at_n import combine,auc_calc
 import os
 from file import File
 
@@ -38,15 +38,18 @@ if __name__ == "__main__":
     recurse = False
     max = None
     i = 1
+    ns = []
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] == "rel"):
-                size = int(open("../size").readline())
                 rel = True
             elif (sys.argv[i].startswith("recurse")):
                 recurse = True
                 if ("=" in sys.argv[i]):
                     max = int(sys.argv[i].split("=")[1])
+            elif (sys.argv[i].startswith("n")):
+                a = sys.argv[i].split("=")[1]
+                ns = [int(x) for x in a.split(",")]
             else:
                 print("Unknown option:", sys.argv[i])
                 quit()
@@ -58,11 +61,16 @@ if __name__ == "__main__":
         for dir in os.scandir(path):
             if (dir.is_dir()):
                 new_path = dir.path
-                if ((max and depth >= max) or (not max and dir.name.endswith("-fault"))):
+                if ((max and depth >= max) or
+                    (not max and dir.name.endswith("-fault") and
+                        (len(ns) == 0 or int(dir.name.split("-")[0]) in ns) )):
                     dirs.append(new_path+"/")
                 else:
                     find_dirs(dirs, new_path, depth=depth+1, max=max)
 
+    if (rel):
+        if (not recurse):
+            size = int(open("../size").readline())
     dirs = [""]
     if (recurse):
         dirs = []
@@ -76,11 +84,15 @@ if __name__ == "__main__":
                 else:
                     avgs.append(0)
 
+    if (rel):
+        sizes = {}
     for d in dirs:
         files[d] = []
         for metric in metrics:
             for mode in modes:
                 files[d].append(File(d+mode[0]+metric[0]+"weff"))
+                if (rel):
+                    sizes[d] = int(open(d+"../size").readline())
 
     end = False
     while (not end):
@@ -99,7 +111,10 @@ if __name__ == "__main__":
                 if (type(avgs[i]) == list):
                     avgs[i].append([float(x) for x in lines[i].strip().split(": ")[1][:-1].split("%,")])
                 elif (rel):
-                    avgs[i] += float(lines[i].split(": ")[1])*100/size
+                    if (recurse):
+                        avgs[i] += float(lines[i].split(": ")[1])*100/sizes[d]
+                    else:
+                        avgs[i] += float(lines[i].split(": ")[1])*100/size
                 else:
                     avgs[i] += float(lines[i].split(": ")[1])
 

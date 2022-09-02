@@ -43,10 +43,20 @@ def combine(results):
     final = [len(r) for r in results]
     combined = []
     while (pointers != final):
-        curr = [(math.inf if (pointers[i] == len(results[i])) else results[i][pointers[i]])
-                for i in range(size)]
-        min_ = min(curr)
-        indexes = [i for i,x in enumerate(curr) if x == min_]
+        min_ = math.inf
+        indexes = []
+        for i in range(size):
+            if (pointers[i] != len(results[i])):
+                val = results[i][pointers[i]]
+                if (abs(min_ - val) < 10e-3):
+                    indexes.append(i)
+                elif (val < min_):
+                    min_ = val
+                    indexes = [i]
+        #curr = [(math.inf if (pointers[i] == len(results[i])) else results[i][pointers[i]])
+                #for i in range(size)]
+        #min_ = min(curr)
+        #indexes = [i for i,x in enumerate(curr) if x - min_ < 10e-4]
         for i in indexes:
             pointers[i] += 1
             total += 100/(len(results[i])*size)
@@ -100,16 +110,17 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
     if (type == plot_type.mode):
         split = modes
         merged = metrics
+    plt.rcParams.update({'font.size': 11})
     fig, axs = plt.subplots(1,1 if all else len(split),
-                gridspec_kw={"left": 0.024,
-                 "bottom": 0.038,
+                gridspec_kw={"left": 0.045,
+                 "bottom": 0.06,
                  "right":0.99,
-                 "top": 0.978,
+                 "top": 0.99,
                  "wspace": 0.2,
                  "hspace": 0.2})
     color = list(cm.rainbow(np.linspace(0, 1, len(split))))
     style = ["-", "--", ":"]
-    marker = ['v', 'o', '+', '8', 's', 'p', '*', '^', 'x', 'D', '<', '>']
+    marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>']
     i = 0
     labels = []
     for s in split:
@@ -149,7 +160,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
         ax.grid()
     plt.show()
 
-def auc_calc(points, cut_off):
+def auc_calc(points, cut_off=101.0):
     auc = 0
     for i in range(1, len(points)):
         if (points[i][0] >= cut_off):
