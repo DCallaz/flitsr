@@ -6,6 +6,7 @@ import copy
 import percent_at_n
 import parallel
 import precision_recall
+from suspicious import Suspicious
 
 #<------------------ Outdated methods ----------------------->
 
@@ -269,14 +270,17 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
         print_names(details, names, groups, sort, file)
 
 if __name__ == "__main__":
+    metrics = Suspicious.getNames()
     if (len(sys.argv) < 2):
-        print("Usage: feedback <input file> [tarantula/ochiai/jaccard/dstar/zoltar/barinel/hyperbolic]"
+        print("Usage: feedback <input file> [<metric>]"
                 +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
+        print()
+        print("Where <metric> is one of:",metrics)
         exit()
     d = sys.argv[1]
-    mode = 't'
+    metric = 'ochiai'
     feedback = False
     input_m = 0
     i = 2
@@ -291,30 +295,8 @@ if __name__ == "__main__":
     parallell = False
     while (True):
         if (len(sys.argv) > i):
-            if (sys.argv[i] == "tarantula"):
-                mode = 't'
-            elif (sys.argv[i] == "ochiai"):
-                mode = 'o'
-            elif (sys.argv[i] == "jaccard"):
-                mode = 'j'
-            elif (sys.argv[i] == "dstar"):
-                mode = 'd'
-            elif (sys.argv[i] == "gp13"):
-                mode = 'g'
-            elif (sys.argv[i] == "naish2"):
-                mode = 'n'
-            elif (sys.argv[i] == "wong2"):
-                mode = 'w'
-            elif (sys.argv[i] == "overlap"):
-                mode = 'v'
-            elif (sys.argv[i] == "harmonic"):
-                mode = 'h'
-            elif (sys.argv[i] == "zoltar"):
-                mode = 'z'
-            elif (sys.argv[i] == "hyperbolic"):
-                mode = 'y'
-            elif (sys.argv[i] == "barinel"):
-                mode = 'b'
+            if (sys.argv[i] in metrics):
+                metric = sys.argv[i]
             elif (sys.argv[i] == "parallel"):
                 parallell = True
             elif (sys.argv[i] == "feedback"):
@@ -380,7 +362,7 @@ if __name__ == "__main__":
     #print("reading table")
     table,counts,groups,details,test_map = read_table(d)
     sort_par = None
-    if (parallell or all):
+    if (parallell):
         sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)
         if (parallell):
             output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
@@ -395,24 +377,24 @@ if __name__ == "__main__":
     #print_table(table)
     if (all):
         types = ["", "flitsr_", "flitsr_multi_"]
-        modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
-                 "ovr_", "harm_", "zol_", "hyp_", "bar_"]
-        chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b']
-        for m in range(len(modes)):
+        #modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
+                 #"ovr_", "harm_", "zol_", "hyp_", "bar_"]
+        #chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b']
+        for m in range(len(metrics)):
             for i in range(3):
             #for i in range(10):
                 #d_p_s = d_p.split('.')
                 #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
-                file = open(types[i]+modes[m]+d_p, "x")
+                file = open(types[i]+metrics[m]+"_"+d_p, "x")
                 #run(table, details, groups, only_fail, m[0], True, 2, False,
                         #weff=["first", "avg", "med"], collapse=collapse, file=file)
-                if (chs[m] == 'p'):
+                if (m == 'parallel'):
                     output(sort_par, details, groups, weff=["first","med","last"],
                             perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
                             collapse=collapse, file=file)
                 else:
-                    run(table, counts, details, groups, chs[m], i>=1, 3, (i==2)*2,
+                    run(table, counts, details, groups, metrics[m], i>=1, 3, (i==2)*2,
                         weff=["first", "avg", "med", "last"],
                         perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
@@ -420,5 +402,5 @@ if __name__ == "__main__":
                 file.close()
                 reset(table, counts)
     else:
-        run(table, counts, details, groups, mode, feedback, tiebrk, multi, weff,
+        run(table, counts, details, groups, metric, feedback, tiebrk, multi, weff,
                 top1, perc_at_n, prec_rec, collapse=collapse)

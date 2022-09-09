@@ -30,6 +30,7 @@ else
   dir_type=*/
   echo "gzoltar"
 fi
+metrics=$(python3 ~/subjects/masters/feedback_localizer/get_metric_names.py)
 
 #for proj in *; do
   #echo "Running $proj..."
@@ -45,16 +46,16 @@ fi
         for file in */; do run_with_lock feedback "${file%/}" collapse all; done
       fi
       wait
-      for m in tar_ och_ dst_ jac_ gp13_ nai_ ovr_ harm_ zol_ hyp_ bar_ par_; do
+      for m in $metrics; do
         #for t in feed_rndm_; do
         #for t in ""; do
         for t in "" flitsr_ flitsr_multi_; do
-          for file in $t$m*.txt; do
-            orig=${file#"$t$m"}
+          for file in $t${m}_*.txt; do
+            orig=${file#"$t${m}_"}
             echo "$orig"
             cat "$file"; rm "$file";
             echo "--------------------------"
-          done > $t$m"weff"
+          done > "$t${m}_weff"
         done
       done
       echo "Done in $dir"

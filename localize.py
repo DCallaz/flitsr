@@ -28,30 +28,7 @@ def apply_formula(counts, formula):
     scores = []
     for i in range(0, counts["locs"]):
         sus = Suspicious(counts["f"][i], counts["tf"], counts["p"][i], counts["tp"])
-        if (formula == 't'):
-            scores.append(sus.tarantula())
-        elif (formula == 'o'):
-            scores.append(sus.ochai())
-        elif (formula == 'j'):
-            scores.append(sus.jaccard())
-        elif (formula == 'd'):
-            scores.append(sus.dstar())
-        elif (formula == 'g'):
-            scores.append(sus.gp13())
-        elif (formula == 'n'):
-            scores.append(sus.naish2())
-        elif (formula == 'w'):
-            scores.append(sus.wong2())
-        elif (formula == 'v'):
-            scores.append(sus.overlap())
-        elif (formula == 'h'):
-            scores.append(sus.harmonic())
-        elif (formula == 'z'):
-            scores.append(sus.zoltar())
-        elif (formula == 'y'):
-            scores.append(sus.hyperbolic())
-        elif (formula == 'b'):
-            scores.append(sus.barinel())
+        scores.append(sus.execute(formula))
     return scores
 
 def get_exec(counts):
@@ -59,7 +36,6 @@ def get_exec(counts):
     for i in range(counts["locs"]):
        execs.append(counts["p"][i]+counts["f"][i])
     return execs
-
 
 orig = None
 

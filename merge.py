@@ -2,13 +2,15 @@ import sys
 from percent_at_n import combine,auc_calc
 import os
 from file import File
+from suspicious import Suspicious
 
 if __name__ == "__main__":
     #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
-    metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar"),
-               ("jac_", "Jaccard"), ("gp13_", "GP13"), ("nai_", "naish2"),
-               ("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
-               ("hyp_", "Hyperbolic"), ("bar_", "Barinel")]#, ("par_", "Parallel")]
+    #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar"),
+               #("jac_", "Jaccard"), ("gp13_", "GP13"), ("nai_", "naish2"),
+               #("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
+               #("hyp_", "Hyperbolic"), ("bar_", "Barinel")]#, ("par_", "Parallel")]
+    metrics = Suspicious.getNames()
     modes = [("", "Base metric"), ("flitsr_", "FLITSR"), #("feed_tie_", "feedback tie"),
             #("feed_multi_", "feedback multi"),
             ("flitsr_multi_", "FLITSR*")]
@@ -90,7 +92,7 @@ if __name__ == "__main__":
         files[d] = []
         for metric in metrics:
             for mode in modes:
-                files[d].append(File(d+mode[0]+metric[0]+"weff"))
+                files[d].append(File(d+mode[0]+metric+"_"+"weff"))
                 if (rel):
                     sizes[d] = int(open(d+"../size").readline())
 
@@ -120,9 +122,9 @@ if __name__ == "__main__":
 
     i = 0
     for metric in metrics:
-        print(metric[1])
+        print(metric.capitalize())
         if ("perc@n" in calcs):
-            print(metric[1], file=perc_file)
+            print(metric.capitalize(), file=perc_file)
         for mode in modes:
             print('\t', mode[1])
             if ("perc@n" in calcs):
