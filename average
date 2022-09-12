@@ -13,7 +13,7 @@ for proj in */; do
     tot=0
     for v in *-fault; do
       cd "$v"
-      res=$(python3 ~/subjects/masters/feedback_localizer/identify.py "$metric" "$calc")
+      res=$(python3 $FLITSR_HOME/identify.py "$metric" "$calc")
       tot="$(echo "print($tot+$res)" | python3)"
       ((i++))
       cd ../

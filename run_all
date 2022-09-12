@@ -30,7 +30,7 @@ else
   dir_type=*/
   echo "gzoltar"
 fi
-metrics=$(python3 ~/subjects/masters/feedback_localizer/get_metric_names.py)
+metrics=$(python3 $FLITSR_HOME/get_metric_names.py)
 
 #for proj in *; do
   #echo "Running $proj..."
@@ -40,10 +40,10 @@ metrics=$(python3 ~/subjects/masters/feedback_localizer/get_metric_names.py)
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
-          run_with_lock feedback "$file" tcm all;
+          run_with_lock flitsr "$file" tcm all;
         done
       else
-        for file in */; do run_with_lock feedback "${file%/}" collapse all; done
+        for file in */; do run_with_lock flitsr "${file%/}" collapse all; done
       fi
       wait
       for m in $metrics; do

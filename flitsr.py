@@ -142,7 +142,7 @@ def reset(table, counts):
 
 spaces = -1
 def feedback_loc(table, counts, formula, tiebrk):
-    """Executes the recursive feedback algorithm to identify faulty rules"""
+    """Executes the recursive flitsr algorithm to identify faulty elements"""
     global spaces
     if (counts["tf"] == 0):
         return []
@@ -158,6 +158,7 @@ def feedback_loc(table, counts, formula, tiebrk):
     tests_removed = remove_from_tests(rule, table, counts)
     i = 1
     while (len(tests_removed) == 0): # sanity check
+        #print(" "*spaces, rule,"with score",sort[0][0])
         rule = sort[i][1]
         tests_removed = remove_from_tests(rule, table, counts)
         i += 1
@@ -186,12 +187,12 @@ def print_table(table):
 #[ <Switch>, <pass/fail>, <line 1 exe>, ..., <line n exe>
 #  ..., ...
 #]
-def run(table, counts, details, groups, mode='t', feedback=False, tiebrk=0,
+def run(table, counts, details, groups, mode='t', flitsr=False, tiebrk=0,
         multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None, collapse=False, file=sys.stdout):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
-    if (feedback):
+    if (flitsr):
         val = 2**64
         newTable = copy.deepcopy(table)
         newCounts = copy.deepcopy(counts)
@@ -272,8 +273,8 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
 if __name__ == "__main__":
     metrics = Suspicious.getNames()
     if (len(sys.argv) < 2):
-        print("Usage: feedback <input file> [<metric>]"
-                +" [feedback] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
+        print("Usage: flitsr <input file> [<metric>]"
+                +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
         print()
@@ -281,7 +282,7 @@ if __name__ == "__main__":
         exit()
     d = sys.argv[1]
     metric = 'ochiai'
-    feedback = False
+    flitsr = True
     input_m = 0
     i = 2
     weff = []
@@ -299,8 +300,8 @@ if __name__ == "__main__":
                 metric = sys.argv[i]
             elif (sys.argv[i] == "parallel"):
                 parallell = True
-            elif (sys.argv[i] == "feedback"):
-                feedback = True
+            elif (sys.argv[i] == "sbfl"):
+                flitsr = False
             elif (sys.argv[i] == "tcm"):
                 input_m = 1
             elif (sys.argv[i] == "first"):
@@ -402,5 +403,5 @@ if __name__ == "__main__":
                 file.close()
                 reset(table, counts)
     else:
-        run(table, counts, details, groups, metric, feedback, tiebrk, multi, weff,
+        run(table, counts, details, groups, metric, flitsr, tiebrk, multi, weff,
                 top1, perc_at_n, prec_rec, collapse=collapse)

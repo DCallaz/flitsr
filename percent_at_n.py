@@ -117,7 +117,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
                  "right":0.99,
                  "top": 0.99,
                  "wspace": 0.2,
-                 "hspace": 0.2})
+                 "hspace": 0.2} if all else {})
     color = list(cm.rainbow(np.linspace(0, 1, len(split))))
     style = ["-", "--", ":"]
     marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>']
@@ -126,18 +126,18 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
     for s in split:
         j = 0
         for m in merged:
-            if (m == "Base metric" or s == "Harmonic" or s == "Ochiai"
-                    or s == "Tarantula"):
-                if (type == plot_type.mode):
-                    point = points[(m, s)]
-                else:
-                    point = points[(s, m)]
-                if (all):
-                    labels.append(s + " " + (m if m != "Base metric" else ""))
-                    axs.plot(point[0], point[1], style[j], color=color[i],
-                            marker=marker[i], markevery=0.1)
-                else:
-                    axs[i].plot(point[0], point[1])
+            #if (m == "Base metric" or s == "Harmonic" or s == "Ochiai"
+                    #or s == "Tarantula"):
+            if (type == plot_type.mode):
+                point = points[(m, s)]
+            else:
+                point = points[(s, m)]
+            if (all):
+                labels.append(s + " " + (m if m != "Base metric" else ""))
+                axs.plot(point[0], point[1], style[j], color=color[i],
+                        marker=marker[i], markevery=0.1)
+            else:
+                axs[i].plot(point[0], point[1])
             j += 1
         i += 1
     #plt.step(x,y)

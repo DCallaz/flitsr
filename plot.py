@@ -112,10 +112,6 @@ if __name__ == "__main__":
     for metric in metrics:
         #print(metric)
         modes = names[metric]
-        #del modes['feedback multi']
-        #modes[metric.capitalize()] = modes.pop('localize')
-        #modes['FLITSR'] = modes.pop('feedback')
-        #modes['FLITSR*'] = modes.pop('feedback multi2')
         i = 0
         for mode in modes.keys():
             #print(mode)

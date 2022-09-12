@@ -11,11 +11,8 @@ if __name__ == "__main__":
                #("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
                #("hyp_", "Hyperbolic"), ("bar_", "Barinel")]#, ("par_", "Parallel")]
     metrics = Suspicious.getNames()
-    modes = [("", "Base metric"), ("flitsr_", "FLITSR"), #("feed_tie_", "feedback tie"),
-            #("feed_multi_", "feedback multi"),
+    modes = [("", "Base metric"), ("flitsr_", "FLITSR"),
             ("flitsr_multi_", "FLITSR*")]
-            #("feed_rndm_max_", "feedback random max"), ("feed_rndm_avg_",
-            #"feedback random average"), ("feed_rndm_min_", "feedback random min")]
     calcs = ["first",
             "avg",
             "med",

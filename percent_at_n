@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 ~/subjects/masters/feedback_localizer/percent_at_n.py "$@"
+python3 $FLITSR_HOME/percent_at_n.py "$@"

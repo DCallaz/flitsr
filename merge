@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 ~/subjects/masters/feedback_localizer/merge.py "$@"
+python3 $FLITSR_HOME/merge.py "$@"

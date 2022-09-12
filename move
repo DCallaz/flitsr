@@ -15,7 +15,7 @@ if [ -z "$1" ] || [ "$1" == "tcm" ]; then
   done
 else
   for version in *; do
-    res=$(python3 ~/subjects/masters/feedback_localizer/find_unex.py "$version" num "gzoltar")
+    res=$(python3 $FLITSR_HOME/find_unex.py "$version" num "gzoltar")
     if [ "$res" != "no faults found" ]; then
       mkdir -p "moved/$res-fault"
       cp -r "$version" "moved/$res-fault/$version"
