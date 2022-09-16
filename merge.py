@@ -108,7 +108,10 @@ if __name__ == "__main__":
             total += 1
             for i in range(0, len(lines)):
                 if (type(avgs[i]) == list):
-                    avgs[i].append([float(x) for x in lines[i].strip().split(": ")[1][:-1].split("%,")])
+                    vals = lines[i].strip().split(": ")[1].split(",")
+                    #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    total = vals[0]
+                    avgs[i].append([float(x) for x in vals[1:]])
                 elif (rel):
                     if (recurse):
                         avgs[i] += float(lines[i].split(": ")[1])*100/sizes[d]

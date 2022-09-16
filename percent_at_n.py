@@ -15,12 +15,12 @@ def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
     i = 0
     total = 0
     size = 0
-    bumps = []
     if (collapse):
         size = len(groups)
     else:
         for group in groups:
             size += len(group)
+    bumps = [size]
     while (i < len(ranking)):
         uuts,group_len,curr_faults,curr_fault_groups,i = getTie(i, faults,
                 ranking, groups, worst_effort)
@@ -32,7 +32,7 @@ def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
         else:
             for f in range(curr_faults):
                 expect_value = (len(uuts)+1)/(curr_faults+1) # - 1
-                bumps.append((total+(f+1)*expect_value)/size)
+                bumps.append((total+(f+1)*expect_value))
             total += len(uuts)
     return bumps
 

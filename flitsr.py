@@ -254,7 +254,7 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
         if (perc_at_n):
             bumps = percent_at_n.getBumps(faults, sort, groups,
                     collapse=collapse)
-            form = ','.join(['{:.8%}']*len(bumps))
+            form = ','.join(['{:.3f}']*len(bumps))
             print("percentage at n:", form.format(*bumps), file=file)
         if (prec_rec):
             for entry in prec_rec:
