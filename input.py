@@ -65,7 +65,7 @@ def fill_table(tests, num_tests, locs, bin_file):
     remove_from_table(groups, table, counts)
     return table,groups,counts,test_map
 
-def read_table(directory):
+def read_table(directory, split_faults):
     # Getting the details of the project
     #print("constructing details")
     details = construct_details(open(directory+"/spectra.csv"))
@@ -75,14 +75,15 @@ def read_table(directory):
     tests,num_tests = construct_tests(open(directory+"/tests.csv"))
     #print("filling table")
     table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
-    faults,unexposed = split(details["faults"], table, groups)
-    details["faults"] = faults
-    for unex in unexposed:
-        print("Dropped faulty UUT due to unexposure:")
-        print_name(find_name(details, unex, groups))
-    if (len(faults) == 0):
-        print("No exposable faults in", directory)
-        quit()
+    if (split_faults):
+        faults,unexposed = split(details["faults"], table, groups)
+        details["faults"] = faults
+        for unex in unexposed:
+            print("Dropped faulty UUT due to unexposure:")
+            print_name(find_name(details, unex, groups))
+        if (len(faults) == 0):
+            print("No exposable faults in", directory)
+            quit()
     return table,counts,groups,details,test_map
 
 def find_name(details, elem, groups):

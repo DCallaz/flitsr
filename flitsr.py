@@ -273,7 +273,7 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
 if __name__ == "__main__":
     metrics = Suspicious.getNames()
     if (len(sys.argv) < 2):
-        print("Usage: flitsr <input file> [<metric>]"
+        print("Usage: flitsr <input file> [<metric>] [split]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
@@ -294,12 +294,15 @@ if __name__ == "__main__":
     all = False
     collapse = False
     parallell = False
+    split = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] in metrics):
                 metric = sys.argv[i]
             elif (sys.argv[i] == "parallel"):
                 parallell = True
+            elif (sys.argv[i] == "split"):
+                split = True
             elif (sys.argv[i] == "sbfl"):
                 flitsr = False
             elif (sys.argv[i] == "tcm"):
@@ -361,7 +364,7 @@ if __name__ == "__main__":
         from input import read_table, print_names, find_faults
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
-    table,counts,groups,details,test_map = read_table(d)
+    table,counts,groups,details,test_map = read_table(d, split)
     sort_par = None
     if (parallell):
         sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)

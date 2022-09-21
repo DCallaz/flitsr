@@ -60,7 +60,7 @@ def fill_table(tests, num_tests, locs, f):
     remove_from_table(groups, table, counts)
     return table,groups,counts,test_map
 
-def read_table(file_loc):
+def read_table(file_loc, split_faults):
     table = None
     tests = None
     num_locs = 0
@@ -85,17 +85,18 @@ def read_table(file_loc):
             # Filling the table
             table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, file)
     file.close()
-    faults,unexposed = split(find_faults(details), table, groups)
-    for i in range(len(details)):
-        if (i in unexposed):
-            details[i] = (details[i][0], -1)
-            print("Dropped faulty UUT:", details[i][0], "due to unexposure")
-        for item in faults.items():
-            if (i in item[1]):
-                details[i] = (details[i][0], item[0])
-    if (len(faults) == 0):
-        print("No exposable faults in", file_loc)
-        quit()
+    if (split_faults):
+        faults,unexposed = split(find_faults(details), table, groups)
+        for i in range(len(details)):
+            if (i in unexposed):
+                details[i] = (details[i][0], -1)
+                print("Dropped faulty UUT:", details[i][0], "due to unexposure")
+            for item in faults.items():
+                if (i in item[1]):
+                    details[i] = (details[i][0], item[0])
+        if (len(faults) == 0):
+            print("No exposable faults in", file_loc)
+            quit()
     return table,counts,groups,details,test_map
 
 def find_names(details, faulties, groups):
