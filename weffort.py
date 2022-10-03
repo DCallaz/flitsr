@@ -46,9 +46,9 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
         if (avg):
             for j in range(0, curr_faults):
                 if (collapse):
-                    efforts.append(effort+(group_len-curr_faulty_groups)/(2))
+                    efforts.append(effort+j*((group_len+1)/(curr_faulty_groups+1)-1))
                 else:
-                    efforts.append(effort+(len(uuts)+1)/(curr_faults+1)-1)
+                    efforts.append(effort+j*((len(uuts)+1)/(curr_faults+1)-1))
         if (not found):
             if (collapse):
                 effort += group_len-curr_faulty_groups
@@ -57,7 +57,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
         else:
             if (collapse):
                 k = target + curr_faults - actual
-                effort += k*((group_len+1)/(curr_faulty_groups+1) - 1)
+                effort += k*((group_len+1)/(curr_faulty_groups+1)-1)
             else:
                 k = target + curr_faults - actual
                 effort += k*((len(uuts)+1)/(curr_faults+1)-1)
@@ -88,13 +88,14 @@ def getTie(i, faults, sort, groups, worst_effort):
                     if (worst_effort and len(locs) > 1):
                         worst_toRemove.append(loc)
                         continue
-                    #print("found fault", fault)
+                    #print("found fault", item[0])
                     curr_faults += 1
                     if (not faulty_group):
                         curr_faulty_groups += 1
                         faulty_group = True
                     #faults.remove(fault)
                     toRemove.add(item[0])
+                    break
             if (worst_effort):
                 for loc in worst_toRemove:
                     locs.remove(loc)
