@@ -7,6 +7,7 @@ import percent_at_n
 import parallel
 import precision_recall
 from suspicious import Suspicious
+from cutoff_points import cutoff_points
 
 #<------------------ Outdated methods ----------------------->
 
@@ -187,8 +188,9 @@ def print_table(table):
 #[ <Switch>, <pass/fail>, <line 1 exe>, ..., <line n exe>
 #  ..., ...
 #]
-def run(table, counts, details, groups, mode='t', flitsr=False, tiebrk=0,
-        multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None, collapse=False, file=sys.stdout):
+def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
+        multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None,
+        collapse=False, file=sys.stdout, cutoff=None):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -219,6 +221,12 @@ def run(table, counts, details, groups, mode='t', flitsr=False, tiebrk=0,
             #print("not breaking")
             val = val-1
         sort = localize.sort(sort, True, tiebrk)
+    if (cutoff):
+        faults = find_fault_groups(details, groups)
+        fault_groups = set()
+        for f in faults.values():
+            fault_groups.update(f)            
+        sort = cutoff_points.cut(cutoff, fault_groups, sort, mode, counts['tf'], counts['tp'])
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
@@ -272,11 +280,13 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
 
 if __name__ == "__main__":
     metrics = Suspicious.getNames()
+    cutoffs = cutoff_points.getNames()
     if (len(sys.argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
-                +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]")
+                +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]"
+                +" "+str(cutoffs))
         print()
         print("Where <metric> is one of:",metrics)
         exit()
@@ -295,10 +305,13 @@ if __name__ == "__main__":
     collapse = False
     parallell = False
     split = False
+    cutoff = None
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] in metrics):
                 metric = sys.argv[i]
+            elif (sys.argv[i] in cutoffs):
+                cutoff = sys.argv[i]
             elif (sys.argv[i] == "parallel"):
                 parallell = True
             elif (sys.argv[i] == "split"):
@@ -358,10 +371,10 @@ if __name__ == "__main__":
         else:
             break
     if (input_m):
-        from tcm_input import read_table, print_names, find_faults
+        from tcm_input import read_table, print_names, find_faults, find_fault_groups
         d_p = d
     else:
-        from input import read_table, print_names, find_faults
+        from input import read_table, print_names, find_faults, find_fault_groups
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
     table,counts,groups,details,test_map = read_table(d, split)
@@ -407,4 +420,4 @@ if __name__ == "__main__":
                 reset(table, counts)
     else:
         run(table, counts, details, groups, metric, flitsr, tiebrk, multi, weff,
-                top1, perc_at_n, prec_rec, collapse=collapse)
+                top1, perc_at_n, prec_rec, collapse=collapse, cutoff=cutoff)
