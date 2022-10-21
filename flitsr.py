@@ -225,7 +225,7 @@ def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
         faults = find_fault_groups(details, groups)
         fault_groups = set()
         for f in faults.values():
-            fault_groups.update(f)            
+            fault_groups.update(f)
         sort = cutoff_points.cut(cutoff, fault_groups, sort, mode, counts['tf'], counts['tp'])
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
 

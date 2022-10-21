@@ -39,8 +39,10 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
     #print("Length:",len(groups))
     #print("Sort:",sort)
     while (not found):
+        #print("Faults:",faults)
         uuts,group_len,curr_faults,curr_faulty_groups,i = getTie(i, faults, sort,
                 groups, worst_effort)
+        #print(uuts,group_len,curr_faults,curr_faulty_groups,i)
         actual += curr_faults
         found = (actual >= target)
         if (avg):

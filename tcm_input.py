@@ -3,17 +3,30 @@ from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
 
 def construct_details(f):
+    """
+    Constructs a details object containing the information related to each
+    element of the form:
+    [
+        (<line_num>, [<fault_num>,...] or <fault_num> or -1),
+        ...
+    ]
+    """
     uuts = []
     num_locs = 0
     line = f.readline()
     bugs = 0
     while (not line == '\n'):
         l = line.strip().split(' | ')
-        fault = -1
+        faults = []
         if (len(l) > 1):
-            fault = bugs if (len(l) > 2 or not l[1].isdigit()) else int(l[1])
+            if (not l[1].isdigit()):
+                faults = [bugs]
+            else:
+                faults = []
+                for b in l[1:]:
+                    faults.append(int(b))
             bugs += 1
-        uuts.append((l[0], fault))
+        uuts.append((l[0], faults))
         num_locs += 1
         line = f.readline()
     return uuts, num_locs
@@ -119,8 +132,9 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
                     file=file)
         i += 1
         for name in group:
-            print("\t("+str(name[1])+")","uut:",name[0][0], "(FAULT {})".format(name[0][1])
-                    if (name[0][1] != -1) else "", file=file)
+            print("\t("+str(name[1])+")","uut:",name[0][0],
+                "(FAULT {})".format(",".join(str(x) for x in name[0][1]))
+                    if (name[0][1]) else "", file=file)
         print("]", file=file)
 
 def print_table(table):
@@ -142,10 +156,11 @@ def find_faults(details):
     actual_faults = {}
     i = 0
     for uut in details:
-        if (uut[1] != -1):
-            if (uut[1] not in actual_faults):
-                actual_faults[uut[1]] = []
-            actual_faults[uut[1]].append(i)
+        if (uut[1]):
+            for fault in uut[1]:
+                if (fault not in actual_faults):
+                    actual_faults[fault] = []
+                actual_faults[fault].append(i)
         i += 1
     return actual_faults
 

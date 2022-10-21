@@ -18,10 +18,11 @@ def construct_details(f):
             i += 1
         details["testCaseDataSize"] += 1
         if (len(l) > 2):
-            fault = bugs if (not l[2].isdigit()) else int(l[2])
-            if (fault not in details["faults"]):
-                details["faults"][fault] = set()
-            details["faults"][fault].add(details["testCaseDataSize"]-1)
+            for b in l[2:]:
+                fault = bugs if (not b.isdigit()) else int(b)
+                if (fault not in details["faults"]):
+                    details["faults"][fault] = set()
+                details["faults"][fault].add(details["testCaseDataSize"]-1)
             bugs += 1
     return details
 
@@ -93,12 +94,11 @@ def find_name(details, elem, groups):
             file = details['files'][i]
             filename = file['fileName'].split("/")[-1]
             line = file['lineNumbers'][elem - offsets[i]]
-            fault = -1
+            faults = []
             for item in details["faults"].items():
                 if (elem in item[1]):
-                    fault = item[0]
-                    break
-            return (filename, line, elem, fault)
+                    faults.append(item[0])
+            return (filename, line, elem, faults)
 
 def find_names(details, faulties, groups):
     ret = []
@@ -111,7 +111,8 @@ def find_names(details, faulties, groups):
 
 def print_name(name, file=sys.stdout, indent=False):
     print("("+str(name[2])+")","File:",name[0]," | line",name[1],
-        "(FAULT {})".format(name[3]) if (name[3] != -1) else "", file=file)
+        "(FAULT {})".format(",".join(str(x) for x in name[3])) if (name[3]) else "",
+        file=file)
 
 def print_names(details, faulty, groups, scores=None, file=sys.stdout):
     names = find_names(details, faulty, groups)

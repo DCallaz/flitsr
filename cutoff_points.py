@@ -24,6 +24,21 @@ class cutoff_points:
         score = sus.execute(formula)
         return cutoff_points.method(score, fault_groups, scores)
 
+    def mba_optimal(fault_groups, scores, formula, tp, tf):
+        new_scores = []
+        stop_i = float('inf')
+        i = 0
+        f_num = 0
+        for item in scores:
+            i += 1
+            new_scores.append(item)
+            if (item[1] in fault_groups):
+                #recalculate stop amount
+                f_num += 1
+                stop_i = i + (i - f_num)/f_num
+            if (i >= stop_i):
+                break
+
     def method(stop_score, fault_groups, scores):
         new_scores = []
         found_one = False
