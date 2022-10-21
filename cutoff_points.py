@@ -36,8 +36,9 @@ class cutoff_points:
                 #recalculate stop amount
                 f_num += 1
                 stop_i = i + (i - f_num)/f_num
-            if (i >= stop_i):
+            if (i > stop_i):
                 break
+        return new_scores
 
     def method(stop_score, fault_groups, scores):
         new_scores = []
