@@ -6,6 +6,7 @@ import copy
 import percent_at_n
 import parallel
 import precision_recall
+from output import print_names, find_faults, find_fault_groups
 from suspicious import Suspicious
 from cutoff_points import cutoff_points
 
@@ -371,10 +372,10 @@ if __name__ == "__main__":
         else:
             break
     if (input_m):
-        from tcm_input import read_table, print_names, find_faults, find_fault_groups
+        from tcm_input import read_table
         d_p = d
     else:
-        from input import read_table, print_names, find_faults, find_fault_groups
+        from input import read_table
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
     table,counts,groups,details,test_map = read_table(d, split)
