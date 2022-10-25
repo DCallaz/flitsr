@@ -283,7 +283,7 @@ if __name__ == "__main__":
     metrics = Suspicious.getNames()
     cutoffs = cutoff_points.getNames()
     if (len(sys.argv) < 2):
-        print("Usage: flitsr <input file> [<metric>] [split]"
+        print("Usage: flitsr <input file> [<metric>] [split] [method]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]"
@@ -306,6 +306,7 @@ if __name__ == "__main__":
     collapse = False
     parallell = False
     split = False
+    method = False
     cutoff = None
     while (True):
         if (len(sys.argv) > i):
@@ -313,6 +314,8 @@ if __name__ == "__main__":
                 metric = sys.argv[i]
             elif (sys.argv[i] in cutoffs):
                 cutoff = sys.argv[i]
+            elif (sys.argv[i] == "method"):
+                method = True
             elif (sys.argv[i] == "parallel"):
                 parallell = True
             elif (sys.argv[i] == "split"):
@@ -378,7 +381,7 @@ if __name__ == "__main__":
         from input import read_table
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
-    table,counts,groups,details,test_map = read_table(d, split)
+    table,counts,groups,details,test_map = read_table(d, split, method_level=method)
     sort_par = None
     if (parallell):
         sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)

@@ -5,9 +5,20 @@ import output
 from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
 
-def construct_details(f):
+def construct_details(f, method_level):
+    """
+    Constructs a details object containing the information related to each
+    element of the form:
+    [
+        (<location tuple>, [<fault_num>,...] or <fault_num> or -1),
+        ...
+    ]
+    """
     uuts = []
-    num_locs = 0
+    num_locs = 0 # number of reported locations (methods/lines)
+    i = 0 # number of actual lines
+    method_map = {}
+    methods = {}
     bugs = 0
     f.readline()
     for line in f:
@@ -22,9 +33,22 @@ def construct_details(f):
                 for b in l[2:]:
                     faults.append(int(b))
             bugs += 1
-        uuts.append(([r.group(1)+"."+r.group(2), r.group(3), l[1]], faults))
-        num_locs += 1
-    return uuts, num_locs
+        if (method_level):
+            details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
+            if ((details[0], details[1]) not in methods):
+                methods[(details[0], details[1])] = num_locs
+                method_map[i] = num_locs
+                uuts.append((details, faults)) # append with first line number
+                num_locs += 1
+            else:
+                method_map[i] = methods[(details[0], details[1])]
+                uuts[method_map[i]][1].extend(faults)
+        else:
+            method_map[i] = i
+            uuts.append(([r.group(1)+"."+r.group(2), r.group(3), l[1]], faults))
+            num_locs += 1
+        i += 1
+    return uuts, num_locs, method_map
 
 def construct_tests(tests_reader):
     tests = []
@@ -36,7 +60,7 @@ def construct_tests(tests_reader):
         num_tests += 1
     return tests, num_tests
 
-def fill_table(tests, num_tests, locs, bin_file):
+def fill_table(tests, num_tests, locs, bin_file, method_map):
     table = []
     groups = [[i for i in range(0, locs)]]
     counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
@@ -45,13 +69,17 @@ def fill_table(tests, num_tests, locs, bin_file):
         row = [True] + [False]*locs
         line = bin_file.readline()
         arr = line.strip().split()
+        seen = []
         for i in range(0, locs):
             if (arr[i] != "0"):
-                row[i+1] = True
-                if (tests[r]):
-                    counts["p"][i] += 1
-                else:
-                    counts["f"][i] += 1
+                i = method_map[i]
+                row[i+1] = row[i+1] or True
+                if (i not in seen):
+                    seen.append(i)
+                    if (tests[r]):
+                        counts["p"][i] += 1
+                    else:
+                        counts["f"][i] += 1
         # Use row to merge equivalences
         groups = merge_on_row(row, groups)
         # Increment total counts, and append row to table
@@ -66,15 +94,17 @@ def fill_table(tests, num_tests, locs, bin_file):
     remove_from_table(groups, table, counts)
     return table,groups,counts,test_map
 
-def read_table(directory, split_faults):
+def read_table(directory, split_faults, method_level=False):
     # Getting the details of the project
     #print("constructing details")
-    details,num_locs = construct_details(open(directory+"/spectra.csv"))
+    details,num_locs,method_map = construct_details(open(directory+"/spectra.csv"),
+            method_level)
     # Constructing the table
     #print("constructing table")
     tests,num_tests = construct_tests(open(directory+"/tests.csv"))
     #print("filling table")
-    table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, open(directory+"/matrix.txt"))
+    table,groups,counts,test_map = fill_table(tests, num_tests, num_locs,
+            open(directory+"/matrix.txt"), method_map)
     if (split_faults):
         faults,unexposed = split(details["faults"], table, groups)
         for i in range(len(details)):

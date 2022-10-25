@@ -4,7 +4,7 @@ import output
 from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
 
-def construct_details(f):
+def construct_details(f, method_level):
     """
     Constructs a details object containing the information related to each
     element of the form:
@@ -14,7 +14,10 @@ def construct_details(f):
     ]
     """
     uuts = []
-    num_locs = 0
+    num_locs = 0 # number of reported locations (methods/lines)
+    i = 0 # number of actual lines
+    method_map = {}
+    methods = {}
     line = f.readline()
     bugs = 0
     while (not line == '\n'):
@@ -28,10 +31,27 @@ def construct_details(f):
                 for b in l[1:]:
                     faults.append(int(b))
             bugs += 1
-        uuts.append((l[0].split(":"), faults))
-        num_locs += 1
+        if (method_level):
+            details = l[0].split(":")
+            if (len(details) != 3):
+                print("ERROR: Could not do method level evaluation, exiting...")
+                quit()
+            if ((details[0], details[1]) not in methods):
+                methods[(details[0], details[1])] = num_locs
+                method_map[i] = num_locs
+                uuts.append((details, faults)) # append with first line number
+                num_locs += 1
+            else:
+                method_map[i] = methods[(details[0], details[1])]
+                uuts[method_map[i]][1].extend(faults)
+        else:
+            method_map[i] = i
+            uuts.append((l[0].split(":"), faults))
+            num_locs += 1
+        i += 1
         line = f.readline()
-    return uuts, num_locs
+    #print(uuts, num_locs, method_map)
+    return uuts, num_locs, method_map
 
 def construct_tests(f):
     tests = []
@@ -44,7 +64,7 @@ def construct_tests(f):
         line = f.readline()
     return tests, num_tests
 
-def fill_table(tests, num_tests, locs, f):
+def fill_table(tests, num_tests, locs, f, method_map):
     table = []
     groups = [[i for i in range(0, locs)]]
     counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
@@ -54,13 +74,17 @@ def fill_table(tests, num_tests, locs, f):
         # Construct the table row
         line = f.readline()
         arr = line.strip().split(' ')
+        seen = []
         for i in range(0, int(len(arr)/2)):
             pos = int(arr[i*2])
-            row[pos+1] = True
-            if (tests[r]):
-                counts["p"][pos] += 1
-            else:
-                counts["f"][pos] += 1
+            pos = method_map[pos]
+            row[pos+1] = row[pos+1] or True
+            if (pos not in seen):
+                seen.append(pos)
+                if (tests[r]):
+                    counts["p"][pos] += 1
+                else:
+                    counts["f"][pos] += 1
         # Use row to merge equivalences
         groups = merge_on_row(row, groups)
         # Increment total counts, and append row to table
@@ -75,12 +99,13 @@ def fill_table(tests, num_tests, locs, f):
     remove_from_table(groups, table, counts)
     return table,groups,counts,test_map
 
-def read_table(file_loc, split_faults):
+def read_table(file_loc, split_faults, method_level=False):
     table = None
     tests = None
     num_locs = 0
     num_tests = 0
     details = None
+    method_map = None
     groups = None
     file = open(file_loc)
     while (True):
@@ -95,10 +120,11 @@ def read_table(file_loc, split_faults):
             tests, num_tests = construct_tests(file)
         elif (line.startswith("#uuts")):
             # Getting the details of the project
-            details,num_locs = construct_details(file)
+            details,num_locs,method_map = construct_details(file, method_level)
         elif (line.startswith("#matrix")):
             # Filling the table
-            table,groups,counts,test_map = fill_table(tests, num_tests, num_locs, file)
+            table,groups,counts,test_map = fill_table(tests, num_tests,
+                    num_locs, file, method_map)
     file.close()
     if (split_faults):
         faults,unexposed = split(find_faults(details), table, groups)
