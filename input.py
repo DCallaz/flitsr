@@ -42,7 +42,10 @@ def construct_details(f, method_level):
                 num_locs += 1
             else:
                 method_map[i] = methods[(details[0], details[1])]
-                uuts[method_map[i]][1].extend(faults)
+                for fault in faults:
+                    if (fault not in uuts[method_map[i]][1]):
+                        uuts[method_map[i]][1].append(fault)
+                #uuts[method_map[i]][1].extend(faults)
         else:
             method_map[i] = i
             uuts.append(([r.group(1)+"."+r.group(2), r.group(3), l[1]], faults))
@@ -70,7 +73,7 @@ def fill_table(tests, num_tests, locs, bin_file, method_map):
         line = bin_file.readline()
         arr = line.strip().split()
         seen = []
-        for i in range(0, locs):
+        for i in range(0, len(arr)-1):
             if (arr[i] != "0"):
                 i = method_map[i]
                 row[i+1] = row[i+1] or True

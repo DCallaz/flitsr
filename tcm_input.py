@@ -43,7 +43,10 @@ def construct_details(f, method_level):
                 num_locs += 1
             else:
                 method_map[i] = methods[(details[0], details[1])]
-                uuts[method_map[i]][1].extend(faults)
+                for fault in faults:
+                    if (fault not in uuts[method_map[i]][1]):
+                        uuts[method_map[i]][1].append(fault)
+                #uuts[method_map[i]][1].extend(faults)
         else:
             method_map[i] = i
             uuts.append((l[0].split(":"), faults))
