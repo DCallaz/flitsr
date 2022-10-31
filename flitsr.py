@@ -191,7 +191,7 @@ def print_table(table):
 #]
 def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
         multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None,
-        collapse=False, file=sys.stdout, cutoff=None):
+        collapse=False, file=sys.stdout, cutoff=None, worst=False):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -227,7 +227,8 @@ def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
         fault_groups = set()
         for f in faults.values():
             fault_groups.update(f)
-        sort = cutoff_points.cut(cutoff, fault_groups, sort, mode, counts['tf'], counts['tp'])
+        sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
+                counts['tp'], worst=worst)
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
@@ -283,7 +284,7 @@ if __name__ == "__main__":
     metrics = Suspicious.getNames()
     cutoffs = cutoff_points.getNames()
     if (len(sys.argv) < 2):
-        print("Usage: flitsr <input file> [<metric>] [split] [method]"
+        print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@x"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]"
@@ -308,6 +309,7 @@ if __name__ == "__main__":
     split = False
     method = False
     cutoff = None
+    worst = False
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] in metrics):
@@ -320,6 +322,8 @@ if __name__ == "__main__":
                 parallell = True
             elif (sys.argv[i] == "split"):
                 split = True
+            elif (sys.argv[i] == "worst"):
+                worst = True
             elif (sys.argv[i] == "sbfl"):
                 flitsr = False
             elif (sys.argv[i] == "tcm"):
@@ -424,4 +428,5 @@ if __name__ == "__main__":
                 reset(table, counts)
     else:
         run(table, counts, details, groups, metric, flitsr, tiebrk, multi, weff,
-                top1, perc_at_n, prec_rec, collapse=collapse, cutoff=cutoff)
+                top1, perc_at_n, prec_rec, collapse=collapse, cutoff=cutoff,
+                worst=worst)
