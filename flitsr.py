@@ -309,7 +309,7 @@ if __name__ == "__main__":
     split = False
     method = False
     cutoff = None
-    worst = False
+    worst = True
     while (True):
         if (len(sys.argv) > i):
             if (sys.argv[i] in metrics):

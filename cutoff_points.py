@@ -39,7 +39,7 @@ class cutoff_points:
                 new_scores.append(items[i])
                 size += len(groups[items[i][1]])
                 i += 1
-            if (faults != 0):
+            if (faults != 0): # should've stopped already: size <= stop_i
                 #recalculate stop amount
                 f_num += faults
                 stop_i = size + size/f_num
