@@ -1,5 +1,13 @@
 from suspicious import Suspicious
 
+def remove_from(fault_groups, item):
+    for s in fault_groups:
+        if (item in fault_groups[s]):
+            fault_groups[s].remove(item)
+
+def linear(fault_groups):
+    return [x for sub in fault_groups.values() for x in sub]
+
 class cutoff_points:
     def getNames():
         all_names = dir(cutoff_points)
@@ -25,16 +33,19 @@ class cutoff_points:
         return cutoff_points.method(score, fault_groups, scores, worst)
 
     def mba_optimal(fault_groups, items, groups, formula, tp, tf, worst):
+        sus = Suspicious(0, tf, 0, tp)
+        zero = sus.execute(formula)
         new_scores = []
         stop_i = float('inf')
         i = 0
         f_num = 0
         size = 0
-        while (i < len(items) and size+1 <= stop_i):
+        while (i < len(items) and size+1 <= stop_i and items[i][0] > zero):
             score = items[i][0]
             faults = 0
             while (i < len(items) and (items[i][0] == score)):
-                if (items[i][1] in fault_groups):
+                if (items[i][1] in linear(fault_groups)):
+                    remove_from(fault_groups, items[i][1])
                     faults += 1
                 new_scores.append(items[i])
                 size += len(groups[items[i][1]])
@@ -53,7 +64,8 @@ class cutoff_points:
             fault = False
             score = items[i][0]
             while (i < len(items) and items[i][0] == score):
-                if (items[i][1] in fault_groups):
+                if (items[i][1] in linear(fault_groups)):
+                    remove_from(fault_groups, items[i][1])
                     fault = True
                 temp_items.append(items[i])
                 i += 1
@@ -61,7 +73,6 @@ class cutoff_points:
                 new_items.extend(temp_items)
                 temp_items = []
         return new_items
-
 
     def method(stop_score, fault_groups, items, worst):
         new_items = []
@@ -71,7 +82,8 @@ class cutoff_points:
             score = items[i][0]
             temp_items = []
             while (i < len(items) and items[i][0] == score):
-                if (items[i][1] in fault_groups and first_fault == -1):
+                if (first_fault == -1 and items[i][1] in linear(fault_groups)):
+                    remove_from(fault_groups, items[i][1])
                     first_fault = len(temp_items)
                 temp_items.append(items[i])
                 i += 1
@@ -80,13 +92,3 @@ class cutoff_points:
             else:
                 new_items.append(temp_items[first_fault])
         return new_items
-
-        #for item in scores:
-            #if (item[1] in fault_groups):
-                #first_score = item[0]
-                #found_one = True
-            #if ((item[0] > stop_score) or (not found_one) or (item[0] == first_score)):
-                #new_scores.append(item)
-            #else:
-                #break
-        #return new_scores

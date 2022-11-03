@@ -223,10 +223,7 @@ def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
             val = val-1
         sort = localize.sort(sort, True, tiebrk)
     if (cutoff):
-        faults = find_fault_groups(details, groups)
-        fault_groups = set()
-        for f in faults.values():
-            fault_groups.update(f)
+        fault_groups = find_fault_groups(details, groups)
         sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
                 counts['tp'], worst=worst)
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
@@ -318,6 +315,8 @@ if __name__ == "__main__":
                 cutoff = sys.argv[i]
             elif (sys.argv[i] == "method"):
                 method = True
+            elif (sys.argv[i] == "statement"):
+                method = False
             elif (sys.argv[i] == "parallel"):
                 parallell = True
             elif (sys.argv[i] == "split"):
