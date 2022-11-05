@@ -40,7 +40,7 @@ class cutoff_points:
         i = 0
         f_num = 0
         size = 0
-        while (i < len(items) and size+1 <= stop_i and items[i][0] > zero):
+        while (i < len(items) and size+1 <= stop_i and (items[i][0] > zero or f_num == 0)):
             score = items[i][0]
             faults = 0
             while (i < len(items) and (items[i][0] == score)):
@@ -53,7 +53,7 @@ class cutoff_points:
             if (faults != 0): # should've stopped already: size <= stop_i
                 #recalculate stop amount
                 f_num += faults
-                stop_i = size + size/f_num
+                stop_i = size + size/(f_num+1)
         return new_scores
 
     def aba(fault_groups, items, groups, formula, tp, tf, worst):
