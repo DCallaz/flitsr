@@ -129,8 +129,8 @@ class cutoff_points:
                     remove_from(fault_groups, items[i][1])
                     first_fault = len(temp_items)
                 temp_items.append(items[i])
-                i += 1
                 size += len(groups[items[i][1]])
+                i += 1
             if (worst or score > stop_score or first_fault == -1):
                 new_items.extend(temp_items)
             else:
