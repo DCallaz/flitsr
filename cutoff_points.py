@@ -121,7 +121,7 @@ class cutoff_points:
         i = 0
         size = 0
         while (i < len(items) and ((not rank and items[i][0] > stop_score)
-            or (rank and i < stop_score) or first_fault == -1)):
+            or (rank and size < stop_score) or first_fault == -1)):
             score = items[i][0]
             temp_items = []
             while (i < len(items) and items[i][0] == score):
