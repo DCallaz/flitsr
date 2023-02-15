@@ -49,10 +49,10 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
             fault_num += add
         else:
             add = 0
-            if (total+len(uuts) > n and curr_faults > 0):
+            if (total+len(uuts) > n and curr_faults[0] > 0):
                 p = int(n - total)
                 m = len(uuts)
-                n_f = curr_faults
+                n_f = curr_faults[1]
                 outer_top = factorial(m-p) * factorial(p)
                 outer_bot = factorial(m)
                 for x in range(1, p+1):
@@ -63,7 +63,7 @@ def method(n, perc, faults, ranking, groups, worst_effort, collapse):
                         #add += 1
                 total += p
             else:
-                add = curr_faults
+                add = curr_faults[0]
                 total += len(uuts)
             fault_num += add
     return fault_num,total

@@ -21,9 +21,9 @@ run_with_lock() {
   )&
 }
 
-N=7
+N=8
 open_sem $N
-if [ $1 = "tcm" ]; then
+if [ "$1" = "tcm" ]; then
   dir_type=*-fault
   echo "tcm"
 else
@@ -31,19 +31,21 @@ else
   echo "gzoltar"
 fi
 metrics=$(python3 $FLITSR_HOME/get_metric_names.py)
+#metrics="barinel"
 
 #for proj in *; do
   #echo "Running $proj..."
   #cd "$proj"
-  for dir in $dir_type; do
-    cd "$dir"
+  #for dir in $dir_type; do
+    #cd "$dir"
+    #echo "Doing $dir..."
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
           run_with_lock flitsr "$file" tcm all;
         done
       else
-        for file in */; do run_with_lock flitsr "${file%/}" collapse all; done
+        for file in */; do run_with_lock flitsr "${file%/}" all; done
       fi
       wait
       for m in $metrics; do
@@ -55,16 +57,17 @@ metrics=$(python3 $FLITSR_HOME/get_metric_names.py)
             echo "$orig"
             cat "$file"; rm "$file";
             echo "--------------------------"
-          done > "$t${m}_weff"
+          done > "$t${m}.results"
         done
       done
-      echo "Done in $dir"
       merge > results
+      #echo "Done in $dir"
       #if [ $1 = "tcm" ]; then
         #merge rel > results_rel
       #fi
     #fi
-    cd ../
-  done
+    #cd ../
+  #done
+  #echo "Done in $proj"
   #cd ../
 #done

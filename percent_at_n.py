@@ -30,8 +30,8 @@ def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
                 bumps.append((total+(f+1)*expect_value)/size)
             total += group_len
         else:
-            for f in range(curr_faults):
-                expect_value = (len(uuts)+1)/(curr_faults+1) # - 1
+            for f in range(curr_faults[0]):
+                expect_value = (len(uuts)+1)/(curr_faults[1]+1) # - 1
                 bumps.append((total+(f+1)*expect_value))
             total += len(uuts)
     return bumps
@@ -40,14 +40,14 @@ def combine(results):
     size = len(results)
     total = 0
     pointers = [0]*size
-    final = [len(r) for r in results]
+    final = [len(r[1]) for r in results]
     combined = []
     while (pointers != final):
         min_ = math.inf
         indexes = []
         for i in range(size):
-            if (pointers[i] != len(results[i])):
-                val = results[i][pointers[i]]
+            if (pointers[i] != len(results[i][1])):
+                val = results[i][1][pointers[i]]*100/results[i][0]
                 if (abs(min_ - val) < 10e-3):
                     indexes.append(i)
                 elif (val < min_):
@@ -59,7 +59,7 @@ def combine(results):
         #indexes = [i for i,x in enumerate(curr) if x - min_ < 10e-4]
         for i in indexes:
             pointers[i] += 1
-            total += 100/(len(results[i])*size)
+            total += 100/(len(results[i][1])*size)
         combined.append((min_, round(total, 8)))
     return combined
 
@@ -132,6 +132,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
                 point = points[(m, s)]
             else:
                 point = points[(s, m)]
+            print(point)
             if (all):
                 labels.append(s + " " + (m if m != "Base metric" else ""))
                 axs.plot(point[0], point[1], style[j], color=color[i],

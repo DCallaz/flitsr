@@ -43,26 +43,26 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
         uuts,group_len,curr_faults,curr_faulty_groups,i = getTie(i, faults, sort,
                 groups, worst_effort)
         #print(uuts,group_len,curr_faults,curr_faulty_groups,i)
-        actual += curr_faults
+        actual += curr_faults[0]
         found = (actual >= target)
         if (avg):
-            for j in range(0, curr_faults):
+            for j in range(0, curr_faults[0]):
                 if (collapse):
                     efforts.append(effort+j*((group_len+1)/(curr_faulty_groups+1)-1))
                 else:
-                    efforts.append(effort+j*((len(uuts)+1)/(curr_faults+1)-1))
+                    efforts.append(effort+j*((len(uuts)+1)/(curr_faults[1]+1)-1))
         if (not found):
             if (collapse):
                 effort += group_len-curr_faulty_groups
             else:
-                effort += len(uuts)-curr_faults
+                effort += len(uuts)-curr_faults[1]
         else:
             if (collapse):
-                k = target + curr_faults - actual
+                k = target + curr_faults[0] - actual
                 effort += k*((group_len+1)/(curr_faulty_groups+1)-1)
             else:
-                k = target + curr_faults - actual
-                effort += k*((len(uuts)+1)/(curr_faults+1)-1)
+                k = target + curr_faults[0] - actual
+                effort += k*((len(uuts)+1)/(curr_faults[1]+1)-1)
     if (avg):
         return sum(efforts)/target
     else:
@@ -72,7 +72,8 @@ def getTie(i, faults, sort, groups, worst_effort):
     score = sort[i][0]
     uuts = []
     group_len = 0
-    curr_faults = 0
+    curr_fault_num = 0
+    curr_fault_locs = 0
     curr_faulty_groups = 0
     # Get all UUTs with same score
     while (i < len(sort) and sort[i][0] == score):
@@ -82,6 +83,7 @@ def getTie(i, faults, sort, groups, worst_effort):
         # Check if fault is in group
         faulty_group = False
         toRemove = set()
+        faulty_locs = []
         for item in faults.items():
             worst_toRemove = []
             locs = item[1]
@@ -91,7 +93,10 @@ def getTie(i, faults, sort, groups, worst_effort):
                         worst_toRemove.append(loc)
                         continue
                     #print("found fault", item[0])
-                    curr_faults += 1
+                    curr_fault_num += 1
+                    if (loc not in faulty_locs):
+                        faulty_locs.append(loc)
+                        curr_fault_locs += 1
                     if (not faulty_group):
                         curr_faulty_groups += 1
                         faulty_group = True
@@ -104,4 +109,4 @@ def getTie(i, faults, sort, groups, worst_effort):
         for fault in toRemove:
             faults.pop(fault)
         i += 1
-    return uuts,group_len,curr_faults,curr_faulty_groups,i
+    return uuts,group_len,[curr_fault_num,curr_fault_locs],curr_faulty_groups,i

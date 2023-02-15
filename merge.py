@@ -35,6 +35,7 @@ if __name__ == "__main__":
     avgs = []
     rel = False
     recurse = False
+    tex = False
     max = None
     i = 1
     ns = []
@@ -49,6 +50,8 @@ if __name__ == "__main__":
             elif (sys.argv[i].startswith("n")):
                 a = sys.argv[i].split("=")[1]
                 ns = [int(x) for x in a.split(",")]
+            elif (sys.argv[i] == "tex"):
+                tex = True
             else:
                 print("Unknown option:", sys.argv[i])
                 quit()
@@ -89,7 +92,7 @@ if __name__ == "__main__":
         files[d] = []
         for metric in metrics:
             for mode in modes:
-                files[d].append(File(d+mode[0]+metric+"_"+"weff"))
+                files[d].append(File(d+mode[0]+metric+".results"))
                 if (rel):
                     sizes[d] = int(open(d+"../size").readline())
 
@@ -110,8 +113,8 @@ if __name__ == "__main__":
                 if (type(avgs[i]) == list):
                     vals = lines[i].strip().split(": ")[1].split(",")
                     #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    total = vals[0]
-                    avgs[i].append([float(x) for x in vals[1:]])
+                    perc_size = vals[0]
+                    avgs[i].append((float(perc_size), [float(x) for x in vals[1:]]))
                 elif (rel):
                     if (recurse):
                         avgs[i] += float(lines[i].split(": ")[1])*100/sizes[d]
@@ -121,6 +124,16 @@ if __name__ == "__main__":
                     avgs[i] += float(lines[i].split(": ")[1])
 
     i = 0
+    tex_file = None
+    if (tex):
+        tex_file = open("results.tex", "w")
+        print("\\documentclass{standalone}", file=tex_file)
+        #print("\\usepackage{longtable}", file=tex_file)
+        print("\\begin{document}", file=tex_file)
+        #print("\\begin{longtable}", file=tex_file)
+        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}", file=tex_file)
+        print("Metric & "+' & '.join([c for c in calcs if c != "perc@n"])+"\\\\", file=tex_file)
+
     for metric in metrics:
         print(metric.capitalize())
         if ("perc@n" in calcs):
@@ -129,14 +142,28 @@ if __name__ == "__main__":
             print('\t', mode[1])
             if ("perc@n" in calcs):
                 print('\t', mode[1], file=perc_file)
+            if (tex):
+                print(metric, mode[1], end=" & ", file=tex_file)
+            j = 0
             for calc in calcs:
+                j += 1
                 if (calc == "perc@n"):
                     comb = combine(avgs[i])
                     print("\t\t",calc+":", comb, file=perc_file)
                 elif (rel):
                     avgs[i] = avgs[i]/total
                     print("\t\t",calc+":", str(avgs[i])+"%")
+                    if (tex):
+                        end = (" & " if j != len(calcs) else " \\\\\n")
+                        print(str(round(avgs[i], 4))+"%", end=end, file=tex_file)
                 else:
                     avgs[i] = avgs[i]/total
                     print("\t\t",calc+":", avgs[i])
+                    if (tex):
+                        end = (" & " if j != len(calcs) else " \\\\\n")
+                        print(str(round(avgs[i],4)), end=end, file=tex_file)
                 i += 1
+    if (tex):
+        print("\\end{tabular}", file=tex_file)
+        #print("\\end{longtable}", file=tex_file)
+        print("\\end{document}", file=tex_file)
