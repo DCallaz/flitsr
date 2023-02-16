@@ -33,12 +33,12 @@ fi
 metrics=$(python3 $FLITSR_HOME/get_metric_names.py)
 #metrics="barinel"
 
-#for proj in *; do
-  #echo "Running $proj..."
-  #cd "$proj"
-  #for dir in $dir_type; do
-    #cd "$dir"
-    #echo "Doing $dir..."
+for proj in *; do
+  echo "Running $proj..."
+  cd "$proj"
+  for dir in $dir_type; do
+    cd "$dir"
+    echo "Doing $dir..."
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
@@ -66,8 +66,8 @@ metrics=$(python3 $FLITSR_HOME/get_metric_names.py)
         #merge rel > results_rel
       #fi
     #fi
-    #cd ../
-  #done
-  #echo "Done in $proj"
-  #cd ../
-#done
+    cd ../
+  done
+  echo "Done in $proj"
+  cd ../
+done

@@ -87,7 +87,8 @@ def read_comb_file(comb_file):
                 metrics.append(metric)
     return metrics, modes, points
 
-def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
+def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
+        flitsrs=None):
     modes = []
     comb_points = {}
     if (metrics == None):
@@ -110,7 +111,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
     if (type == plot_type.mode):
         split = modes
         merged = metrics
-    plt.rcParams.update({'font.size': 11})
+    plt.rcParams.update({'font.size': 10})
     fig, axs = plt.subplots(1,1 if all else len(split),
                 gridspec_kw={"left": 0.045,
                  "bottom": 0.06,
@@ -126,20 +127,19 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None):
     for s in split:
         j = 0
         for m in merged:
-            #if (m == "Base metric" or s == "Harmonic" or s == "Ochiai"
-                    #or s == "Tarantula"):
-            if (type == plot_type.mode):
-                point = points[(m, s)]
-            else:
-                point = points[(s, m)]
-            print(point)
-            if (all):
-                labels.append(s + " " + (m if m != "Base metric" else ""))
-                axs.plot(point[0], point[1], style[j], color=color[i],
-                        marker=marker[i], markevery=0.1)
-            else:
-                axs[i].plot(point[0], point[1])
-            j += 1
+            if (m == "Base metric" or flitsrs == None or s in flitsrs):
+                if (type == plot_type.mode):
+                    point = points[(m, s)]
+                else:
+                    point = points[(s, m)]
+                print(point)
+                if (all):
+                    labels.append(s + " " + (m if m != "Base metric" else ""))
+                    axs.plot(point[0], point[1], style[j], color=color[i],
+                            marker=marker[i], markevery=0.1)
+                else:
+                    axs[i].plot(point[0], point[1])
+                j += 1
         i += 1
     #plt.step(x,y)
     for i in range(1 if (all) else len(axs)):
@@ -179,6 +179,7 @@ if __name__ == "__main__":
             plot_file = sys.argv[2]
             split = plot_type.metric
             metrics = None
+            flitsrs = None
             log = True
             all = False
             i = 3
@@ -186,9 +187,12 @@ if __name__ == "__main__":
                 if (len(sys.argv) > i):
                     if (sys.argv[i] == "mode"):
                         split = plot_type.mode
-                    elif (sys.argv[i].startswith("[")):
+                    elif (sys.argv[i].startswith("metrics=[")):
                         metrics = [x.strip() for x in
-                                sys.argv[i][1:-1].split(",")]
+                                sys.argv[i][9:-1].split(",")]
+                    elif (sys.argv[i].startswith("flitsrs=[")):
+                        flitsrs = [x.strip() for x in
+                                sys.argv[i][9:-1].split(",")]
                     elif (sys.argv[i] == "linear"):
                         log = False
                     elif (sys.argv[i] == "log"):
@@ -201,7 +205,7 @@ if __name__ == "__main__":
                     i += 1
                 else:
                     break
-            plot(plot_file, log=log, all=all, type=split, metrics=metrics)
+            plot(plot_file, log=log, all=all, type=split, metrics=metrics, flitsrs=flitsrs)
         elif (mode == "auc"):
             comb_file = sys.argv[2]
             metrics,modes,points = read_comb_file(comb_file)

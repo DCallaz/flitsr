@@ -143,7 +143,7 @@ if __name__ == "__main__":
             if ("perc@n" in calcs):
                 print('\t', mode[1], file=perc_file)
             if (tex):
-                print(metric, mode[1], end=" & ", file=tex_file)
+                print( '%25s'% (str(metric) + " " + str(mode[1])), end=" & ", file=tex_file)
             j = 0
             for calc in calcs:
                 j += 1
@@ -155,13 +155,13 @@ if __name__ == "__main__":
                     print("\t\t",calc+":", str(avgs[i])+"%")
                     if (tex):
                         end = (" & " if j != len(calcs) else " \\\\\n")
-                        print(str(round(avgs[i], 4))+"%", end=end, file=tex_file)
+                        print('% 10.4f' % avgs[i]+"%", end=end, file=tex_file)
                 else:
                     avgs[i] = avgs[i]/total
                     print("\t\t",calc+":", avgs[i])
                     if (tex):
                         end = (" & " if j != len(calcs) else " \\\\\n")
-                        print(str(round(avgs[i],4)), end=end, file=tex_file)
+                        print('% 10.4f' % avgs[i], end=end, file=tex_file)
                 i += 1
     if (tex):
         print("\\end{tabular}", file=tex_file)
