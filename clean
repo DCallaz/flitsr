@@ -1,7 +1,0 @@
-#!/bin/bash
-echo "Running delete..."
-delete
-echo "Done"
-echo "Running move..."
-move
-echo "Done"

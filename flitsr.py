@@ -283,7 +283,7 @@ if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [perc@n] [precision/recall]@x"
+                +" [perc@n] [precision/recall]@<x>"
                 +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]"
                 +" "+str(cutoffs))
         print()

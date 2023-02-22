@@ -29,7 +29,6 @@ if __name__ == "__main__":
             "recall at 10",
             "recall at num faults"
             ]
-    perc_file = open("perc_at_n_results", "w")
     files = {}
     total = 0
     avgs = []
@@ -123,10 +122,11 @@ if __name__ == "__main__":
                 else:
                     avgs[i] += float(lines[i].split(": ")[1])
 
+    perc_file = open("perc_at_n"+"-".join([str(n) for n in ns])+"_results", "w")
     i = 0
     tex_file = None
     if (tex):
-        tex_file = open("results.tex", "w")
+        tex_file = open("results"+'-'.join([str(n) for n in ns])+".tex" , "w")
         print("\\documentclass{standalone}", file=tex_file)
         #print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
