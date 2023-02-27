@@ -1,7 +1,7 @@
 import sys
 import re
 import os
-import output
+from output import find_faults
 from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
 
@@ -109,14 +109,17 @@ def read_table(directory, split_faults, method_level=False):
     table,groups,counts,test_map = fill_table(tests, num_tests, num_locs,
             open(directory+"/matrix.txt"), method_map)
     if (split_faults):
-        faults,unexposed = split(details["faults"], table, groups)
+        faults,unexposed = split(find_faults(details), table, groups)
         for i in range(len(details)):
             if (i in unexposed):
-                details[i] = (details[i][0], -1)
+                details[i] = (details[i][0], [])
                 print("Dropped faulty UUT:", details[i][0], "due to unexposure")
+            fault_items = []
             for item in faults.items():
                 if (i in item[1]):
-                    details[i] = (details[i][0], item[0])
+                    fault_items.append(item[0])
+            if (len(fault_items) != 0):
+                details[i] = (details[i][0], fault_items)
         if (len(faults) == 0):
             print("No exposable faults in", file_loc)
             quit()

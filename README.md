@@ -1,7 +1,105 @@
 # FLITSR
 A python implementation of the FLITSR fault localization tool for multiple
 faults.
-## Usage
+## Setup
+### Requirements
+* `python3`
+* `matplotlib`
+### Installation
+To install FLITSR, simply clone this repository and add the following lines to
+your `.bashrc`:
+```
+export FLITSR_HOME="path/to/flitsr/directory"
+export PATH="$FLITSR_HOME:$PATH"
+```
+
+To test your installation, from any directory run:
+```
+flitsr
+```
+which should print the usage message.
+## Basic usage
+### Running FLITSR
+To run the FLITSR algorithm and produce a suspiciousness ranking, simply use the
+command:
+```
+flitsr <input> [tcm]
+```
+where `<input>` is the directory containing the coverage files for GZoltar
+input, or the file containing the coverage for TCM input (which must then be
+followed by the `tcm` option). See the Input structure section for more
+information on the types of input.
+
+More advanced options and outputs are described in the Detailed usage section in
+this README.
+### Input structure
+FLITSR is a pure Spectrum-Based Fault Localization (SBFL) technique, and thus
+only requires the collected coverage information from the execution of the test
+suite over a system. FLITSR currently supports two input types:
+1. TCM format, taken from ["More Debugging in Parallel"](https://www.fernuni-hagen.de/ps/prjs/PD/)
+    ```
+    #tests
+    <test name> <status (PASSED | FAILED | ERROR)> [<exception>]
+    .
+    .
+    .
+
+    #uuts
+    <element name> [| <bugId>]
+    .
+    .
+    .
+
+    #matrix
+    <index above of element executed> <number of executions> ...
+    .
+    .
+    .
+    ```
+    When using the `method` argument for FLITSR, `<element name>` must be of the format:
+    `<java package name>.<class name>:<method name>:<line number>`.
+
+    Note that this format is slightly different than that described on the [TCM
+    webpage](https://www.fernuni-hagen.de/ps/prjs/PD/), for instance it does not
+    require the exceptions for FAILED test cases and assumes a bug ID can be given
+    for buggy elements. These differences are optional, as both this format
+    __AND__ the format given on the TCM webpage are supported, as well as any
+    combination of the two. In this way, the format accepted is a more relaxed
+    format.
+2. GZoltar format, which can be generated using the [GZoltar tool](https://gzoltar.com/).
+
+    This splits the coverage information into three separate files:
+    1. `tests.csv`:
+        ```
+        name,outcome,runtime,stacktrace
+        <test name>,<status (PASS | FAIL)>[,<runtime>,<exception>]
+        .
+        .
+        .
+        ```
+    2. `spectra.csv`:
+        ```
+        name
+        <element name>[:<bugID>]
+        .
+        .
+        .
+        ```
+        Where `<element name>` is of the format: `<java package name>$<class
+        name>#<method name>:<line number>`. Note that because of this restriction,
+        FLITSR only supports statement-level coverage in GZoltar format.
+    3. `matrix.txt`:
+
+        The test and element numbering in this file refers to the indexing of the
+        tests and elements in the `tests.csv` and `spectra.csv` files respectively.
+        ```
+        <element 0 executed in test 1> <element 1 executed in test 1> ...
+        <element 0 executed in test 2> <element 1 executed in test 2>
+        .
+        .
+        .
+        ```
+## Detailed usage and script description
 The use of the FLITSR tool and its associated scripts is described here in
 detail.
 ### FLITSR script (`flitsr`)
@@ -12,9 +110,8 @@ For ease of access, these are listed and described here:
 ```
 Usage: flitsr <input file> [<metric>] [split] [method] [worst] [sbfl] [tcm]
 [first/avg/med/last] [one_top1/all_top1/perc_top1] [perc@n] [precision/recall]@x
-[tiebrk/rndm/otie] [multi/multi2] [all] [only_fail] ['aba', 'mba_10_perc',
-'mba_5_perc', 'mba_const_add', 'mba_dominator', 'mba_optimal', 'mba_zombie',
-'oba']
+[tiebrk/rndm/otie] [multi] [all] [only_fail] ['aba', 'mba_10_perc', 'mba_5_perc',
+'mba_const_add', 'mba_dominator', 'mba_optimal', 'mba_zombie', 'oba']
 
 Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
 'jaccard', 'naish2', 'ochiai', 'overlap', 'tarantula', 'zoltar']
@@ -68,8 +165,15 @@ Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
   the localization. `tiebrk` breaks ties using only execution counts, `rndm` by
   randomly ordering, and `otie` by using the original base metric ranking (in the
   case of FLITSR) and by execution counts otherwise.
-* `multi/multi2`: Runs the FLITSR\* (i.e. multi-round) algorithm.
-TODO: complete
+* `multi`: Runs the FLITSR\* (i.e. multi-round) algorithm.
+* `all`: Used in the evaluation of FLITSR against other techniques. Runs all
+  metrics given in `suspicious.py` and both FLITSR and FLITSR\* extensions over
+  each metric. Also enables all of the above evaluation calculations. Prints the
+  results out to files named `[<flitsr method>_]<metric>.results` for each
+  FLITSR method and metric.
+* `aba/mba_<cutoff>/oba`: Cuts off the ranking using the given ABA, MBA or OBA
+  cut-off point respectively. This affects both the rank output method and any
+  calculations as given above.
 ### Bug distribution (`distro`)
 In the evaluation of FLITSR over multi-fault datasets it is sometimes useful to
 know the distribution of faults in the datasets. For this purpose, the `distro`

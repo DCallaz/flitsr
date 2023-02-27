@@ -9,7 +9,7 @@ for proj in */; do
     faults+=([$fault]=$fault)
   done
   #name=$(pwd | sed 's/.*\///')
-  #python3 ~/subjects/masters/feedback_localizer/distro.py "$name" <<< "$distro" &
+  #python3 $FLITSR_HOME/distro.py "$name" <<< "$distro" &
   #echo "$distro" >> "distro.txt"
   echo "$(paste <(echo "${faults[*]}" | tr ' ' '\n') <(echo "${distro[*]}" | tr ' ' '\n'))" > distro.txt
   cd ../

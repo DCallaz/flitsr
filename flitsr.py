@@ -284,7 +284,7 @@ if __name__ == "__main__":
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
-                +" [tiebrk/rndm/otie] [multi/multi2] [all] [only_fail]"
+                +" [tiebrk/rndm/otie] [multi] [all]"
                 +" "+str(cutoffs))
         print()
         print("Where <metric> is one of:",metrics)
@@ -367,8 +367,6 @@ if __name__ == "__main__":
                 tiebrk = 3
             elif (sys.argv[i] == "multi"):
                 multi = 1
-            elif (sys.argv[i] == "multi2"):
-                multi = 2
             elif (sys.argv[i] == "all"):
                 all = True
             else:
