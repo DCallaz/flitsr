@@ -19,10 +19,10 @@ if __name__ == "__main__":
                 rel = True
             elif (sys.argv[i] == "tcm"):
                 tcm = True
-            elif (sys.argv[i].startswith("[") or sys.argv[i].startswith("e[")):
+            elif (sys.argv[i].startswith("calcs=[")):
                 index = sys.argv[i].index("[")+1
                 custom = [x.strip() for x in sys.argv[i][index:-1].split(",")]
-            elif (sys.argv[i].startswith("m[")):
+            elif (sys.argv[i].startswith("metrics=[")):
                 index = sys.argv[i].index("[")+1
                 metrics = [x.strip() for x in sys.argv[i][index:-1].split(",")]
             else:
