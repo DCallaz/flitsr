@@ -4,6 +4,10 @@ import os
 from output import find_faults
 from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
+import exrex
+from pytest import list_of
+import io
+from pytest import mark as pytest
 
 def construct_details(f, method_level):
     """
@@ -129,3 +133,19 @@ if __name__ == "__main__":
     d = sys.argv[1]
     table,locs,tests,details = read_table(d)
     print_table(table)
+
+#<-------------------------------- Unit tests -------------------------------->
+
+def gen_strings(regex, num):
+    return [exrex.getone(regex) for i in range(num)]
+
+@pytest.randomize(entries=list_of(str, min_items=1, max_items=100),
+        choices=gen_strings("([a-z.]+)\$([a-z]+)#([a-z(),]+):[0-9]+(:[0-9]+)?", 1000))
+def test_detail_construction(entries):
+    num_entries = len(entries)
+    entries = ['name'] + entries
+    entries = '\n'.join(entries)
+    uuts, num_locs, method_map = construct_details(io.StringIO(entries), False)
+    assert len(uuts) == num_entries
+    assert num_locs == num_entries
+
