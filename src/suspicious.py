@@ -1,5 +1,5 @@
 import math
-from pytest import mark as pytest
+from pytest import mark as pytestr
 
 class Suspicious() :
     """
@@ -340,8 +340,8 @@ class Suspicious() :
 
 #<-------------------------------- Unit tests -------------------------------->
 
-@pytest.parametrize('metric', Suspicious.getNames())
-@pytest.randomize(ef=int, nf=int, ep=int ,np=int, min_num=0, max_num=10000)
+@pytestr.parametrize('metric', Suspicious.getNames())
+@pytestr.randomize(ef=int, nf=int, ep=int ,np=int, min_num=0, max_num=10000)
 def test_metrics(metric, ef, nf, ep, np):
     sus = Suspicious(ef, ef+nf, ep, ep+np)
     ans = sus.execute(metric)

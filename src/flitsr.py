@@ -224,8 +224,12 @@ def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
         sort = localize.sort(sort, True, tiebrk)
     if (cutoff):
         fault_groups = find_fault_groups(details, groups)
-        sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
-                counts['tp'], worst=worst)
+        if (cutoff.startswith("basis")):
+            sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
+                    sort, groups, mode, counts['tf'], counts['tp'], worst=worst)
+        else:
+            sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
+                    counts['tp'], worst=worst)
     output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
@@ -277,19 +281,19 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
             names.append(x[1])
         print_names(details, names, groups, sort, file)
 
-if __name__ == "__main__":
+def main(argv):
     metrics = Suspicious.getNames()
     cutoffs = cutoff_points.getNames()
-    if (len(sys.argv) < 2):
+    if (len(argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
-                +" [tiebrk/rndm/otie] [multi] [all]"
+                +" [tiebrk/rndm/otie] [multi] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
         print()
         print("Where <metric> is one of:",metrics)
-        exit()
-    d = sys.argv[1]
+        return
+    d = argv[1]
     metric = 'ochiai'
     flitsr = True
     input_m = 0
@@ -308,73 +312,81 @@ if __name__ == "__main__":
     cutoff = None
     worst = True
     while (True):
-        if (len(sys.argv) > i):
-            if (sys.argv[i] in metrics):
-                metric = sys.argv[i]
-            elif (sys.argv[i] in cutoffs):
-                cutoff = sys.argv[i]
-            elif (sys.argv[i] == "method"):
+        if (len(argv) > i):
+            if (argv[i] in metrics):
+                metric = argv[i]
+            elif (argv[i].startswith("basis")):
+                if ("=" in argv[i]):
+                    cutoff = argv[i]
+                else:
+                    cutoff = "basis=0"
+            elif (argv[i] in cutoffs):
+                cutoff = argv[i]
+            elif (argv[i] == "method"):
                 method = True
-            elif (sys.argv[i] == "statement"):
+            elif (argv[i] == "statement"):
                 method = False
-            elif (sys.argv[i] == "parallel"):
+            elif (argv[i] == "parallel"):
                 parallell = True
-            elif (sys.argv[i] == "split"):
+            elif (argv[i] == "split"):
                 split = True
-            elif (sys.argv[i] == "worst"):
+            elif (argv[i] == "worst"):
                 worst = True
-            elif (sys.argv[i] == "sbfl"):
+            elif (argv[i] == "sbfl"):
                 flitsr = False
-            elif (sys.argv[i] == "tcm"):
+            elif (argv[i] == "tcm"):
                 input_m = 1
-            elif (sys.argv[i] == "first"):
+            elif (argv[i] == "first"):
                 weff.append("first")
-            elif (sys.argv[i] == "avg"):
+            elif (argv[i] == "avg"):
                 weff.append("avg")
-            elif (sys.argv[i] == "med"):
+            elif (argv[i] == "med"):
                 weff.append("med")
-            elif (sys.argv[i] == "last"):
+            elif (argv[i] == "last"):
                 weff.append("last")
-            elif (sys.argv[i] == "collapse"):
+            elif (argv[i] == "collapse"):
                 collapse = True
-            elif (sys.argv[i] == "one_top1"):
+            elif (argv[i] == "one_top1"):
                 top1.append("one")
-            elif (sys.argv[i] == "all_top1"):
+            elif (argv[i] == "all_top1"):
                 top1.append("all")
-            elif (sys.argv[i] == "perc_top1"):
+            elif (argv[i] == "perc_top1"):
                 top1.append("perc")
-            elif (sys.argv[i] == "size_top1"):
+            elif (argv[i] == "size_top1"):
                 top1.append("size")
-            elif (sys.argv[i] == "perc@n"):
+            elif (argv[i] == "perc@n"):
                 perc_at_n = True
-            elif ("precision@" in sys.argv[i]):
-                n = sys.argv[i].split("@")[1]
+            elif ("precision@" in argv[i]):
+                n = argv[i].split("@")[1]
                 if (n == "b" or n == "f"):
                     prec_rec.append(('p', n))
                 else:
                     prec_rec.append(('p', float(n)))
-            elif ("recall@" in sys.argv[i]):
-                n = sys.argv[i].split("@")[1]
+            elif ("recall@" in argv[i]):
+                n = argv[i].split("@")[1]
                 if (n == "b" or n == "f"):
                     prec_rec.append(('r', n))
                 else:
                     prec_rec.append(('r', float(n)))
-            elif (sys.argv[i] == "tiebrk"):
+            elif (argv[i] == "tiebrk"):
                 tiebrk = 1
-            elif (sys.argv[i] == "rndm"):
+            elif (argv[i] == "rndm"):
                 tiebrk = 2
-            elif (sys.argv[i] == "otie"):
+            elif (argv[i] == "otie"):
                 tiebrk = 3
-            elif (sys.argv[i] == "multi"):
+            elif (argv[i] == "multi"):
                 multi = 1
-            elif (sys.argv[i] == "all"):
+            elif (argv[i] == "all"):
                 all = True
             else:
-                print("Unknown option:", sys.argv[i])
+                print("Unknown option:", argv[i])
                 quit()
             i += 1
         else:
             break
+    if (cutoff and cutoff.startswith('basis')):
+        flitsr = True
+        multi = 1
     if (input_m):
         from tcm_input import read_table
         d_p = d
@@ -427,3 +439,6 @@ if __name__ == "__main__":
         run(table, counts, details, groups, metric, flitsr, tiebrk, multi, weff,
                 top1, perc_at_n, prec_rec, collapse=collapse, cutoff=cutoff,
                 worst=worst)
+
+if __name__ == "__main__":
+    main(sys.argv)
