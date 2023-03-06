@@ -186,12 +186,10 @@ def print_table(table):
 #<------------------ Main method ----------------------->
 #Description of table:
 #table =
-#[ <Switch>, <pass/fail>, <line 1 exe>, ..., <line n exe>
+#[ <pass/fail>, <line 1 exe>, ..., <line n exe>
 #  ..., ...
 #]
-def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
-        multi=0, weff=None, top1=None, perc_at_n=False, prec_rec=None,
-        collapse=False, file=sys.stdout, cutoff=None, worst=False):
+def run(table, counts, mode, flitsr=False, tiebrk=0, multi=0):
     sort = localize.localize(counts, mode, tiebrk)
     #print(sort)
     localize.orig = sorted(copy.deepcopy(sort), key=lambda x: x[1])
@@ -222,15 +220,18 @@ def run(table, counts, details, groups, mode, flitsr=False, tiebrk=0,
             #print("not breaking")
             val = val-1
         sort = localize.sort(sort, True, tiebrk)
-    if (cutoff):
-        fault_groups = find_fault_groups(details, groups)
-        if (cutoff.startswith("basis")):
-            sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
-                    sort, groups, mode, counts['tf'], counts['tp'], worst=worst)
-        else:
-            sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
-                    counts['tp'], worst=worst)
-    output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse, file)
+    localize.orig = None
+    return sort
+
+def compute_cutoff(cutoff, sort, details, groups, counts, mode, worst=False):
+    fault_groups = find_fault_groups(details, groups)
+    if (cutoff.startswith("basis")):
+        sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
+                sort, groups, mode, counts['tf'], counts['tp'], worst=worst)
+    else:
+        sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
+                counts['tp'], worst=worst)
+    return sort
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
         prec_rec=None, collapse=False, file=sys.stdout):
@@ -288,7 +289,7 @@ def main(argv):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
-                +" [tiebrk/rndm/otie] [multi] [all] [basis[=<n>]]"
+                +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
         print()
         print("Where <metric> is one of:",metrics)
@@ -306,7 +307,7 @@ def main(argv):
     multi = 0
     all = False
     collapse = False
-    parallell = False
+    parallell = None
     split = False
     method = False
     cutoff = None
@@ -326,8 +327,15 @@ def main(argv):
                 method = True
             elif (argv[i] == "statement"):
                 method = False
-            elif (argv[i] == "parallel"):
-                parallell = True
+            elif (argv[i].startswith("parallel")):
+                if ("=" in argv[i]):
+                    parType = argv[i].split("=")[1]
+                    if (parType == "bdm" or parType == "msp"):
+                        parallell = parType
+                    else:
+                        print("Unknown parallel argument: ", parType)
+                else:
+                    parallell = "bdm"
             elif (argv[i] == "split"):
                 split = True
             elif (argv[i] == "worst"):
@@ -395,20 +403,15 @@ def main(argv):
         d_p = d.split("/")[0] + ".txt"
     #print("reading table")
     table,counts,groups,details,test_map = read_table(d, split, method_level=method)
-    sort_par = None
     if (parallell):
-        sort_par = parallel.parallel(d, table, test_map, counts, tiebrk)
-        if (parallell):
-            output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
-                    collapse)
-            quit()
-    #print(table)
-    #print(counts)
-    #print(groups)
-    #print("merging equivs")
-    #groups = merge_equivs(table, num_locs)
-    #print("merged")
-    #print_table(table)
+        tables,count_arr = parallel.parallel(d, table, test_map, counts, tiebrk, metric, parallell)
+        #for sort_par in rankings:
+            #print("<---------------------- Ranking ---------------------->")
+            #output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
+                    #collapse)
+    else:
+        tables = [table]
+        count_arr = [counts]
     if (all):
         types = ["", "flitsr_", "flitsr_multi_"]
         #modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
@@ -420,25 +423,34 @@ def main(argv):
                 #d_p_s = d_p.split('.')
                 #file = open("feed_rndm_"+m+d_p_s[0]+"_"+str(i)+"."+d_p_s[1], "x")
                 file = open(types[i]+metrics[m]+"_"+d_p, "x")
-                #run(table, details, groups, only_fail, m[0], True, 2, False,
-                        #weff=["first", "avg", "med"], collapse=collapse, file=file)
                 if (m == 'parallel'):
-                    output(sort_par, details, groups, weff=["first","med","last"],
+                    tables,counts = parallel.parallel(d, table, test_map, counts, tiebrk, metric, parallell)
+                    output(sort, details, groups, weff=["first","med","last"],
                             perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
                             collapse=collapse, file=file)
                 else:
-                    run(table, counts, details, groups, metrics[m], i>=1, 3, (i==2)*2,
-                        weff=["first", "avg", "med", "last"],
-                        perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
+                    sort = run(table, counts, metrics[m], i>=1, 3, (i==2)*2)
+                    output(sort, details, groups, weff=["first", "avg", "med", "last"],
+                            perc_at_n=True,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
-                        collapse=collapse, file=file)
+                            collapse=collapse, file=file)
                 file.close()
                 reset(table, counts)
     else:
-        run(table, counts, details, groups, metric, flitsr, tiebrk, multi, weff,
-                top1, perc_at_n, prec_rec, collapse=collapse, cutoff=cutoff,
-                worst=worst)
+        f = True
+        for table,counts in zip(tables, count_arr):
+            if (not f):
+                print("<---------------------- Next Ranking ---------------------->")
+            else:
+                f = False
+            sort = run(table, counts, metric, flitsr, tiebrk, multi)
+            if ('map' in counts): # Map back if parallel
+                for rank in sort:
+                    rank[1] = counts['map'][rank[1]]
+            if (cutoff):
+                sort = compute_cutoff(cutoff, sort, details, groups, counts, metric, worst)
+            output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
 
 if __name__ == "__main__":
     main(sys.argv)
