@@ -438,12 +438,9 @@ def main(argv):
                 file.close()
                 reset(table, counts)
     else:
-        f = True
-        for table,counts in zip(tables, count_arr):
-            if (not f):
+        for i,(table,counts) in enumerate(zip(tables, count_arr)):
+            if (i > 0):
                 print("<---------------------- Next Ranking ---------------------->")
-            else:
-                f = False
             sort = run(table, counts, metric, flitsr, tiebrk, multi)
             if ('map' in counts): # Map back if parallel
                 for rank in sort:
