@@ -311,7 +311,8 @@ def main(argv):
     split = False
     method = False
     cutoff = None
-    worst = True
+    worst = False
+    ranking = False
     while (True):
         if (len(argv) > i):
             if (argv[i] in metrics):
@@ -320,7 +321,7 @@ def main(argv):
                 if ("=" in argv[i]):
                     cutoff = argv[i]
                 else:
-                    cutoff = "basis=0"
+                    cutoff = "basis=1"
             elif (argv[i] in cutoffs):
                 cutoff = argv[i]
             elif (argv[i] == "method"):
@@ -384,6 +385,8 @@ def main(argv):
                 tiebrk = 3
             elif (argv[i] == "multi"):
                 multi = 1
+            elif (argv[i] == "ranking"):
+                ranking = True
             elif (argv[i] == "all"):
                 all = True
             else:
@@ -395,24 +398,27 @@ def main(argv):
     if (cutoff and cutoff.startswith('basis')):
         flitsr = True
         multi = 1
+    # If only a ranking is given, print out metrics and return
+    if (ranking):
+        from ranking import read_ranking
+        sort,details,groups = read_ranking(d, method_level=method)
+        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
+        return
+    # Else, run the full process
     if (input_m):
         from tcm_input import read_table
         d_p = d
     else:
         from input import read_table
         d_p = d.split("/")[0] + ".txt"
-    #print("reading table")
+    # Read the table in and setup parallel if needed
     table,counts,groups,details,test_map = read_table(d, split, method_level=method)
     if (parallell):
         tables,count_arr = parallel.parallel(d, table, test_map, counts, tiebrk, metric, parallell)
-        #for sort_par in rankings:
-            #print("<---------------------- Ranking ---------------------->")
-            #output(sort_par, details, groups, weff, top1, perc_at_n, prec_rec,
-                    #collapse)
     else:
         tables = [table]
         count_arr = [counts]
-    if (all):
+    if (all): # Run the 'all' script (do all metrics and calculations)
         types = ["", "flitsr_", "flitsr_multi_"]
         #modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
                  #"ovr_", "harm_", "zol_", "hyp_", "bar_"]
@@ -437,7 +443,7 @@ def main(argv):
                             collapse=collapse, file=file)
                 file.close()
                 reset(table, counts)
-    else:
+    else: # Just run the given metric and calculations
         for i,(table,counts) in enumerate(zip(tables, count_arr)):
             if (i > 0):
                 print("<---------------------- Next Ranking ---------------------->")

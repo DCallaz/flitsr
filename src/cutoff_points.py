@@ -23,9 +23,9 @@ class cutoff_points:
         new_items = []
         first_fault = -1
         i = 0
-        size = 0
         score = 0
-        while (i < len(items) and (score-1 == items[i][0] or first_fault == -1)):
+        seen_basis = 0
+        while (i < len(items) and (not (seen_basis == basis_num) or first_fault == -1)):
             score = items[i][0]
             temp_items = []
             while (i < len(items) and items[i][0] == score):
@@ -33,12 +33,13 @@ class cutoff_points:
                     remove_from(fault_groups, items[i][1])
                     first_fault = len(temp_items)
                 temp_items.append(items[i])
-                size += len(groups[items[i][1]])
                 i += 1
             if (worst or first_fault == -1):
                 new_items.extend(temp_items)
             else:
                 new_items.append(temp_items[first_fault])
+            if (i < len(items) and score-1 != items[i][0]):
+                seen_basis += 1
         return new_items
 
     def oba(fault_groups, scores, groups, formula, tp, tf, worst):
