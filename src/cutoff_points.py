@@ -25,7 +25,7 @@ class cutoff_points:
         i = 0
         score = 0
         seen_basis = 0
-        while (i < len(items) and (not (seen_basis == basis_num) or first_fault == -1)):
+        while (i < len(items) and (seen_basis < basis_num or first_fault == -1)):
             score = items[i][0]
             temp_items = []
             while (i < len(items) and items[i][0] == score):

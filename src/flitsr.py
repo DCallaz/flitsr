@@ -286,7 +286,7 @@ def main(argv):
     metrics = Suspicious.getNames()
     cutoffs = cutoff_points.getNames()
     if (len(argv) < 2):
-        print("Usage: flitsr <input file> [<metric>] [split] [method] [worst]"
+        print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
@@ -341,6 +341,8 @@ def main(argv):
                 split = True
             elif (argv[i] == "worst"):
                 worst = True
+            elif (argv[i] == "best"):
+                worst = False
             elif (argv[i] == "sbfl"):
                 flitsr = False
             elif (argv[i] == "tcm"):
