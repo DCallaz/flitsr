@@ -331,7 +331,8 @@ def main(argv):
             elif (argv[i].startswith("parallel")):
                 if ("=" in argv[i]):
                     parType = argv[i].split("=")[1]
-                    if (parType == "bdm" or parType == "msp"):
+                    if (parType == "bdm" or parType == "msp"
+                        or parType == "hwk" or parType == "vwk"):
                         parallell = parType
                     else:
                         print("Unknown parallel argument: ", parType)
