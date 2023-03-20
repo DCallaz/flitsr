@@ -223,14 +223,14 @@ def run(table, counts, mode, flitsr=False, tiebrk=0, multi=0):
     localize.orig = None
     return sort
 
-def compute_cutoff(cutoff, sort, details, groups, counts, mode, worst=False):
+def compute_cutoff(cutoff, sort, details, groups, counts, mode, effort=2):
     fault_groups = find_fault_groups(details, groups)
     if (cutoff.startswith("basis")):
         sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
-                sort, groups, mode, counts['tf'], counts['tp'], worst=worst)
+                sort, groups, mode, counts['tf'], counts['tp'], effort=effort)
     else:
         sort = cutoff_points.cut(cutoff, fault_groups, sort, groups, mode, counts['tf'],
-                counts['tp'], worst=worst)
+                counts['tp'], effort=effort)
     return sort
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
@@ -286,7 +286,7 @@ def main(argv):
     metrics = Suspicious.getNames()
     cutoffs = cutoff_points.getNames()
     if (len(argv) < 2):
-        print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best]"
+        print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve]"
                 +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
@@ -311,7 +311,7 @@ def main(argv):
     split = False
     method = False
     cutoff = None
-    worst = False
+    effort = 0
     ranking = False
     while (True):
         if (len(argv) > i):
@@ -341,9 +341,11 @@ def main(argv):
             elif (argv[i] == "split"):
                 split = True
             elif (argv[i] == "worst"):
-                worst = True
+                effort = 1
             elif (argv[i] == "best"):
-                worst = False
+                effort = 0
+            elif (argv[i] == "resolve"):
+                effort = 2
             elif (argv[i] == "sbfl"):
                 flitsr = False
             elif (argv[i] == "tcm"):
@@ -455,7 +457,7 @@ def main(argv):
                 for rank in sort:
                     rank[1] = counts['map'][rank[1]]
             if (cutoff):
-                sort = compute_cutoff(cutoff, sort, details, groups, counts, metric, worst)
+                sort = compute_cutoff(cutoff, sort, details, groups, counts, metric, effort)
             output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
 
 if __name__ == "__main__":

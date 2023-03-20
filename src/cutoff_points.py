@@ -15,11 +15,11 @@ class cutoff_points:
             and x != "cut" and x != "getNames" and x != "method")]
         return names
 
-    def cut(cutoff, fault_groups, scores, groups, formula, tp, tf, worst=False):
+    def cut(cutoff, fault_groups, scores, groups, formula, tp, tf, effort=2):
         func = getattr(cutoff_points, cutoff)
-        return func(fault_groups, scores, groups, formula, tp, tf, worst)
+        return func(fault_groups, scores, groups, formula, tp, tf, effort)
 
-    def basis(basis_num, fault_groups, items, groups, formula, tp, tf, worst):
+    def basis(basis_num, fault_groups, items, groups, formula, tp, tf, effort):
         new_items = []
         first_fault = -1
         i = 0
@@ -34,42 +34,44 @@ class cutoff_points:
                     first_fault = len(temp_items)
                 temp_items.append(items[i])
                 i += 1
-            if (worst or first_fault == -1):
+            if (effort==1 or first_fault == -1):
                 new_items.extend(temp_items)
+            elif (effort == 2):
+                new_items.extend(temp_items[:first_fault+1])
             else:
                 new_items.append(temp_items[first_fault])
             if (i < len(items) and score-1 != items[i][0]):
                 seen_basis += 1
         return new_items
 
-    def oba(fault_groups, scores, groups, formula, tp, tf, worst):
-        return cutoff_points.method(float('inf'), fault_groups, scores, groups, worst)
+    def oba(fault_groups, scores, groups, formula, tp, tf, effort):
+        return cutoff_points.method(float('inf'), fault_groups, scores, groups, effort)
 
-    def mba_dominator(fault_groups, scores, groups, formula, tp, tf, worst):
+    def mba_dominator(fault_groups, scores, groups, formula, tp, tf, effort):
         sus = Suspicious(tf, tf, tp, tp)
         score = sus.execute(formula)
-        return cutoff_points.method(score, fault_groups, scores, groups, worst)
+        return cutoff_points.method(score, fault_groups, scores, groups, effort)
 
-    def mba_zombie(fault_groups, scores, groups, formula, tp, tf, worst):
+    def mba_zombie(fault_groups, scores, groups, formula, tp, tf, effort):
         sus = Suspicious(0, tf, 0, tp)
         score = sus.execute(formula)
-        return cutoff_points.method(score, fault_groups, scores, groups, worst)
+        return cutoff_points.method(score, fault_groups, scores, groups, effort)
 
-    def mba_5_perc(fault_groups, scores, groups, formula, tp, tf, worst):
+    def mba_5_perc(fault_groups, scores, groups, formula, tp, tf, effort):
         size = 0
         for group in groups:
             size += len(group)
         return cutoff_points.method(int(size*0.05), fault_groups, scores,
-                groups, worst, True)
+                groups, effort, True)
 
-    def mba_10_perc(fault_groups, scores, groups, formula, tp, tf, worst):
+    def mba_10_perc(fault_groups, scores, groups, formula, tp, tf, effort):
         size = 0
         for group in groups:
             size += len(group)
         return cutoff_points.method(int(size*0.1), fault_groups, scores,
-                groups, worst, True)
+                groups, effort, True)
 
-    def mba_const_add(fault_groups, items, groups, formula, tp, tf, worst):
+    def mba_const_add(fault_groups, items, groups, formula, tp, tf, effort):
         tot_size = 0
         for group in groups:
             tot_size += len(group)
@@ -96,7 +98,7 @@ class cutoff_points:
                 stop_i = size + tot_size*0.01
         return new_scores
 
-    def mba_optimal(fault_groups, items, groups, formula, tp, tf, worst):
+    def mba_optimal(fault_groups, items, groups, formula, tp, tf, effort):
         sus = Suspicious(0, tf, 0, tp)
         zero = sus.execute(formula)
         new_scores = []
@@ -120,7 +122,7 @@ class cutoff_points:
                 stop_i = size + size/(f_num+1)
         return new_scores
 
-    def aba(fault_groups, items, groups, formula, tp, tf, worst):
+    def aba(fault_groups, items, groups, formula, tp, tf, effort):
         new_items = []
         i = 0
         temp_items = []
@@ -138,7 +140,7 @@ class cutoff_points:
                 temp_items = []
         return new_items
 
-    def method(stop_score, fault_groups, items, groups, worst, rank=False):
+    def method(stop_score, fault_groups, items, groups, effort, rank=False):
         new_items = []
         first_fault = -1
         i = 0
@@ -154,8 +156,10 @@ class cutoff_points:
                 temp_items.append(items[i])
                 size += len(groups[items[i][1]])
                 i += 1
-            if (worst or score > stop_score or first_fault == -1):
+            if (effort == 1 or score > stop_score or first_fault == -1):
                 new_items.extend(temp_items)
+            elif (effort == 2):
+                new_items.extend(temp_items[:first_fault+1])
             else:
                 new_items.append(temp_items[first_fault])
         return new_items
