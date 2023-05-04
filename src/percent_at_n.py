@@ -155,7 +155,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
             ax.set_title(split[i])
         if (log):
             ax.set_xscale("log")
-            ax.set_xticks([0.01, 0.1, 1, 10, 100])
+            ax.set_xticks([0.01, 0.1, 1, 10, 100], [0.01, 0.1, 1, 10, 100])
         #plt.ylim(0, 100)
         #plt.xlim(0, 100)
         ax.grid()
