@@ -23,12 +23,11 @@ which should print the usage message.
 To run the FLITSR algorithm and produce a suspiciousness ranking, simply use the
 command:
 ```
-flitsr <input> [tcm]
+flitsr <input>
 ```
 where `<input>` is the directory containing the coverage files for GZoltar
-input, or the file containing the coverage for TCM input (which must then be
-followed by the `tcm` option). See the Input structure section for more
-information on the types of input.
+input, or the file containing the coverage for TCM input. See the Input structure
+section for more information on the types of input.
 
 More advanced options and outputs are described in the Detailed usage section in
 this README.

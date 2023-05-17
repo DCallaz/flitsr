@@ -6,6 +6,7 @@ import copy
 import percent_at_n
 import parallel
 import precision_recall
+from os import path as osp
 from output import print_names, find_faults, find_fault_groups
 from suspicious import Suspicious
 from cutoff_points import cutoff_points
@@ -142,17 +143,17 @@ def reset(table, counts):
         if (not table[t][0]):
             add_test(t, table, counts)
 
-spaces = -1
+#spaces = -1
 def feedback_loc(table, counts, formula, tiebrk):
     """Executes the recursive flitsr algorithm to identify faulty elements"""
-    global spaces
+    #global spaces
     if (counts["tf"] == 0):
         return []
     #print(counts)
     sort = localize.localize(counts, formula, tiebrk)
     #print(sort)
     rule = sort[0][1]
-    spaces += 1
+    #spaces += 1
     #if (sort[0][0] <= 0.0):
         #print(" "*spaces,rule,"has zero score, returning")
         #return []
@@ -161,7 +162,13 @@ def feedback_loc(table, counts, formula, tiebrk):
     i = 1
     while (len(tests_removed) == 0): # sanity check
         #print(" "*spaces, rule,"with score",sort[0][0])
-        rule = sort[i][1]
+        if (len(sort) < i):
+            rule = sort[i][1]
+        else:
+            count_non_removed = len([1 for t in table if t[0]])
+            print("WARNING: flitsr found", count_non_removed,
+                    "failing test(s) that it could not explain", file=sys.stderr)
+            return []
         tests_removed = remove_from_tests(rule, table, counts)
         i += 1
     #print(" "*spaces, "removed:",tests_removed)
@@ -171,7 +178,7 @@ def feedback_loc(table, counts, formula, tiebrk):
         #print(" "*spaces,"Adding",rule)
         faulty.append(rule)
     #print(" "*spaces, rule,"finished")
-    spaces -= 1
+    #spaces -= 1
     return faulty
 
 #<------------------ Printing methods ----------------------->
@@ -287,7 +294,7 @@ def main(argv):
     cutoffs = cutoff_points.getNames()
     if (len(argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve]"
-                +" [sbfl] [tcm] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
+                +" [sbfl] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
                 +" [perc@n] [precision/recall]@<x>"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
@@ -349,7 +356,7 @@ def main(argv):
             elif (argv[i] == "sbfl"):
                 flitsr = False
             elif (argv[i] == "tcm"):
-                input_m = 1
+                pass
             elif (argv[i] == "first"):
                 weff.append("first")
             elif (argv[i] == "avg"):
@@ -400,6 +407,13 @@ def main(argv):
             i += 1
         else:
             break
+    if (osp.isfile(d)):
+        input_m = 1
+    elif (osp.isdir(d) and osp.isfile(osp.join(d, "matrix.txt"))):
+        input_m = 0
+    else:
+        print("ERROR:", d, "does not exist")
+        quit()
     if (cutoff and cutoff.startswith('basis')):
         flitsr = True
         multi = 1

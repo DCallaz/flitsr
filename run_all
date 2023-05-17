@@ -42,7 +42,7 @@ for proj in *; do
     #if [ ! -f "results" ]; then
       if [ "$1" = "tcm" ]; then
         for file in *.txt; do
-          run_with_lock flitsr "$file" tcm all;
+          run_with_lock flitsr "$file" all;
         done
       else
         for file in */; do run_with_lock flitsr "${file%/}" all; done
