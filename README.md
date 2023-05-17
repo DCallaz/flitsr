@@ -114,7 +114,7 @@ by running the `flitsr` command. Running the command with no parameters will
 give the help message containing all the valid arguements the script can take.
 For ease of access, these are listed and described here:
 ```
-Usage: flitsr <input file> [<metric>] [split] [method] [worst] [sbfl] [tcm]
+Usage: flitsr <input file> [<metric>] [split] [method] [worst] [sbfl]
 [first/avg/med/last] [one_top1/all_top1/perc_top1] [perc@n] [precision/recall]@x
 [tiebrk/rndm/otie] [multi] [all] [only_fail] ['aba', 'mba_10_perc', 'mba_5_perc',
 'mba_const_add', 'mba_dominator', 'mba_optimal', 'mba_zombie', 'oba']
@@ -144,9 +144,6 @@ Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
 * `sbfl`: Disables the FLITSR algorithm so that only the base metric is used
   to produce the ranking. This is equivalent to using the base metric as-is, but
   allows the user to run these metrics within the FLITSR framework.
-* `tcm`: Specifies that the input is of the TCM format type, which is a single
-  file containing the coverage information and bug locations. More information
-  on the TCM format can be found at the [TCM homepage](https://www.fernuni-hagen.de/ps/prjs/PD/)
 * The following arguments replace the default ranking output of FLITSR with
   evaluation calculations. Multiple of the following arguments can be given in
   the same call:
