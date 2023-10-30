@@ -10,7 +10,7 @@ To install FLITSR, simply clone this repository and add the following lines to
 your `.bashrc`:
 ```
 export FLITSR_HOME="absolute/path/to/flitsr/directory"
-export PATH="$FLITSR_HOME:$PATH"
+export PATH="$FLITSR_HOME/bin:$PATH"
 ```
 
 To test your installation, from any directory run:
