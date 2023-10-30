@@ -51,3 +51,29 @@ def read_ranking(ranking_file, method_level=False):
         i += 1
     groups = [[i] for i in range(0, num_locs)]
     return sort,uuts,groups
+
+def read_flitsr_ranking(ranking_file):
+    f = open(ranking_file)
+    num_locs = 0  # number of reported locations (methods/lines)
+    i = 0  # number of actual lines
+    uuts = []
+    sort = []
+    groups = []
+    line = f.readline()
+    while (line != ""):
+        line = line.strip()
+        score = float(line[line.index(": ")+2:line.index(" [")])
+        line = f.readline().strip()
+        groups.append([])
+        while (not line.startswith("]")):
+            m = re.fullmatch("\s*\([0-9]+\) (\S*)\s*(?:\(FAULT ([0-9,]+)\))?", line)
+            details = m.group(1).split('|')
+            faults = m.group(2).split(',') if m.group(2) else []
+            uuts.append((details, faults))
+            groups[num_locs].append(i)
+            i += 1
+            line = f.readline().strip()
+        sort.append([score, num_locs, 0])
+        num_locs += 1
+        line = f.readline().strip()
+    return sort, uuts, groups

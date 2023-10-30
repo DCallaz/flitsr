@@ -419,8 +419,10 @@ def main(argv):
         multi = 1
     # If only a ranking is given, print out metrics and return
     if (ranking):
-        from ranking import read_ranking
-        sort,details,groups = read_ranking(d, method_level=method)
+        #from ranking import read_ranking
+        #sort,details,groups = read_ranking(d, method_level=method)
+        from ranking import read_flitsr_ranking
+        sort,details,groups = read_flitsr_ranking(d)
         output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
         return
     # Else, run the full process
