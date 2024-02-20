@@ -1,5 +1,14 @@
 import re
 
+
+def read_any_ranking(ranking_file, method_level=False):
+    f = open(ranking_file)
+    if (f.readline().startswith("Faulty grouping")):
+        return read_flitsr_ranking(ranking_file)
+    else:
+        return read_ranking(ranking_file, method_level)
+
+
 def read_ranking(ranking_file, method_level=False):
     f = open(ranking_file)
     num_locs = 0 # number of reported locations (methods/lines)
