@@ -1,7 +1,7 @@
 import sys
 import re
 import os
-from flitsr.output import find_faults
+from flitsr.output import find_faults, print_table
 from flitsr.merge_equiv import merge_on_row, remove_from_table
 from flitsr.split_faults import split
 
@@ -127,5 +127,5 @@ def read_table(directory, split_faults, method_level=False):
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    table,locs,tests,details = read_table(d)
+    table,locs,tests,details = read_table(d, False)
     print_table(table)

@@ -13,76 +13,7 @@ from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
 from math import log
 
-#<------------------ Outdated methods ----------------------->
-
-def merge_equivs_old(table, locs):
-    """Merges groups of rules with identical spectra"""
-    names = [[i] for i in range(0, locs)]
-    i = 0
-    l = locs
-    while (i < l):
-        suspects = [i for i in range(i+1, l)]
-        for row in table:
-            if (len(suspects) == 0):
-                break
-            for sus in list(suspects):
-                if (row[i+2] != row[sus+2]):
-                    suspects.remove(sus)
-        suspects.sort(reverse=True)
-        for eq in suspects:
-            names[i] += names[eq]
-            names.pop(eq)
-            for row in table:
-                row.pop(eq+2)
-        i += 1
-        l = len(table[0])-2
-    return names
-
-def merge_equivs(table, locs):
-    """Merges groups of rules with identical spectra"""
-    groups = [[i for i in range(0, locs)]]
-    for row in table:
-        new_groups = []
-        for group in groups:
-            eq = [group[0]]
-            neq = []
-            for elem in group[1:]:
-                if (row[2+elem] == row[2+group[0]]):
-                    eq.append(elem)
-                else:
-                    neq.append(elem)
-            if (eq != []):
-                new_groups.append(eq)
-            if (neq != []):
-                new_groups.append(neq)
-        groups = new_groups
-    groups.sort(key=lambda group: group[0])
-    remove = []
-    for group in groups:
-        remove.extend(group[1:])
-    remove.sort(reverse=True)
-    for row in table:
-        for rem in remove:
-            row.pop(rem+2)
-    return groups
-
-def add_back_tests(tests_removed, table, counts):
-    """Re-activates all the given tests"""
-    for t in tests_removed:
-        add_test(t, table, counts)
-
 #<------------------ Feedback methods ----------------------->
-
-def all_passing(table, list=None):
-    """Tests if all active test cases are passing test cases"""
-    nullify = True
-    if (list == None):
-        list = range(0, len(table))
-        nullify = False
-    for i in list:
-        if ((nullify or table[i][0] == True) and table[i][1] == False):
-            return False
-    return True
 
 def remove_test(t, table, counts):
     table[t][0] = False
@@ -145,52 +76,29 @@ def reset(table, counts):
         if (not table[t][0]):
             add_test(t, table, counts)
 
-#spaces = -1
 def feedback_loc(table, counts, formula, tiebrk):
     """Executes the recursive flitsr algorithm to identify faulty elements"""
-    #global spaces
     if (counts["tf"] == 0):
         return []
-    #print(counts)
     sort = localize.localize(counts, formula, tiebrk)
-    #print(sort)
     rule = sort[0][1]
-    #spaces += 1
-    #if (sort[0][0] <= 0.0):
-        #print(" "*spaces,rule,"has zero score, returning")
-        #return []
-    #print(" "*spaces, rule,"with score",sort[0][0])
     tests_removed = remove_from_tests(rule, table, counts)
     i = 1
     while (len(tests_removed) == 0): # sanity check
-        #print(" "*spaces, rule,"with score",sort[0][0])
-        if (len(sort) < i):
-            rule = sort[i][1]
-        else:
+        if (i >= len(sort)):
             count_non_removed = len([1 for t in table if t[0]])
             print("WARNING: flitsr found", count_non_removed,
                     "failing test(s) that it could not explain", file=sys.stderr)
             return []
+        # continue trying the next element if available
+        rule = sort[i][1]
         tests_removed = remove_from_tests(rule, table, counts)
         i += 1
-    #print(" "*spaces, "removed:",tests_removed)
     faulty = feedback_loc(table, counts, formula, tiebrk)
     remove_faulty_rules(table, tests_removed, faulty)
     if (len(tests_removed) > 0):
-        #print(" "*spaces,"Adding",rule)
         faulty.append(rule)
-    #print(" "*spaces, rule,"finished")
-    #spaces -= 1
     return faulty
-
-#<------------------ Printing methods ----------------------->
-
-def print_table(table):
-    """Prints the given table to stdout"""
-    for row in table:
-        for col in row:
-            print(float(col), end=",")
-        print()
 
 #<------------------ Main method ----------------------->
 #Description of table:
@@ -458,6 +366,9 @@ def main(argv):
         d_p = d.split("/")[0] + ".run"
     # Read the table in and setup parallel if needed
     table,counts,groups,details,test_map = read_table(d, split, method_level=method)
+    if (table == None):
+        print("WARNING: Incorrectly formatted input file, terminating...", file=sys.stderr)
+        return
     if (parallell):
         tables,count_arr = parallel.parallel(d, table, test_map, counts, tiebrk, metric, parallell)
     else:
