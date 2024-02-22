@@ -66,4 +66,3 @@ def find_fault_groups(details, groups):
                     fault_groups[fault_num].add(i)
                     break
     return fault_groups
-

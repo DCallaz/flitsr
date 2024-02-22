@@ -1,6 +1,6 @@
 import sys
 import os
-from output import find_faults
+from output import find_faults, print_table
 from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
 
@@ -104,6 +104,8 @@ def fill_table(tests, num_tests, locs, f, method_map):
 
 def read_table(file_loc, split_faults, method_level=False):
     table = None
+    counts = None
+    test_map = None
     tests = None
     num_locs = 0
     num_tests = 0
@@ -148,5 +150,5 @@ def read_table(file_loc, split_faults, method_level=False):
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    table,locs,tests,details = read_table(d)
+    table,locs,tests,details = read_table(d, False)
     print_table(table)
