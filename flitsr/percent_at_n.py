@@ -163,6 +163,8 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
 
 def auc_calc(points, cut_off=101.0):
     auc = 0
+    if (len(points) == 0 or points[-1][0] != 100.0):
+        points.append((100.0, 100.0))
     for i in range(1, len(points)):
         if (points[i][0] >= cut_off):
             break
