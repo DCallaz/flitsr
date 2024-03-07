@@ -6,8 +6,10 @@ faults.
 * `python3`
 * `matplotlib`
 ### Installation
-To install FLITSR, simply clone this repository and add the following lines to
-your `.bashrc`:
+To install FLITSR, simply clone this repository and run the `setup.sh` script.
+
+Alternatively, if you do not want to run the `setup.sh` script, you can add the
+following lines to your `.bashrc` manually:
 ```
 export FLITSR_HOME="absolute/path/to/flitsr/directory"
 export PATH="$FLITSR_HOME/bin:$PATH"
