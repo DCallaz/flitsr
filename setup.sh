@@ -7,8 +7,12 @@ fi
 # add the script path to the bashrc
 if [ "$(grep "FLITSR_HOME" ~/.bashrc)" == "" ]; then
   SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+  export FLITSR_HOME="$SCRIPT_DIR"
   echo "export FLITSR_HOME=\"$SCRIPT_DIR\"" >> ~/.bashrc
   echo "export PATH=\"\$FLITSR_HOME/bin:\$PATH\"" >> ~/.bashrc
 fi
 # install numpy
-pip install numpy
+python -m venv "$FLITSR_HOME/.venv"
+source "$FLITSR_HOME/.venv/bin/activate"
+pip install -r "$FLITSR_HOME/requirements.txt"
+deactivate
