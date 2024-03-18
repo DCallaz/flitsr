@@ -4,6 +4,7 @@ faults.
 ## Setup
 ### Requirements
 * `python3`
+* `numpy`
 * `matplotlib` (optional, used for evaluation)
 ### Installation
 To install FLITSR, simply clone this repository and run the `setup.sh` script.
