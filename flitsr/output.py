@@ -1,4 +1,7 @@
 import sys
+from spectrum import Spectrum
+from typing import Dict, List
+
 
 def find_names(details, faulties, groups):
     ret = []
@@ -8,6 +11,7 @@ def find_names(details, faulties, groups):
             group.append((details[elem], elem))
         ret.append(group)
     return ret
+
 
 def print_names(details, faulty, groups, scores=None, file=sys.stdout):
     names = find_names(details, faulty, groups)
@@ -26,11 +30,14 @@ def print_names(details, faulty, groups, scores=None, file=sys.stdout):
                     if (name[0][1]) else "", file=file)
         print("]", file=file)
 
-def print_table(table):
-    for row in table:
+
+def print_table(spectrum):
+    for test in spectrum:
+        row = spectrum[test]
         i = 0
         p = False
-        for col in row:
+        for elem in row:
+            col = row[elem]
             if (i == 1):
                 p = col
             elif (i > 1):
@@ -41,26 +48,26 @@ def print_table(table):
         else:
             print('-')
 
-def find_faults(details):
-    actual_faults = {}
-    i = 0
-    for uut in details:
-        if (uut[1]):
-            for fault in uut[1]:
+
+def find_faults(spectrum: Spectrum) -> Dict[int, List[Spectrum.Element]]:
+    actual_faults: Dict[int, List[Spectrum.Element]] = dict()
+    for elem in spectrum.elements:
+        if (elem.faults):
+            for fault in elem.faults:
                 if (fault not in actual_faults):
                     actual_faults[fault] = []
-                actual_faults[fault].append(i)
-        i += 1
+                actual_faults[fault].append(elem)
     return actual_faults
 
-def find_fault_groups(details, groups):
-    faults = find_faults(details)
+
+def find_fault_groups(spectrum: Spectrum):
+    faults = find_faults(spectrum)
     fault_groups = {}
-    for i in range(len(groups)):
+    for i in range(len(spectrum.groups)):
         for item in faults.items():
             fault_num = item[0]
-            for loc in item[1]:
-                if (loc in groups[i]):
+            for elem in item[1]:
+                if (elem in spectrum.groups[i]):
                     if (fault_num not in fault_groups):
                         fault_groups[fault_num] = set()
                     fault_groups[fault_num].add(i)

@@ -2,10 +2,11 @@ import sys
 import re
 import os
 from output import find_faults, print_table
-from merge_equiv import merge_on_row, remove_from_table
 from split_faults import split
+from spectrum import Spectrum
 
-def construct_details(f, method_level):
+
+def construct_details(f, method_level, spectrum):
     """
     Constructs a details object containing the information related to each
     element of the form:
@@ -14,9 +15,7 @@ def construct_details(f, method_level):
         ...
     ]
     """
-    uuts = []
-    num_locs = 0 # number of reported locations (methods/lines)
-    i = 0 # number of actual lines
+    i = 0  # number of actual lines
     method_map = {}
     methods = {}
     bugs = 0
@@ -36,96 +35,88 @@ def construct_details(f, method_level):
         if (method_level):
             details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
             if ((details[0], details[1]) not in methods):
-                methods[(details[0], details[1])] = num_locs
-                method_map[i] = num_locs
-                uuts.append((details, faults)) # append with first line number
-                num_locs += 1
+                # add with first line number
+                elem = spectrum.addElement(details, faults)
+                methods[(details[0], details[1])] = elem
+                method_map[i] = elem
             else:
-                method_map[i] = methods[(details[0], details[1])]
+                elem = method_map[i] = methods[(details[0], details[1])]
                 for fault in faults:
-                    if (fault not in uuts[method_map[i]][1]):
-                        uuts[method_map[i]][1].append(fault)
-                #uuts[method_map[i]][1].extend(faults)
+                    if (fault not in elem.faults):
+                        elem.faults.append(fault)
         else:
-            method_map[i] = i
-            uuts.append(([r.group(1)+"."+r.group(2), r.group(3), l[1]], faults))
-            num_locs += 1
+            details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
+            elem = spectrum.addElement(details, faults)
+            method_map[i] = elem
         i += 1
-    return uuts, num_locs, method_map
+    return method_map
 
-def construct_tests(tests_reader):
-    tests = []
+
+def construct_tests(tests_reader, spectrum):
     num_tests = 0
     tests_reader.readline()
     for r in tests_reader:
         row = r.strip().split(",")
-        tests.append(row[1] == 'PASS')
+        spectrum.addTest(row[0], row[1] == 'PASS')
         num_tests += 1
-    return tests, num_tests
+    return num_tests
 
-def fill_table(tests, num_tests, locs, bin_file, method_map):
-    table = []
-    groups = [[i for i in range(0, locs)]]
-    counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
-    test_map = {}
-    for r in range(0, num_tests):
-        row = [True] + [False]*locs
+
+def fill_table(num_tests, bin_file, method_map, spectrum):
+    for test in spectrum.tests:
         line = bin_file.readline()
         arr = line.strip().split()
         seen = []
         for i in range(0, len(arr)-1):
-            if (arr[i] != "0"):
-                i = method_map[i]
-                row[i+1] = row[i+1] or True
-                if (i not in seen):
-                    seen.append(i)
-                    if (tests[r]):
-                        counts["p"][i] += 1
-                    else:
-                        counts["f"][i] += 1
+            elem = method_map[i]
+            spectrum.addExecution(test, elem, arr[i] != "0")
+            if (arr[i] != "0" and elem not in seen):
+                seen.append(elem)
+                if (test.outcome):
+                    spectrum.p[elem] += 1
+                else:
+                    spectrum.f[elem] += 1
         # Use row to merge equivalences
-        groups = merge_on_row(row, groups)
+        spectrum.merge_on_test(test)
         # Increment total counts, and append row to table
-        if (tests[r]):
-            counts["tp"] += 1
+        if (test.outcome):
+            spectrum.tp += 1
         else:
-            counts["tf"] += 1
-            table.append(row)
-            test_map[r] = len(table)-1
-    groups.sort(key=lambda group: group[0])
+            spectrum.tf += 1
+    # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from table
-    remove_from_table(groups, table, counts)
-    return table,groups,counts,test_map
+    spectrum.remove_unnecessary()
+
 
 def read_table(directory, split_faults, method_level=False):
-    # Getting the details of the project
-    #print("constructing details")
-    details,num_locs,method_map = construct_details(open(directory+"/spectra.csv"),
-            method_level)
+    spectrum = Spectrum()
+    # Getting the details of the elements
+    method_map = construct_details(open(directory+"/spectra.csv"),
+                                   method_level, spectrum)
+    # Getting the details of the tests
+    num_tests = construct_tests(open(directory+"/tests.csv"), spectrum)
     # Constructing the table
-    #print("constructing table")
-    tests,num_tests = construct_tests(open(directory+"/tests.csv"))
-    #print("filling table")
-    table,groups,counts,test_map = fill_table(tests, num_tests, num_locs,
-            open(directory+"/matrix.txt"), method_map)
+    fill_table(num_tests, open(directory+"/matrix.txt"), method_map, spectrum)
+    # Split fault groups if necessary
     if (split_faults):
-        faults,unexposed = split(find_faults(details), table, groups)
-        for i in range(len(details)):
-            if (i in unexposed):
-                details[i] = (details[i][0], [])
-                print("Dropped faulty UUT:", details[i][0], "due to unexposure")
+        faults, unexposed = split(find_faults(spectrum), spectrum)
+        for elem in spectrum.elements:
+            if (elem in unexposed):
+                elem.faults = []
+                print("Dropped faulty UUT:", elem.details, "due to unexposure")
             fault_items = []
             for item in faults.items():
-                if (i in item[1]):
+                if (elem in item[1]):
                     fault_items.append(item[0])
             if (len(fault_items) != 0):
-                details[i] = (details[i][0], fault_items)
+                elem.faults = fault_items
         if (len(faults) == 0):
-            print("No exposable faults in", file_loc)
+            print("No exposable faults in", directory)
             quit()
-    return table,counts,groups,details,test_map
+    return spectrum
+
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    table,locs,tests,details = read_table(d, False)
-    print_table(table)
+    spectrum = read_table(d, False)
+    print_table(spectrum)
