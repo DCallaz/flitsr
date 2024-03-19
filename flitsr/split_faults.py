@@ -1,5 +1,5 @@
 import sys
-from output import find_fault_groups, find_faults
+from flitsr.output import find_faults
 
 def getMapping(faults, groups):
     faults_comb = [i for l in faults.values() for i in l]
@@ -74,9 +74,9 @@ if __name__ == "__main__":
         else:
             break
     if (gzoltar):
-        from input import read_table
+        from flitsr.input import read_table
     else:
-        from tcm_input import read_table
+        from flitsr.tcm_input import read_table
     table,counts,groups,details,_ = read_table(d, False)
     faults = find_faults(details)
     print("faults:",faults)

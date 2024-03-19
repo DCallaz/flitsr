@@ -1,0 +1,19 @@
+#!/bin/bash
+if [ ! "$(ls | grep "\.results$")" ]; then
+  echo "ERROR: Could not find results files in this directory!"
+  exit 1
+fi
+for results in *.results; do
+  metric="$(basename -s .results $results)"
+  results="$(awk -F "\n" -v RS="-{26}\n" '{print $1,$6}' "$results" | sed 's/\.txt percentage at n: [0-9.]\+,/,/g')"
+  for result in $results; do
+    name="$(echo "$result" | cut -d ',' -f 1)"
+    res="$(echo "$result" | cut --complement -d ',' -f 1 | tr ',' '\n')"
+    if [ -f "perc_at_n_$name.csv" ]; then
+      paste -d ',' "perc_at_n_$name.csv" <(echo -e "$metric\n$res") > temp
+      mv temp "perc_at_n_$name.csv"
+    else
+      echo -e "$metric\n$res" > "perc_at_n_$name.csv"
+    fi
+  done
+done

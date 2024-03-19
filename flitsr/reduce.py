@@ -1,4 +1,4 @@
-from tcm_input import read_table, print_names, find_faults
+from flitsr.tcm_input import read_table
 from multiprocessing import Process, Event, Queue
 import sys
 import random

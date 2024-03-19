@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 $FLITSR_HOME/flitsr/percent_at_n.py "$@"
+python3 -m flitsr.percent_at_n "$@"

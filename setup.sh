@@ -19,6 +19,7 @@ fi
 if [ "$(grep "FLITSR_HOME" "$rcfile")" == "" ]; then
   SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   echo "export FLITSR_HOME=\"$SCRIPT_DIR\"" >> "$rcfile"
+  echo "export PYTHONPATH=\"\$FLITSR_HOME:\$PYTHONPATH\"" >> "$rcfile"
   echo "export PATH=\"\$FLITSR_HOME/bin:\$PATH\"" >> "$rcfile"
   echo "$rcfile has been updated. Run 'source $rcfile' to update your session."
 fi

@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 $FLITSR_HOME/flitsr/merge.py "$@"
+python3 -m flitsr.merge "$@"

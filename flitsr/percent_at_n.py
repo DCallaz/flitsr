@@ -1,4 +1,4 @@
-from weffort import getTie
+from flitsr.weffort import getTie
 import math
 import sys
 import copy
