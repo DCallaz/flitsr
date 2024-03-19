@@ -9,8 +9,6 @@ shell="$(ps -p$PPID | grep -v "PID" | awk '{print $4}')"
 if [[ ! "$shell" =~ ^sh|csh|tcsh|ksh|dash|bash|zsh|fish$ ]]; then
   shell="$(basename $SHELL)"
 fi
-echo "$shell"
-exit 0
 if [ "$shell" == "bash" ]; then
   rcfile=~/.bashrc
 elif [ "$shell" == "zsh" ]; then
