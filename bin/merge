@@ -1,2 +1,4 @@
 #!/bin/bash
-python3 -m flitsr.merge "$@"
+source "$FLITSR_HOME/.venv/bin/activate"
+python -m flitsr.merge "$@"
+deactivate

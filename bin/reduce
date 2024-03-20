@@ -1,2 +1,4 @@
 #!/bin/bash
-python3 -m flitsr.reduce "$@"
+source "$FLITSR_HOME/.venv/bin/activate"
+python -m flitsr.reduce "$@"
+deactivate

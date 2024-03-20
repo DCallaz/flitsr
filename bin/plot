@@ -1,2 +1,4 @@
 #!/bin/bash
-python3 -m flitsr.plot "$@"
+source "$FLITSR_HOME/.venv/bin/activate"
+python -m flitsr.plot "$@"
+deactivate
