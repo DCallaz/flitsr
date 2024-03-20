@@ -13,7 +13,6 @@ class Spectrum():
         def __init__(self, name: str, outcome: bool):
             self.name = name
             self.outcome = outcome
-            self.spectra = dict()
 
         def __str__(self):
             return self.name

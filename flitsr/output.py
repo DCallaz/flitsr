@@ -3,11 +3,11 @@ from spectrum import Spectrum
 from typing import Dict, List
 
 
-def find_names(details, faulties, groups):
+def find_groups(faulties, spectrum):
     ret = []
     for faulty in faulties:
         group = []
-        for elem in groups[faulty]:
+        for elem in spectrum.groups[faulty]:
             group.append((details[elem], elem))
         ret.append(group)
     return ret

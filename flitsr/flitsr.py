@@ -159,10 +159,12 @@ def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], faults, sort, groups, collapse)
+                    p = precision_recall.precision(entry[1], faults, sort,
+                                                   spectrum.groups, collapse)
                     print("precision at {}: {}".format(entry[1], p), file=file)
                 elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], faults, sort, groups, collapse)
+                    r = precision_recall.recall(entry[1], faults, sort,
+                                                spectrum.groups, collapse)
                     print("recall at {}: {}".format(entry[1], r), file=file)
     else:
         names = []
