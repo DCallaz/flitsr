@@ -1,6 +1,6 @@
 import copy
-from math import comb,factorial
-from weffort import getTie
+from math import comb, factorial
+from flitsr.weffort import getTie
 
 def precision(n, faults, ranking, groups, perc=False, worst_effort=False, collapse=False):
     if (len(faults) == 0):

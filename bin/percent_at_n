@@ -1,4 +1,4 @@
 #!/bin/bash
 source "$FLITSR_HOME/.venv/bin/activate"
-python $FLITSR_HOME/flitsr/percent_at_n.py "$@"
+python -m flitsr.percent_at_n "$@"
 deactivate

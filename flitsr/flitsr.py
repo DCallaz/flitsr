@@ -1,15 +1,15 @@
-import localize
+from flitsr import localize
 import sys
-import weffort
-import top
+from flitsr import weffort
+from flitsr import top
 import copy
-import percent_at_n
-import parallel
-import precision_recall
+from flitsr import percent_at_n
+from flitsr import parallel
+from flitsr import precision_recall
 from os import path as osp
-from output import print_names, find_faults, find_fault_groups
-from suspicious import Suspicious
-from cutoff_points import cutoff_points
+from flitsr.output import print_names, find_faults, find_fault_groups
+from flitsr.suspicious import Suspicious
+from flitsr.cutoff_points import cutoff_points
 
 #<------------------ Outdated methods ----------------------->
 
@@ -431,16 +431,16 @@ def main(argv):
         multi = 1
     # If only a ranking is given, print out metrics and return
     if (ranking):
-        from ranking import read_any_ranking
+        from flitsr.ranking import read_any_ranking
         sort, details, groups = read_any_ranking(d, method_level=method)
         output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
         return
     # Else, run the full process
     if (input_m):
-        from tcm_input import read_table
+        from flitsr.tcm_input import read_table
         d_p = d
     else:
-        from input import read_table
+        from flitsr.input import read_table
         d_p = d.split("/")[0] + ".txt"
     # Read the table in and setup parallel if needed
     table,counts,groups,details,test_map = read_table(d, split, method_level=method)

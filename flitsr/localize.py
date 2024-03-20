@@ -1,4 +1,4 @@
-from suspicious import Suspicious
+from flitsr.suspicious import Suspicious
 import random
 
 def get_counts(table):
