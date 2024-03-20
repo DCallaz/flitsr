@@ -1,4 +1,4 @@
-from flitsr import flitsr, merge, percent_at_n, plot
+from flitsr import flitsr, merge, percent_at_n
 
 __all__ = [
     'flitsr',
