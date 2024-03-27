@@ -10,6 +10,7 @@ from os import path as osp
 from flitsr.output import print_names, find_faults, find_fault_groups
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
+from math import log
 
 #<------------------ Outdated methods ----------------------->
 
@@ -283,6 +284,9 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
                 elif (perc_at_n == 3):
                     optimal=percent_at_n.auc_calc([(0.0, 100.0)])
                     print("pauc:", "{:.3f}".format(auc/optimal), file=file)
+                elif (perc_at_n == 4):
+                    optimal=percent_at_n.auc_calc([(0.0, 100.0)])
+                    print("lauc:", "{:.3f}".format(log(auc+1, optimal)), file=file)
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
@@ -303,7 +307,7 @@ def main(argv):
     if (len(argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve]"
                 +" [sbfl] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [perc@n/auc/pauc] [precision/recall]@<x>"
+                +" [perc@n/auc/pauc/lauc] [precision/recall]@<x>"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
         print()
@@ -389,6 +393,8 @@ def main(argv):
                 perc_at_n = 2
             elif (argv[i] == "pauc"):
                 perc_at_n = 3
+            elif (argv[i] == "lauc"):
+                perc_at_n = 4
             elif ("precision@" in argv[i]):
                 n = argv[i].split("@")[1]
                 if (n == "b" or n == "f"):
