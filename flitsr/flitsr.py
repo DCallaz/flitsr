@@ -242,7 +242,7 @@ def compute_cutoff(cutoff, sort, details, groups, counts, mode, effort=2):
     return sort
 
 def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
-        prec_rec=None, collapse=False, file=sys.stdout):
+        prec_rec=None, collapse=False, file=sys.stdout, decimals=2):
     if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(details)
         if (weff):
@@ -275,18 +275,20 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
             bumps = percent_at_n.getBumps(faults, sort, groups,
                     collapse=collapse)
             if (perc_at_n == 1):
-                form = ','.join(['{:.3f}']*len(bumps))
+                form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
                 print("percentage at n:", form.format(*bumps), file=file)
             else:
                 auc = percent_at_n.auc_calc(percent_at_n.combine([(bumps[0],bumps[1:])]))
                 if (perc_at_n == 2):
                     print("auc:", auc, file=file)
                 elif (perc_at_n == 3):
-                    optimal=percent_at_n.auc_calc([(0.0, 100.0)])
-                    print("pauc:", "{:.3f}".format(auc/optimal), file=file)
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
+                    print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
+                          file=file)
                 elif (perc_at_n == 4):
-                    optimal=percent_at_n.auc_calc([(0.0, 100.0)])
-                    print("lauc:", "{:.3f}".format(log(auc+1, optimal)), file=file)
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
+                    print("lauc:", "{:.{}f}".format(log(auc+1, optimal),
+                                                    decimals), file=file)
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
@@ -307,7 +309,7 @@ def main(argv):
     if (len(argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve]"
                 +" [sbfl] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [perc@n/auc/pauc/lauc] [precision/recall]@<x>"
+                +" [perc@n/auc/pauc/lauc] [precision/recall]@<x> [decimals=<x>]"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
         print()
@@ -324,6 +326,7 @@ def main(argv):
     perc_at_n = 0
     tiebrk = 3
     multi = 0
+    decimals = 2
     all = False
     collapse = False
     parallell = None
@@ -407,6 +410,9 @@ def main(argv):
                     prec_rec.append(('r', n))
                 else:
                     prec_rec.append(('r', float(n)))
+            elif ("decimals=" in argv[i]):
+                n = argv[i].split("=")[1]
+                decimals = int(n)
             elif (argv[i] == "tiebrk"):
                 tiebrk = 1
             elif (argv[i] == "rndm"):
@@ -439,7 +445,8 @@ def main(argv):
     if (ranking):
         from flitsr.ranking import read_any_ranking
         sort, details, groups = read_any_ranking(d, method_level=method)
-        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
+        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,
+               collapse, decimals=decimals)
         return
     # Else, run the full process
     if (input_m):
@@ -471,7 +478,7 @@ def main(argv):
                     output(sort, details, groups, weff=["first","med","last"],
                             perc_at_n=1,prec_rec=[('p', 1), ('p', 5), ('p', 10),
                             ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
-                            collapse=collapse, file=file)
+                            collapse=collapse, file=file, decimals=decimals)
                 else:
                     sort = run(table, counts, metrics[m], i>=1, 3, (i==2)*2)
                     output(sort, details, groups, weff=["first", "avg", "med", "last"],
