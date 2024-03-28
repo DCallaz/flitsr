@@ -287,7 +287,8 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
                           file=file)
                 elif (perc_at_n == 4):
                     optimal = percent_at_n.auc_calc([(0.0, 100.0)])
-                    print("lauc:", "{:.{}f}".format(log(auc+1, optimal),
+                    print("lauc:", "{:.{}f}".format(abs(1-log(optimal-(auc),
+                                                              optimal)),
                                                     decimals), file=file)
         if (prec_rec):
             for entry in prec_rec:
