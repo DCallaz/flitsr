@@ -165,6 +165,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
 
 
 def auc_calc(points, cut_off=101.0):
+    points = sorted(points, key=lambda x: x[0])  # sort points, sanity check
     auc = 0
     if (len(points) == 0 or points[-1][0] != 100.0):
         points.append((100.0, 100.0))

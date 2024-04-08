@@ -286,10 +286,9 @@ def output(sort, details, groups, weff=None, top1=None, perc_at_n=False,
                     print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
                           file=file)
                 elif (perc_at_n == 4):
-                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
-                    print("lauc:", "{:.{}f}".format(abs(1-log(optimal-(auc),
-                                                              optimal)),
-                                                    decimals), file=file)
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])+1
+                    lauc = abs(1-log(optimal-auc, optimal))
+                    print("lauc:", "{:.{}f}".format(lauc, decimals), file=file)
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
