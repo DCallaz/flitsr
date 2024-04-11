@@ -1,12 +1,11 @@
-from weffort import getTie
+from flitsr.weffort import getTie
 import math
-from matplotlib import pyplot as plt
-import matplotlib.cm as cm
 import sys
 import copy
 import ast
 from enum import Enum
 import numpy as np
+
 
 def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
     if (len(faults) == 0):
@@ -36,6 +35,7 @@ def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
             total += len(uuts)
     return bumps
 
+
 def combine(results):
     size = len(results)
     total = 0
@@ -63,6 +63,7 @@ def combine(results):
         combined.append((min_, round(total, 8)))
     return combined
 
+
 plot_type = Enum("plot_type", "metric mode")
 
 def read_comb_file(comb_file):
@@ -87,14 +88,17 @@ def read_comb_file(comb_file):
                 metrics.append(metric)
     return metrics, modes, points
 
+
 def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
-        flitsrs=None):
+         flitsrs=None):
+    from matplotlib import pyplot as plt
+    import matplotlib.cm as cm
     modes = []
     comb_points = {}
-    if (metrics == None):
-        metrics,modes,comb_points = read_comb_file(plot_file)
+    if (metrics is None):
+        metrics, modes, comb_points = read_comb_file(plot_file)
     else:
-        _,modes,comb_points = read_comb_file(plot_file)
+        _, modes, comb_points = read_comb_file(plot_file)
     points = {}
     for item in comb_points.items():
         key = item[0]
@@ -103,8 +107,6 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
         for inc in item[1]:
             x.append(inc[0])
             y.append(inc[1])
-        #x.append(100)
-        #y.append(100)
         points[key] = (x, y)
     split = metrics
     merged = modes
@@ -112,13 +114,13 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
         split = modes
         merged = metrics
     plt.rcParams.update({'font.size': 10})
-    fig, axs = plt.subplots(1,1 if all else len(split),
-                gridspec_kw={"left": 0.045,
-                 "bottom": 0.06,
-                 "right":0.99,
-                 "top": 0.99,
-                 "wspace": 0.2,
-                 "hspace": 0.2} if all else {})
+    fig, axs = plt.subplots(1, 1 if all else len(split),
+                            gridspec_kw={"left": 0.045,
+                                         "bottom": 0.06,
+                                         "right": 0.99,
+                                         "top": 0.99,
+                                         "wspace": 0.2,
+                                         "hspace": 0.2} if all else {})
     color = list(cm.rainbow(np.linspace(0, 1, len(split))))
     style = ["-", "--", ":"]
     marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>']
@@ -127,7 +129,7 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
     for s in split:
         j = 0
         for m in merged:
-            if (m == "Base metric" or flitsrs == None or s in flitsrs):
+            if (m == "Base metric" or flitsrs is None or s in flitsrs):
                 if (type == plot_type.mode):
                     point = points[(m, s)]
                 else:
@@ -136,12 +138,12 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
                 if (all):
                     labels.append(s + " " + (m if m != "Base metric" else ""))
                     axs.plot(point[0], point[1], style[j], color=color[i],
-                            marker=marker[i], markevery=0.1)
+                             marker=marker[i], markevery=0.1)
                 else:
                     axs[i].plot(point[0], point[1])
                 j += 1
         i += 1
-    #plt.step(x,y)
+    # plt.step(x,y)
     for i in range(1 if (all) else len(axs)):
         if (all):
             ax = axs
@@ -149,25 +151,30 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
             ax = axs[i]
         if (all):
             ax.legend(labels)
-            #ax.set_title("")
+            # ax.set_title("")
         else:
             ax.legend(merged)
             ax.set_title(split[i])
         if (log):
             ax.set_xscale("log")
             ax.set_xticks([0.01, 0.1, 1, 10, 100], [0.01, 0.1, 1, 10, 100])
-        #plt.ylim(0, 100)
-        #plt.xlim(0, 100)
+        # plt.ylim(0, 100)
+        # plt.xlim(0, 100)
         ax.grid()
     plt.show()
 
+
 def auc_calc(points, cut_off=101.0):
+    points = sorted(points, key=lambda x: x[0])  # sort points, sanity check
     auc = 0
+    if (len(points) == 0 or points[-1][0] != 100.0):
+        points.append((100.0, 100.0))
     for i in range(1, len(points)):
         if (points[i][0] >= cut_off):
             break
         auc += (points[i][0] - points[i-1][0]) * points[i-1][1]
     return auc
+
 
 if __name__ == "__main__":
     if (len(sys.argv) > 1):
@@ -189,10 +196,10 @@ if __name__ == "__main__":
                         split = plot_type.mode
                     elif (sys.argv[i].startswith("metrics=[")):
                         metrics = [x.strip() for x in
-                                sys.argv[i][9:-1].split(",")]
+                                   sys.argv[i][9:-1].split(",")]
                     elif (sys.argv[i].startswith("flitsrs=[")):
                         flitsrs = [x.strip() for x in
-                                sys.argv[i][9:-1].split(",")]
+                                   sys.argv[i][9:-1].split(",")]
                     elif (sys.argv[i] == "linear"):
                         log = False
                     elif (sys.argv[i] == "log"):
@@ -205,17 +212,18 @@ if __name__ == "__main__":
                     i += 1
                 else:
                     break
-            plot(plot_file, log=log, all=all, type=split, metrics=metrics, flitsrs=flitsrs)
+            plot(plot_file, log=log, all=all, type=split, metrics=metrics,
+                 flitsrs=flitsrs)
         elif (mode == "auc"):
             comb_file = sys.argv[2]
-            metrics,modes,points = read_comb_file(comb_file)
+            metrics, modes, points = read_comb_file(comb_file)
             cutoff = 101.0
             i = 3
             while (True):
                 if (len(sys.argv) > i):
                     if (sys.argv[i].startswith("[")):
                         metrics = [x.strip() for x in
-                                sys.argv[i][1:-1].split(",")]
+                                   sys.argv[i][1:-1].split(",")]
                     elif (sys.argv[i].startswith("cutoff=")):
                         cutoff = float(sys.argv[i].split("=")[1])
                     else:

@@ -1,12 +1,11 @@
 import math
-from pytest import mark as pytestr
 
-class Suspicious() :
+class Suspicious():
     """
     An implementation of ranking metric used for
     fault localization
     """
-    def __init__(self, ef, tf, ep, tp) :
+    def __init__(self, ef, tf, ep, tp):
         """
         The four basic counts that are parameters to
         different metrics
@@ -346,14 +345,3 @@ class Suspicious() :
         else:
             h = self.ep/(self.ep + self.ef)
         return h**(self.ep) * (1-h)**(11)
-
-#<-------------------------------- Unit tests -------------------------------->
-
-@pytestr.parametrize('metric', Suspicious.getNames())
-@pytestr.randomize(ef=int, nf=int, ep=int, np=int, min_num=0, max_num=10000)
-def test_metrics(metric, ef, nf, ep, np):
-    sus = Suspicious(ef, ef+nf, ep, ep+np)
-    ans = sus.execute(metric)
-    #assert ans >= 0.0
-    if (ef == 0):
-        assert ans <= 0.0

@@ -1,6 +1,6 @@
 import subprocess
 import re
-import localize
+from flitsr import localize
 import copy
 import os
 

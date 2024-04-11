@@ -1,8 +1,8 @@
 import sys
-from percent_at_n import combine,auc_calc
+from flitsr.percent_at_n import combine
 import os
-from file import File
-from suspicious import Suspicious
+from flitsr.file import File
+from flitsr.suspicious import Suspicious
 
 if __name__ == "__main__":
     #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]

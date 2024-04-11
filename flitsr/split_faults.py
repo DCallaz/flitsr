@@ -1,7 +1,7 @@
 import sys
-from spectrum import Spectrum
+from flitsr.spectrum import Spectrum
+from flitsr.output import find_fault_groups, find_faults
 from typing import Dict, List
-from output import find_fault_groups, find_faults
 
 
 def getMapping(faults: Dict[int, List[Spectrum.Element]], spectrum: Spectrum):
@@ -77,9 +77,9 @@ if __name__ == "__main__":
         else:
             break
     if (gzoltar):
-        from input import read_table
+        from flitsr.input import read_table
     else:
-        from tcm_input import read_table
+        from flitsr.tcm_input import read_table
     spectrum = read_table(d, False)
     faults = find_faults(spectrum)
     print("faults:", faults)

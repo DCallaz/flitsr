@@ -1,8 +1,8 @@
 import sys
 import os
-from output import find_faults, print_table
-from merge_equiv import merge_on_row, remove_from_table
-from split_faults import split
+from flitsr.output import find_faults, print_table
+from flitsr.merge_equiv import merge_on_row, remove_from_table
+from flitsr.split_faults import split
 
 def construct_details(f, method_level):
     """

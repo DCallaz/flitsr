@@ -1,5 +1,5 @@
-from suspicious import Suspicious
-from spectrum import Spectrum
+from flitsr.suspicious import Suspicious
+from flitsr.spectrum import Spectrum
 from typing import List, Tuple
 import random
 

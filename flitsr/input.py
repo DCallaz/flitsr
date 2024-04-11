@@ -1,9 +1,9 @@
 import sys
 import re
 import os
-from output import find_faults, print_table
-from split_faults import split
-from spectrum import Spectrum
+from flitsr.output import find_faults, print_table
+from flitsr.split_faults import split
+from flitsr.spectrum import Spectrum
 
 
 def construct_details(f, method_level, spectrum):

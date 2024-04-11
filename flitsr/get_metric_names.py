@@ -1,4 +1,4 @@
-from suspicious import Suspicious
+from flitsr.suspicious import Suspicious
 
 if __name__ == "__main__":
     names = Suspicious.getNames()

@@ -1,15 +1,16 @@
-import localize
+from flitsr import localize
 import sys
-import weffort
-import top
+from flitsr import weffort
+from flitsr import top
 import copy
-import percent_at_n
-import parallel
-import precision_recall
+from flitsr import percent_at_n
+from flitsr import parallel
+from flitsr import precision_recall
 from os import path as osp
-from output import print_names, find_faults, find_fault_groups
-from suspicious import Suspicious
-from cutoff_points import cutoff_points
+from flitsr.output import print_names, find_faults, find_fault_groups
+from flitsr.suspicious import Suspicious
+from flitsr.cutoff_points import cutoff_points
+from math import log
 
 
 def remove_from_tests(element, spectrum):
@@ -117,9 +118,8 @@ def compute_cutoff(cutoff, sort, spectrum, mode, effort=2):
                                  mode, spectrum.tf, spectrum.tp, effort=effort)
     return sort
 
-
 def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
-           prec_rec=None, collapse=False, file=sys.stdout):
+           prec_rec=None, collapse=False, file=sys.stdout, decimals=2):
     if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(spectrum)
         if (weff):
@@ -154,8 +154,21 @@ def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
         if (perc_at_n):
             bumps = percent_at_n.getBumps(faults, sort, spectrum.groups,
                                           collapse=collapse)
-            form = ','.join(['{:.3f}']*len(bumps))
-            print("percentage at n:", form.format(*bumps), file=file)
+            if (perc_at_n == 1):
+                form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
+                print("percentage at n:", form.format(*bumps), file=file)
+            else:
+                auc = percent_at_n.auc_calc(percent_at_n.combine([(bumps[0],bumps[1:])]))
+                if (perc_at_n == 2):
+                    print("auc:", auc, file=file)
+                elif (perc_at_n == 3):
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
+                    print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
+                          file=file)
+                elif (perc_at_n == 4):
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])+1
+                    lauc = abs(1-log(optimal-auc, optimal))
+                    print("lauc:", "{:.{}f}".format(lauc, decimals), file=file)
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
@@ -178,7 +191,7 @@ def main(argv):
     if (len(argv) < 2):
         print("Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve]"
                 +" [sbfl] [first/avg/med/last] [one_top1/all_top1/perc_top1]"
-                +" [perc@n] [precision/recall]@<x>"
+                +" [perc@n/auc/pauc/lauc] [precision/recall]@<x> [decimals=<x>]"
                 +" [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]] [all] [basis[=<n>]]"
                 +" "+str(cutoffs))
         print()
@@ -192,9 +205,10 @@ def main(argv):
     weff = []
     top1 = []
     prec_rec = []
-    perc_at_n = False
+    perc_at_n = 0
     tiebrk = 3
     multi = 0
+    decimals = 2
     all = False
     collapse = False
     parallell = None
@@ -259,7 +273,13 @@ def main(argv):
             elif (argv[i] == "size_top1"):
                 top1.append("size")
             elif (argv[i] == "perc@n"):
-                perc_at_n = True
+                perc_at_n = 1
+            elif (argv[i] == "auc"):
+                perc_at_n = 2
+            elif (argv[i] == "pauc"):
+                perc_at_n = 3
+            elif (argv[i] == "lauc"):
+                perc_at_n = 4
             elif ("precision@" in argv[i]):
                 n = argv[i].split("@")[1]
                 if (n == "b" or n == "f"):
@@ -272,6 +292,9 @@ def main(argv):
                     prec_rec.append(('r', n))
                 else:
                     prec_rec.append(('r', float(n)))
+            elif ("decimals=" in argv[i]):
+                n = argv[i].split("=")[1]
+                decimals = int(n)
             elif (argv[i] == "tiebrk"):
                 tiebrk = 1
             elif (argv[i] == "rndm"):
@@ -302,16 +325,17 @@ def main(argv):
         multi = 1
     # If only a ranking is given, print out metrics and return
     if (ranking):
-        from ranking import read_any_ranking
+        from flitsr.ranking import read_any_ranking
         sort, details, groups = read_any_ranking(d, method_level=method)
-        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,collapse)
+        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,
+               collapse, decimals=decimals)
         return
     # Else, run the full process
     if (input_m):
-        from tcm_input import read_table
+        from flitsr.tcm_input import read_table
         d_p = d
     else:
-        from input import read_table
+        from flitsr.input import read_table
         d_p = d.split("/")[0] + ".txt"
     # Read the table in and setup parallel if needed
     spectrum = read_table(d, split, method_level=method)
@@ -333,18 +357,16 @@ def main(argv):
                 if (m == 'parallel'):
                     spectrums = parallel.parallel(d, spectrum, tiebrk, metric,
                                                   parallell)
-                    output(sort, spectrum, weff=["first", "med", "last"],
-                           perc_at_n=True,
-                           prec_rec=[('p', 1), ('p', 5), ('p', 10), ('p', "f"),
-                                     ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
-                           collapse=collapse, file=file)
+                    output(sort, spectrum, weff=["first","med","last"],
+                            perc_at_n=1,prec_rec=[('p', 1), ('p', 5), ('p', 10),
+                            ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
+                            collapse=collapse, file=file, decimals=decimals)
                 else:
                     sort = run(spectrum, metrics[m], i >= 1, 3, (i == 2)*2)
                     output(sort, spectrum, weff=["first", "avg", "med", "last"],
-                           perc_at_n=True,
-                           prec_rec=[('p', 1), ('p', 5), ('p', 10), ('p', "f"),
-                                     ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
-                           collapse=collapse, file=file)
+                            perc_at_n=1,prec_rec=[('p', 1), ('p', 5), ('p', 10),
+                            ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
+                            collapse=collapse, file=file)
                 file.close()
                 spectrum.reset()
     else:  # Just run the given metric and calculations

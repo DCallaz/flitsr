@@ -1,4 +1,4 @@
-from suspicious import Suspicious
+from flitsr.suspicious import Suspicious
 
 def remove_from(fault_groups, item):
     for s in fault_groups:
