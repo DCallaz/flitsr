@@ -80,7 +80,7 @@ if __name__ == "__main__":
     results_check = re.compile("^(?:([\\w_]*)_)?(\\w+)\\.results$")
     for d in dirs:
         files.setdefault(d, {})
-        for file in os.scandir(d):
+        for file in os.scandir(osp.normpath(d)):
             m = results_check.match(file.name)
             if (m):
                 mode = m.group(1) or ""
