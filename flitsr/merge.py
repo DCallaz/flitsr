@@ -1,37 +1,34 @@
 import sys
+import re
 from flitsr.percent_at_n import combine
 import os
+from os import path as osp
 from flitsr.file import File
-from flitsr.suspicious import Suspicious
+from typing import Set, Dict, Any
+
+PERC_N = "percentage at n"
+
+
+def readBlock(file: File):
+    block = []
+    line = file.readline()
+    if (": " not in line):
+        line = file.readline()
+    while (line != "" and not re.match("^-+$", line)):
+        block.append(line)
+        line = file.readline()
+    return block
+
 
 if __name__ == "__main__":
-    #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar")]
-    #metrics = [("tar_", "Tarantula"), ("och_", "Ochiai"), ("dst_", "DStar"),
-               #("jac_", "Jaccard"), ("gp13_", "GP13"), ("nai_", "naish2"),
-               #("ovr_", "Overlap"), ("harm_", "Harmonic"), ("zol_", "Zoltar"),
-               #("hyp_", "Hyperbolic"), ("bar_", "Barinel")]#, ("par_", "Parallel")]
-    metrics = Suspicious.getNames()
-    modes = [("", "Base metric"), ("flitsr_", "FLITSR"),
-            ("flitsr_multi_", "FLITSR*")]
-    calcs = ["first",
-            "avg",
-            "med",
-            "last",
-            #"top1",
-            #"sizet1",
-            "perc@n",
-            "precision at 1",
-            "precision at 5",
-            "precision at 10",
-            "precision at num faults",
-            "recall at 1",
-            "recall at 5",
-            "recall at 10",
-            "recall at num faults"
-            ]
-    files = {}
+    metrics: Set[str] = set()
+    modes: Set[str] = set()
+    calcs: Set[str] = set()
+    #           dir       mode      metric
+    files: Dict[str, Dict[str, Dict[str, File]]] = {}
+    #          mode      metric    calc
+    avgs: Dict[str, Dict[str, Dict[str, Any]]] = {}
     total = 0
-    avgs = []
     rel = False
     recurse = False
     tex = False
@@ -58,13 +55,14 @@ if __name__ == "__main__":
         else:
             break
 
+    # Initialize the script
     def find_dirs(dirs, path, depth=1, max=None):
         for dir in os.scandir(path):
             if (dir.is_dir()):
                 new_path = dir.path
                 if ((max and depth >= max) or
                     (not max and dir.name.endswith("-fault") and
-                        (len(ns) == 0 or int(dir.name.split("-")[0]) in ns) )):
+                        (len(ns) == 0 or int(dir.name.split("-")[0]) in ns))):
                     dirs.append(new_path+"/")
                 else:
                     find_dirs(dirs, new_path, depth=depth+1, max=max)
@@ -77,93 +75,109 @@ if __name__ == "__main__":
         dirs = []
         find_dirs(dirs, ".", max=max)
 
-    for metric in metrics:
-        for mode in modes:
-            for calc in calcs:
-                if (calc == "perc@n"):
-                    avgs.append([])
-                else:
-                    avgs.append(0)
-
     if (rel):
         sizes = {}
+    results_check = re.compile("^(?:([\\w_]*)_)?(\\w+)\\.results$")
     for d in dirs:
-        files[d] = []
-        for metric in metrics:
-            for mode in modes:
-                files[d].append(File(d+mode[0]+metric+".results"))
-                if (rel):
-                    sizes[d] = int(open(d+"../size").readline())
+        files.setdefault(d, {})
+        for file in os.scandir(d):
+            m = results_check.match(file.name)
+            if (m):
+                mode = m.group(1) or ""
+                modes.add(mode)
+                metric = m.group(2)
+                metrics.add(metric)
+                files[d].setdefault(mode, {})[metric] = File(file)
+                avgs.setdefault(mode, {}).setdefault(metric, {})
+        if (rel):
+            sizes[d] = int(open(osp.join(d, "../size")).readline())
 
-    end = False
-    while (not end):
-        for d in dirs:
-            lines = []
-            for f in files[d]:
-                f.readline()
-                for calc in calcs:
-                    lines.append(f.readline())
-                f.readline()
-            if (lines[0] == ''):
-                end = True
-                break
-            total += 1
-            for i in range(0, len(lines)):
-                if (type(avgs[i]) == list):
-                    vals = lines[i].strip().split(": ")[1].split(",")
-                    #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    perc_size = vals[0]
-                    avgs[i].append((float(perc_size), [float(x) for x in vals[1:]]))
-                elif (rel):
-                    if (recurse):
-                        avgs[i] += float(lines[i].split(": ")[1])*100/sizes[d]
-                    else:
-                        avgs[i] += float(lines[i].split(": ")[1])*100/size
-                else:
-                    avgs[i] += float(lines[i].split(": ")[1])
+    # Collect all the results
+    class Avg:
+        """Holds a partially constructed average"""
+        def __init__(self):
+            self.sum = 0.0
+            self.adds = 0
 
+        def add(self, val):
+            self.sum += val
+            self.adds += 1
+
+        def eval(self):
+            return self.sum/self.adds
+
+    for d in dirs:
+        for mode in modes:
+            for metric in metrics:
+                block = readBlock(files[d][mode][metric])
+                while (block != []):
+                    print(d, mode, metric)
+                    for line in block:
+                        line_s = line.split(": ")
+                        calc = line_s[0]
+                        calcs.add(calc)
+                        if (calc == PERC_N):
+                            vals = line_s[1].split(",")
+                            avgs[mode][metric].setdefault(calc, []).append(
+                                (float(vals[0]), [float(x) for x in vals[1:]]))
+                        elif (rel):
+                            if (recurse):
+                                avgs[mode][metric].setdefault(calc, Avg()).add(
+                                        float(line_s[1])*100/sizes[d])
+                            else:
+                                avgs[mode][metric].setdefault(calc, Avg()).add(
+                                        float(line_s[1])*100/size)
+                        else:
+                            avgs[mode][metric].setdefault(calc, Avg()).add(
+                                    float(line_s[1]))
+                    block = readBlock(files[d][mode][metric])
+
+    # Set up output files
     perc_file = open("perc_at_n"+"-".join([str(n) for n in ns])+"_results", "w")
     i = 0
     tex_file = None
     if (tex):
-        tex_file = open("results"+'-'.join([str(n) for n in ns])+".tex" , "w")
+        tex_file = open("results"+'-'.join([str(n) for n in ns])+".tex", "w")
         print("\\documentclass{standalone}", file=tex_file)
-        #print("\\usepackage{longtable}", file=tex_file)
+        # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
-        #print("\\begin{longtable}", file=tex_file)
-        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}", file=tex_file)
-        print("Metric & "+' & '.join([c for c in calcs if c != "perc@n"])+"\\\\", file=tex_file)
+        # print("\\begin{longtable}", file=tex_file)
+        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
+              file=tex_file)
+        print("Metric & "+' & '.join([c for c in calcs if c != PERC_N])+"\\\\",
+              file=tex_file)
 
+    # Print out merged results
     for metric in metrics:
         print(metric.capitalize())
-        if ("perc@n" in calcs):
+        if (PERC_N in calcs):
             print(metric.capitalize(), file=perc_file)
         for mode in modes:
-            print('\t', mode[1])
-            if ("perc@n" in calcs):
-                print('\t', mode[1], file=perc_file)
+            print('\t', mode.replace("_", " ").title())
+            if (PERC_N in calcs):
+                print('\t', mode.replace("_", " ").title(), file=perc_file)
             if (tex):
-                print( '%25s'% (str(metric) + " " + str(mode[1])), end=" & ", file=tex_file)
-            j = 0
-            for calc in calcs:
-                j += 1
-                if (calc == "perc@n"):
-                    comb = combine(avgs[i])
-                    print("\t\t",calc+":", comb, file=perc_file)
+                print('%25s' % (metric.capitalize() + " " +
+                                mode.replace("_", " ").title()), end=" & ",
+                      file=tex_file)
+            for j, calc in enumerate(calcs):
+                if (calc == PERC_N):
+                    comb = combine(avgs[mode][metric][calc])
+                    print("\t\t", calc+":", comb, file=perc_file)
                 elif (rel):
-                    avgs[i] = avgs[i]/total
-                    print("\t\t",calc+":", str(avgs[i])+"%")
+                    result = avgs[mode][metric][calc].eval()
+                    print("\t\t", calc+":", str(result)+"%")
                     if (tex):
-                        end = (" & " if j != len(calcs) else " \\\\\n")
-                        print('% 10.4f' % avgs[i]+"%", end=end, file=tex_file)
+                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
+                        print('% 10.4f' % result+"%", end=end, file=tex_file)
                 else:
-                    avgs[i] = avgs[i]/total
-                    print("\t\t",calc+":", avgs[i])
+                    result = avgs[mode][metric][calc].eval()
+                    print("\t\t", calc+":", result)
                     if (tex):
-                        end = (" & " if j != len(calcs) else " \\\\\n")
-                        print('% 10.4f' % avgs[i], end=end, file=tex_file)
+                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
+                        print('% 10.4f' % result, end=end, file=tex_file)
                 i += 1
     if (tex):
         print("\\end{tabular}", file=tex_file)
-        #print("\\end{longtable}", file=tex_file)
+        # print("\\end{longtable}", file=tex_file)
         print("\\end{document}", file=tex_file)

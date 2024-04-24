@@ -10,3 +10,6 @@ class File:
             self.i += 1
             return self.lines[self.i-1]
         return ''
+
+    def hasline(self):
+        return self.i < len(self.lines)
