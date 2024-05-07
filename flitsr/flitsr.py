@@ -1,5 +1,6 @@
 from flitsr import localize
 import sys
+import re
 from flitsr import weffort
 from flitsr import top
 import copy
@@ -333,10 +334,10 @@ def main(argv):
     # Else, run the full process
     if (input_m):
         from flitsr.tcm_input import read_table
-        d_p = d
+        d_p = re.sub("\\.\\w+$", ".run", d)
     else:
         from flitsr.input import read_table
-        d_p = d.split("/")[0] + ".txt"
+        d_p = d.split("/")[0] + ".run"
     # Read the table in and setup parallel if needed
     spectrum = read_table(d, split, method_level=method)
     print("done computing spectrum")
@@ -350,7 +351,7 @@ def main(argv):
     else:
         spectrums = [spectrum]
     if (all):  # Run the 'all' script (do all metrics and calculations)
-        types = ["", "flitsr_", "flitsr_multi_"]
+        types = ["base_", "flitsr_", "flitsr_multi_"]
         for m in range(len(metrics)):
             for i in range(3):
                 file = open(types[i]+metrics[m]+"_"+d_p, "x")
