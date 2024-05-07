@@ -21,53 +21,99 @@ run_with_lock() {
   )&
 }
 
+USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] [-d <depth>/-t/-g]
+  where:
+    -h                    : Prints this USAGE message
+    -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
+    -b <base dir>         : Set the base directory for running in to <base dir>
+    -d <depth>            : Specifies the depth at which to look for inputs
+    -t                    : Look only for TCM type inputs
+    -g                    : Look only for GZoltar type inputs"
+
 N=8
 open_sem $N
-if [ "$1" = "tcm" ]; then
-  dir_type=*-fault
-  echo "tcm"
-else
-  dir_type=*/
-  echo "gzoltar"
-fi
-metrics=$($FLITSR_HOME/.venv/bin/python -m flitsr.get_metric_names)
-#metrics="barinel"
 
-for proj in *; do
-  echo "Running $proj..."
-  cd "$proj"
-  for dir in $dir_type; do
-    cd "$dir"
-    echo "Doing $dir..."
-    #if [ ! -f "results" ]; then
-      if [ "$1" = "tcm" ]; then
-        for file in *.txt; do
-          run_with_lock flitsr "$file" all;
-        done
-      else
-        for file in */; do run_with_lock flitsr "${file%/}" all; done
-      fi
-      wait
-      for m in $metrics; do
-        #for t in feed_rndm_; do
-        #for t in ""; do
-        for t in "" flitsr_ flitsr_multi_; do
-          for file in $t${m}_*.txt; do
-            orig=${file#"$t${m}_"}
-            echo "$orig"
-            cat "$file"; rm "$file";
-            echo "--------------------------"
-          done > "$t${m}.results"
-        done
-      done
-      merge > results
-      #echo "Done in $dir"
-      #if [ $1 = "tcm" ]; then
-        #merge rel > results_rel
-      #fi
-    #fi
-    cd ../
-  done
-  echo "Done in $proj"
-  cd ../
+metrics=""
+base_dir="$PWD"
+while getopts ":d:m:b:tgh" opt; do
+  case ${opt} in
+    d )
+      depth="$OPTARG"
+      ;;
+    t )
+      tcm=1
+      ;;
+    g )
+      tcm=0
+      ;;
+    b )
+      base_dir="$OPTARG"
+      base_dir="$(readlink -f "$(echo ${base_dir/"~"/~})")"
+      ;;
+    m )
+      metrics+=" ${OPTARG//,/ }"
+      ;;
+    h )
+      echo "$USAGE"
+      exit 0
+      ;;
+    \? )
+      echo "Invalid option: $OPTARG" 1>&2
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      ;;
+  esac
 done
+shift $((OPTIND -1))
+
+if [ ! "$depth" ] && [ ! "$tcm" ]; then
+  echo "ERROR: Please specify a depth or input type"
+  echo "$USAGE"
+  exit 1
+elif [ "$depth" ] && [[ ! "$depth" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: Depth \"$depth\" is not an integer"
+  echo "$USAGE"
+  exit 1
+fi
+
+if [ "$metrics" == "" ]; then
+  metrics=$($FLITSR_HOME/.venv/bin/python -m flitsr.get_metric_names)
+fi
+
+cd "$base_dir"
+
+if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "spectra.csv" | xargs -n 1 dirname)"
+elif [ "$tcm" ] && [ "$tcm" -eq 1 ]; then
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} -type f)"
+else
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"})"
+fi
+
+inputs="$(echo "$inputs" | sed "s#^\./##" | sort)"
+directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
+
+while read -r dir; do
+  echo "Running $dir..."
+  cd "$dir"
+  for input in $(echo "$inputs" | grep -P "^\Q$dir\E" | xargs -d $'\n' basename); do
+    #TODO: add metrics
+    run_with_lock flitsr "$input" all
+  done
+  wait
+  for m in $metrics; do
+    while read -r t || [ -n "$t" ]; do
+      for file in "$t${m}_"*.run; do
+        orig=${file#"$t${m}_"}
+        echo "$orig"
+        cat "$file"; rm "$file";
+        echo "--------------------------"
+      done > "$t${m}.results"
+    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_[^_]+\.run/\1/p")
+  done
+  merge > results
+  echo "Done in $dir"
+  cd "$base_dir"
+done < <(echo "$directories")

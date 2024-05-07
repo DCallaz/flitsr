@@ -111,7 +111,6 @@ if __name__ == "__main__":
             for metric in metrics:
                 block = readBlock(files[d][mode][metric])
                 while (block != []):
-                    print(d, mode, metric)
                     for line in block:
                         line_s = line.split(": ")
                         calc = line_s[0]

@@ -1,5 +1,6 @@
 from flitsr import localize
 import sys
+import re
 from flitsr import weffort
 from flitsr import top
 import copy
@@ -451,10 +452,10 @@ def main(argv):
     # Else, run the full process
     if (input_m):
         from flitsr.tcm_input import read_table
-        d_p = d
+        d_p = re.sub("\\.\\w+$", ".run", d)
     else:
         from flitsr.input import read_table
-        d_p = d.split("/")[0] + ".txt"
+        d_p = d.split("/")[0] + ".run"
     # Read the table in and setup parallel if needed
     table,counts,groups,details,test_map = read_table(d, split, method_level=method)
     if (parallell):
@@ -463,7 +464,7 @@ def main(argv):
         tables = [table]
         count_arr = [counts]
     if (all): # Run the 'all' script (do all metrics and calculations)
-        types = ["", "flitsr_", "flitsr_multi_"]
+        types = ["base_", "flitsr_", "flitsr_multi_"]
         #modes = ["tar_", "och_", "dst_", "jac_", "gp13_", "nai_",
                  #"ovr_", "harm_", "zol_", "hyp_", "bar_"]
         #chs = ['t', 'o', 'd', 'j', 'g', 'n', 'v', 'h', 'z', 'y', 'b']
