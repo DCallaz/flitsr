@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 from matplotlib import ticker as mtick
+from typing import Dict, List
 import re
 import os
 import sys
@@ -45,7 +46,7 @@ if __name__ == "__main__":
             num = int(d.name.split('-')[0])
             faults.append(num)
     faults.sort()
-    names = {}
+    names: Dict[str, Dict[str, Dict[str, List[float]]]] = {}
     size = 0
     for f in faults:
         if (rel):
@@ -61,85 +62,68 @@ if __name__ == "__main__":
         line = file.readline()
         while (not line == ""):
             metric = line.strip()
-            if (not metric in names):
+            if (metric not in names):
                 names[metric] = {}
             name = names[metric]
             line = file.readline()
             while (line.count("\t") == 1):
                 mode = line.strip()
-                if (not mode in name):
+                if (mode not in name):
                     name[mode] = {}
                 mod = name[mode]
                 line = file.readline()
                 while (line.count("\t") == 2):
-                    calc = line.strip().split(": ")
-                    if (not calc[0] in mod):
-                        mod[calc[0]] = []
+                    calcs = line.strip().split(": ")
+                    if (not calcs[0] in mod):
+                        mod[calcs[0]] = []
                         size += 1
                     if (rel):
-                        mod[calc[0]].append(float(calc[1][:-1]))
+                        mod[calcs[0]].append(float(calcs[1][:-1]))
                     else:
-                        mod[calc[0]].append(float(calc[1]))
+                        mod[calcs[0]].append(float(calcs[1]))
                     line = file.readline()
     if (len(metrics) == 0):
-        metrics = names.keys()
+        metrics = list(names.keys())
     color = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
     shape = ['^', '.', 'v', '-']
     if (seperate):
         if (custom):
             size = len(custom)
-        fig, axs = plt.subplots(size,len(metrics), sharey='row',
-                gridspec_kw={"left": 0.022,
-                 "bottom": 0.027,
-                 "right":0.994,
-                 "top": 0.932,
-                 "wspace": 0.09,
-                 "hspace": 0.131})
+        fig, axs = plt.subplots(size, len(metrics), sharey='row',
+                                gridspec_kw={"left":   0.022,
+                                             "bottom": 0.027,
+                                             "right":  0.994,
+                                             "top":    0.932,
+                                             "wspace": 0.09,
+                                             "hspace": 0.131})
         row = size
     else:
-        fig, axs = plt.subplots(2,2, sharey=True, sharex=True,
-                gridspec_kw={"left": 0.035,
-                 "bottom": 0.047,
-                 "right":0.98,
-                 "top": 0.90,
-                 "wspace": 0.126,
-                 "hspace": 0.215})
+        fig, axs = plt.subplots(2, 2, sharey=True, sharex=True,
+                                gridspec_kw={"left":   0.035,
+                                             "bottom": 0.047,
+                                             "right":  0.98,
+                                             "top":    0.90,
+                                             "wspace": 0.126,
+                                             "hspace": 0.215})
         row = 2
     ax = 0
 
-    #remove unused things
-    #del names['jaccard']
     for metric in metrics:
-        #print(metric)
         modes = names[metric]
-        i = 0
-        for mode in modes.keys():
-            #print(mode)
+        for (i, mode) in enumerate(modes.keys()):
             calcs = modes[mode]
             if (not custom):
-                custom = calcs.keys()
-            j = 0
-            for calc in custom:
+                custom = list(calcs.keys())
+            for (j, calc) in enumerate(custom):
                 values = calcs[calc]
-                #print(faults, values)
                 if (seperate):
                     axs[j, ax].plot(faults, values, str(color[i])+".-")
-                    #if (rel):
-                        #axs[j, ax].set_title("Comparison of the relative wasted"
-                                #+" effort for the \n"+calc +" fault using the "+
-                                #metric+" metric")
-                    #else:
-                        #axs[j, ax].set_title("Comparison of the wasted effort for the "+calc
-                            #+"\nfault using the "+metric+" metric")
                     axs[j, ax].set_title(metric+" "+calc)
                     axs[j, ax].grid(True)
-                    #legendloc = "upper left" if j == 1 else "upper right"
                     axs[j, ax].legend([x for x in list(modes.keys())],
                             prop={"size":12})
                 else:
                     axs[int(ax/row), ax%row].plot(faults, values, str(color[i])+".-")
-                j += 1
-            i += 1
         if (not seperate):
             if (rel):
                 axs[int(ax/row), ax%row].set_title("Comparison of the relative wasted"+
