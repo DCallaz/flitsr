@@ -61,9 +61,10 @@ if __name__ == "__main__":
             if (dir.is_dir()):
                 new_path = dir.path
                 if ((max and depth >= max) or
-                    (not max and dir.name.endswith("-fault") and
-                        (len(ns) == 0 or int(dir.name.split("-")[0]) in ns))):
-                    dirs.append(new_path+"/")
+                    (not max and any(f.endswith('.results') for f in
+                                     os.listdir(new_path)))):
+                    if (len(ns) == 0 or int(dir.name.split("-")[0]) in ns):
+                        dirs.append(new_path+"/")
                 else:
                     find_dirs(dirs, new_path, depth=depth+1, max=max)
 

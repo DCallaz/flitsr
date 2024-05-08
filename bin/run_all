@@ -93,18 +93,18 @@ cd "$base_dir"
 
 if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
   inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
-              -type f -name "spectra.csv" | xargs -n 1 dirname)"
+              -type f -name "spectra.csv" | xargs -n 1 dirname | sort)"
 elif [ "$tcm" ] && [ "$tcm" -eq 1 ]; then
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} -type f -name "*.$tcm_ext")"
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "*.$tcm_ext" | sort)"
 else
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"})"
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} | sort)"
 fi
 
-inputs="$(echo "$inputs" | sed "s#^\./##" | sort)"
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 
 while read -r dir; do
-  echo "Running $dir..."
+  echo "Running ${dir#./}"
   cd "$dir"
   for input in $(echo "$inputs" | grep -P "^\Q$dir\E" | xargs -d $'\n' -n 1 basename); do
     #TODO: add metrics
@@ -119,9 +119,9 @@ while read -r dir; do
         cat "$file"; rm "$file";
         echo "--------------------------"
       done > "$t${m}.results"
-    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_[^_]+\.run/\1/p")
+    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_[^_]+\.run/\1/p" | sort -u)
   done
   merge > results
-  echo "Done in $dir"
+  echo "Done in ${dir#./}"
   cd "$base_dir"
 done < <(echo "$directories")
