@@ -37,10 +37,14 @@ this README.
 ### Running evaluation
 To run the full evaluation on FLITSR, simply use the command:
 ```
-run_all [tcm]
+run_all [-t [<extension>]/-g]
 ```
-in the top level directory for the dataset. If the `tcm` parameter is given, the
-TCM format is assumed, otherwise GZoltar format is assumed.
+in the top level directory for the dataset. If the `-t` option is given (with an
+optional file extension), then the TCM format is assumed, otherwise if the `-g`
+option is given, Gzoltar format is assumed.
+
+See *[the section on the run_all script](#running-evaluation-run_all)* for more
+details.
 ### Input structure
 FLITSR is a pure Spectrum-Based Fault Localization (SBFL) technique, and thus
 only requires the collected coverage information from the execution of the test
