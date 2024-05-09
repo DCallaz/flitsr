@@ -8,7 +8,7 @@ def first(faults, sort, groups, c):
 def average(faults, sort, groups, c):
     if (len(faults) == 0):
         return 0
-    return method(faults, sort, groups, len(faults), True, c)
+    return method(faults, sort, groups, len(faults), avg=True, collapse=c)
 
 def median(faults, sort, groups, c):
     if (len(faults) == 0):
@@ -46,7 +46,7 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
         actual += curr_faults[0]
         found = (actual >= target)
         if (avg):
-            for j in range(0, curr_faults[0]):
+            for j in range(1, curr_faults[0]+1):
                 if (collapse):
                     efforts.append(effort+j*((group_len+1)/(curr_faulty_groups+1)-1))
                 else:
