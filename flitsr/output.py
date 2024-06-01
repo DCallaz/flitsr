@@ -29,19 +29,15 @@ def print_names(spectrum, scores=None, file=sys.stdout):
         print("]", file=file)
 
 
+# TODO: this function does not produce nice looking output
 def print_table(spectrum):
     for test in spectrum:
+        print(test.name, end=": ")
         row = spectrum[test]
-        i = 0
-        p = False
         for elem in row:
-            col = row[elem]
-            if (i == 1):
-                p = col
-            elif (i > 1):
-                print(float(col), end=" ")
-            i += 1
-        if (p):
+            if (row[elem]):
+                print(elem, end=" ")
+        if (test.outcome):
             print('+')
         else:
             print('-')

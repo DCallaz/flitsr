@@ -1,17 +1,17 @@
 import sys
 import re
+import copy
+from os import path as osp
+from math import log
+from typing import List, Set
 from flitsr import weffort
 from flitsr import top
-import copy
 from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
-from os import path as osp
-from typing import List, Set
 from flitsr.output import print_names, find_faults, find_fault_groups
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
-from math import log
 from flitsr.spectrum import Spectrum
 from flitsr import score
 
@@ -89,19 +89,18 @@ def run(spectrum: Spectrum, formula, flitsr=False, tiebrk=0, multi=0):
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
             faulty = feedback_loc(newSpectrum, formula, tiebrk)
-            faulty.reverse()
             if (not faulty == []):
                 for x in sort:
                     if (x.elem in faulty):
                         x.score = val
                         val = val-1
+            # Reset the coverage matrix and counts
+            newSpectrum.reset()
             # Next iteration can be either multi-fault, or multi-explanation
             # multi-fault -> we assume multiple faults exist
             # multi-explanation -> we assume there are multiple explanations
             # for the same faults
             multiRemove(newSpectrum, faulty)
-            # Reset the coverage matrix and counts
-            newSpectrum.reset()
             if (not multi):
                 break
             val = val-1
