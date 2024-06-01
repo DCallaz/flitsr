@@ -66,7 +66,8 @@ def fill_table(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
         line = bin_file.readline()
         arr = line.strip().split()
         seen = []
-        for i in range(0, len(arr)):
+        # Loop over all elements in test exec (remove test outcome at the end)
+        for i in range(0, len(arr)-1):
             elem = method_map[i]
             spectrum.addExecution(test, elem, arr[i] != "0")
             if (arr[i] != "0" and elem not in seen):
