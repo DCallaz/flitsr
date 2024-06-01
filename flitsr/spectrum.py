@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict
+from typing import List, Dict, Any
 
 
 class Spectrum():
@@ -17,12 +17,15 @@ class Spectrum():
         def __str__(self):
             return self.name
 
+        def __repr__(self):
+            return str(self)
+
     class Element():
         """
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        def __init__(self, details, faults):
+        def __init__(self, details, faults: List[Any]):
             self.details = details
             # if (type(details, str) or len(details) == 1):
             #  self.name = details[0]
@@ -35,6 +38,15 @@ class Spectrum():
             return "|".join(self.details) + " " + \
                    ("(FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
+
+        def __repr__(self):
+            return str(self)
+
+        def __eq__(self, other):
+            return self.details == other.details
+
+        def __hash__(self):
+            return hash(tuple(self.details))
 
     class Execution():
         """
@@ -50,6 +62,9 @@ class Spectrum():
             self.elems.append(elem)
             self.exec[elem] = executed
 
+        def __len__(self):
+            return len(self.elems)
+
         def __iter__(self):
             return self.elems.__iter__()
 
@@ -57,7 +72,13 @@ class Spectrum():
             return self.elems.__next__()
 
         def __getitem__(self, elem: Spectrum.Element):
-            return self.exec[elem]
+            return self.exec.get(elem, False)
+
+        def __setitem__(self, elem: Spectrum.Element, val: bool):
+            self.exec[elem] = val
+
+        def get(self, elem: Spectrum.Element, default=False):
+            return self.exec.get(elem, default)
 
         def pop(self, elem, *args):
             return self.exec.pop(elem, *args)
@@ -135,7 +156,7 @@ class Spectrum():
     def addExecution(self, test: Test, elem: Element, executed: bool):
         self.spectrum[test].addElement(elem, executed)
 
-    def merge_on_test(self, test):
+    def merge_on_test(self, test: Test):
         """Given one test pertaining to a row in the table, merge the groups"""
         row = self.spectrum[test]
         new_groups = []
@@ -168,4 +189,4 @@ class Spectrum():
             self.p.pop(rem)
             self.f.pop(rem)
             for test in self.tests:
-                self.spectrum[test].pop(rem, None)
+                self.spectrum[test].pop(rem, None)  # remove if there

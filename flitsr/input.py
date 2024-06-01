@@ -1,28 +1,29 @@
 import sys
 import re
 import os
+from io import TextIOWrapper
+from typing import Dict, Tuple
 from flitsr.output import find_faults, print_table
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum
 
 
-def construct_details(f, method_level, spectrum):
+def construct_details(f: TextIOWrapper, method_level: bool,
+                      spectrum: Spectrum):
     """
-    Constructs a details object containing the information related to each
-    element of the form:
-    [
-        (<location tuple>, [<fault_num>,...] or <fault_num> or -1),
-        ...
-    ]
+    Fills the spectrum object with elements read in from the open file 'f'.
     """
     i = 0  # number of actual lines
-    method_map = {}
-    methods = {}
+    method_map: Dict[int, Spectrum.Element] = {}
+    methods: Dict[Tuple[str, str], Spectrum.Element] = {}
     bugs = 0
     f.readline()
     for line in f:
         l = line.strip().split(':')
-        r = re.search("(.*)\$(.*)#([^:]*)", l[0])
+        r = re.search("(.*)\\$(.*)#([^:]*)", l[0])
+        if (r is None):
+            raise ValueError("Incorrectly formatted line \"" + line +
+                             "\" when reading input file")
         faults = []
         if (len(l) > 2):
             if (not l[2].isdigit()):
@@ -52,22 +53,20 @@ def construct_details(f, method_level, spectrum):
     return method_map
 
 
-def construct_tests(tests_reader, spectrum):
-    num_tests = 0
+def construct_tests(tests_reader: TextIOWrapper, spectrum: Spectrum):
     tests_reader.readline()
     for r in tests_reader:
         row = r.strip().split(",")
         spectrum.addTest(row[0], row[1] == 'PASS')
-        num_tests += 1
-    return num_tests
 
 
-def fill_table(num_tests, bin_file, method_map, spectrum):
+def fill_table(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
+               spectrum: Spectrum):
     for test in spectrum.tests:
         line = bin_file.readline()
         arr = line.strip().split()
         seen = []
-        for i in range(0, len(arr)-1):
+        for i in range(0, len(arr)):
             elem = method_map[i]
             spectrum.addExecution(test, elem, arr[i] != "0")
             if (arr[i] != "0" and elem not in seen):
@@ -88,15 +87,15 @@ def fill_table(num_tests, bin_file, method_map, spectrum):
     spectrum.remove_unnecessary()
 
 
-def read_table(directory, split_faults, method_level=False):
+def read_table(input_path: str, split_faults: bool, method_level=False):
     spectrum = Spectrum()
     # Getting the details of the elements
-    method_map = construct_details(open(directory+"/spectra.csv"),
+    method_map = construct_details(open(input_path+"/spectra.csv"),
                                    method_level, spectrum)
     # Getting the details of the tests
-    num_tests = construct_tests(open(directory+"/tests.csv"), spectrum)
+    construct_tests(open(input_path+"/tests.csv"), spectrum)
     # Constructing the table
-    fill_table(num_tests, open(directory+"/matrix.txt"), method_map, spectrum)
+    fill_table(open(input_path+"/matrix.txt"), method_map, spectrum)
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(find_faults(spectrum), spectrum)
@@ -111,7 +110,7 @@ def read_table(directory, split_faults, method_level=False):
             if (len(fault_items) != 0):
                 elem.faults = fault_items
         if (len(faults) == 0):
-            print("No exposable faults in", directory)
+            print("No exposable faults in", input_path)
             quit()
     return spectrum
 

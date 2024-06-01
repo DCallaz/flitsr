@@ -1,6 +1,6 @@
 import subprocess
 import re
-from flitsr import localize
+from flitsr.suspicious import Suspicious
 import copy
 import os
 
@@ -64,7 +64,7 @@ def get_rankings(count_arr, tiebrk, metric):
     sorts = []
     for counts in count_arr:
         # Get ranking of remaining elements
-        ranking = localize.localize(new_counts, metric, tiebrk)
+        ranking = Suspicious.apply_formula(new_counts, metric, tiebrk)
         # map back the remaining elements to their original indexes
         for rank in ranking:
             rank[1] = new_counts['map'][rank[1]]
@@ -88,5 +88,5 @@ def create_ranking(count_arr, tiebrk):
     sorts = []
     for i in range(len(count_arr)):
         counts = count_arr[i]
-        sorts.append(localize.localize(counts, 'ochiai', tiebrk))
+        sorts.append(Suspicious.apply_formula(counts, 'ochiai', tiebrk))
     return merge_rankings(sorts)

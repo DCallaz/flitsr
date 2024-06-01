@@ -1,33 +1,31 @@
 import sys
-from spectrum import Spectrum
-from typing import Dict, List
+from flitsr.spectrum import Spectrum
+from flitsr.score import Scores
+from typing import Dict, List, Set
 
 
-def find_groups(faulties, spectrum):
-    ret = []
-    for faulty in faulties:
-        group = []
-        for elem in spectrum.groups[faulty]:
-            group.append((details[elem], elem))
-        ret.append(group)
-    return ret
+def find_group(elem: Spectrum.Element, spectrum: Spectrum) -> List[Spectrum.Element]:
+    for group in spectrum.groups:
+        if (elem in group):
+            return group
+    raise KeyError("Element \""+str(elem)+"\" not found in a spectrum group")
 
 
-def print_names(details, faulty, groups, scores=None, file=sys.stdout):
-    names = find_names(details, faulty, groups)
-    i = 0
-    for group in names:
-        if (scores == None):
-            print("Faulty grouping ("+str(faulty[i])+"): ","[", file=file)
+def print_names(spectrum, scores=None, file=sys.stdout):
+    no_scores = False
+    if (scores is None):  # make a tempoorary Scores object
+        scores = Scores()
+        for elem in spectrum.elements:
+            scores.append(elem, 0, 0)
+        no_scores = True
+    for score in scores:
+        if (no_scores):
+            print("Faulty grouping: ", "[", file=file)
         else:
-            print("Faulty grouping ("+str(faulty[i])+"):", scores[i][0],"[",
-                    file=file)
-        i += 1
-        for name in group:
-            #arr[0] = os.path.join(*arr[0].split('.'))
-            print("  ("+str(name[1])+")", "|".join(name[0][0]),
-                "(FAULT {})".format(",".join(str(x) for x in name[0][1]))
-                    if (name[0][1]) else "", file=file)
+            print("Faulty grouping:", score.score, "[", file=file)
+        group = find_group(score.elem, spectrum)
+        for elem in group:
+            print("  ", elem, file=file)
         print("]", file=file)
 
 
@@ -62,7 +60,7 @@ def find_faults(spectrum: Spectrum) -> Dict[int, List[Spectrum.Element]]:
 
 def find_fault_groups(spectrum: Spectrum):
     faults = find_faults(spectrum)
-    fault_groups = {}
+    fault_groups: Dict[int, Set[int]] = {}
     for i in range(len(spectrum.groups)):
         for item in faults.items():
             fault_num = item[0]

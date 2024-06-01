@@ -1,25 +1,22 @@
 import sys
 import os
+from io import TextIOWrapper
+from typing import Dict, Tuple
 from flitsr.output import find_faults, print_table
-from flitsr.merge_equiv import merge_on_row, remove_from_table
 from flitsr.split_faults import split
+from flitsr.spectrum import Spectrum
 
-def construct_details(f, method_level):
+
+def construct_details(f: TextIOWrapper, method_level: bool,
+                      spectrum: Spectrum):
     """
-    Constructs a details object containing the information related to each
-    element of the form:
-    [
-        (<location tuple>, [<fault_num>,...] or <fault_num> or -1),
-        ...
-    ]
+    Fills the spectrum object with elements read in from the open file 'f'.
     """
-    uuts = []
-    num_locs = 0 # number of reported locations (methods/lines)
-    i = 0 # number of actual lines
-    method_map = {}
-    methods = {}
-    line = f.readline()
+    i = 0  # number of actual lines
+    method_map: Dict[int, Spectrum.Element] = {}
+    methods: Dict[Tuple[str, str], Spectrum.Element] = {}
     bugs = 0
+    line = f.readline()
     while (not line == '\n'):
         l = line.strip().split(' | ')
         faults = []
@@ -34,85 +31,66 @@ def construct_details(f, method_level):
         if (method_level):
             details = l[0].split(":")
             if (len(details) != 3):
-                print("ERROR: Could not do method level evaluation, exiting...")
-                quit()
+                raise ValueError("Incorrectly formatted line \"" + line +
+                                 "\" for method level evaluation")
             if ((details[0], details[1]) not in methods):
-                methods[(details[0], details[1])] = num_locs
-                method_map[i] = num_locs
-                uuts.append((details, faults)) # append with first line number
-                num_locs += 1
+                # append with first line number
+                elem = spectrum.addElement(details, faults)
+                methods[(details[0], details[1])] = elem
+                method_map[i] = elem
             else:
-                method_map[i] = methods[(details[0], details[1])]
+                elem = method_map[i] = methods[(details[0], details[1])]
                 for fault in faults:
-                    if (fault not in uuts[method_map[i]][1]):
-                        uuts[method_map[i]][1].append(fault)
-                #uuts[method_map[i]][1].extend(faults)
+                    if (fault not in elem.faults):
+                        elem.faults.append(fault)
         else:
-            method_map[i] = i
-            uuts.append((l[0].split(":"), faults))
-            num_locs += 1
+            details = l[0].split(":")
+            elem = spectrum.addElement(details, faults)
+            method_map[i] = elem
         i += 1
         line = f.readline()
-    #print(uuts, num_locs, method_map)
-    return uuts, num_locs, method_map
+    return method_map
 
-def construct_tests(f):
-    tests = []
-    num_tests = 0
+
+def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
     line = f.readline()
     while (not line == '\n'):
         row = line.strip().split(" ")
-        tests.append(row[1] == 'PASSED')
-        num_tests += 1
+        spectrum.addTest(row[0], row[1] == 'PASSED')
         line = f.readline()
-    return tests, num_tests
 
-def fill_table(tests, num_tests, locs, f, method_map):
-    table = []
-    groups = [[i for i in range(0, locs)]]
-    counts = {"p":[0]*locs, "f":[0]*locs, "tp": 0, "tf": 0, "locs": locs}
-    test_map = {}
-    for r in range(0, num_tests):
-        row = [True] + [False]*locs
-        # Construct the table row
+
+def fill_table(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
+               spectrum: Spectrum):
+    for test in spectrum.tests:
         line = f.readline()
         arr = line.strip().split(' ')
         seen = []
         for i in range(0, int(len(arr)/2)):
-            pos = int(arr[i*2])
-            pos = method_map[pos]
-            row[pos+1] = row[pos+1] or True
-            if (pos not in seen):
-                seen.append(pos)
-                if (tests[r]):
-                    counts["p"][pos] += 1
+            elem = method_map[int(arr[i*2])]
+            spectrum.addExecution(test, elem, True)
+            if (elem not in seen):
+                seen.append(elem)
+                if (test.outcome):
+                    spectrum.p[elem] += 1
                 else:
-                    counts["f"][pos] += 1
+                    spectrum.f[elem] += 1
         # Use row to merge equivalences
-        groups = merge_on_row(row, groups)
+        spectrum.merge_on_test(test)
         # Increment total counts, and append row to table
-        if (tests[r]):
-            counts["tp"] += 1
+        if (test.outcome):
+            spectrum.tp += 1
         else:
-            counts["tf"] += 1
-            table.append(row)
-            test_map[r] = len(table)-1
-    groups.sort(key=lambda group: group[0])
+            spectrum.tf += 1
+    # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from table
-    remove_from_table(groups, table, counts)
-    return table,groups,counts,test_map
+    spectrum.remove_unnecessary()
 
-def read_table(file_loc, split_faults, method_level=False):
-    table = None
-    counts = None
-    test_map = None
-    tests = None
-    num_locs = 0
-    num_tests = 0
-    details = None
-    method_map = None
-    groups = None
-    file = open(file_loc)
+
+def read_table(input_path: str, split_faults: bool, method_level=False):
+    spectrum = Spectrum()
+    method_map: Dict[int, Spectrum.Element]
+    file = open(input_path)
     while (True):
         line = file.readline()
         if (line == '' or not line.startswith("#")):
@@ -122,33 +100,34 @@ def read_table(file_loc, split_faults, method_level=False):
                 line = file.readline()
         elif (line.startswith("#tests")):
             # Constructing the table
-            tests, num_tests = construct_tests(file)
+            construct_tests(file, spectrum)
         elif (line.startswith("#uuts")):
             # Getting the details of the project
-            details,num_locs,method_map = construct_details(file, method_level)
+            method_map = construct_details(file, method_level, spectrum)
         elif (line.startswith("#matrix")):
             # Filling the table
-            table,groups,counts,test_map = fill_table(tests, num_tests,
-                    num_locs, file, method_map)
+            fill_table(file, method_map, spectrum)
     file.close()
+    # Split fault groups if necessary
     if (split_faults):
-        faults,unexposed = split(find_faults(details), table, groups)
-        for i in range(len(details)):
-            if (i in unexposed):
-                details[i] = (details[i][0], [])
-                print("Dropped faulty UUT:", details[i][0], "due to unexposure")
+        faults, unexposed = split(find_faults(spectrum), spectrum)
+        for elem in spectrum.elements:
+            if (elem in unexposed):
+                elem.faults = []
+                print("Dropped faulty UUT:", elem.details, "due to unexposure")
             fault_items = []
             for item in faults.items():
-                if (i in item[1]):
+                if (elem in item[1]):
                     fault_items.append(item[0])
             if (len(fault_items) != 0):
-                details[i] = (details[i][0], fault_items)
+                elem.faults = fault_items
         if (len(faults) == 0):
-            print("No exposable faults in", file_loc)
+            print("No exposable faults in", input_path)
             quit()
-    return table,counts,groups,details,test_map
+    return spectrum
+
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    table,locs,tests,details = read_table(d, False)
-    print_table(table)
+    spectrum = read_table(d, False)
+    print_table(spectrum)

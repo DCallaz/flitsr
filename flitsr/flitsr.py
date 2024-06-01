@@ -1,4 +1,3 @@
-from flitsr import localize
 import sys
 import re
 from flitsr import weffort
@@ -8,13 +7,16 @@ from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
 from os import path as osp
+from typing import List, Set
 from flitsr.output import print_names, find_faults, find_fault_groups
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
 from math import log
+from flitsr.spectrum import Spectrum
+from flitsr import score
 
 
-def remove_from_tests(element, spectrum):
+def remove_from_tests(element: Spectrum.Element, spectrum: Spectrum):
     """Removes all the test cases executing the given element"""
     tests = set()
     for test in spectrum:
@@ -24,21 +26,23 @@ def remove_from_tests(element, spectrum):
     return tests
 
 
-def remove_faulty_elements(spectrum, tests_removed, faulty):
+def remove_faulty_elements(spectrum: Spectrum,
+                           tests_removed: Set[Spectrum.Test],
+                           faulty: List[Spectrum.Element]):
     """Removes all tests that execute an 'actually' faulty element"""
     toRemove = []
     for test in tests_removed:
         for f in faulty:
-            if (spectrum[test][f] == True):
+            if (spectrum[test][f] is True):
                 toRemove.append(test)
                 break
     tests_removed.difference_update(toRemove)
 
 
-def multiRemove(spectrum, faulty):
+def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]):
     nonFaulty = set(spectrum.elements).difference(faulty)
     multiFault = False
-    for test in reversed(spectrum):
+    for test in reversed(spectrum.tests):
         remove = True
         for elem in nonFaulty:
             if (spectrum[test][elem]):
@@ -53,25 +57,23 @@ def multiRemove(spectrum, faulty):
     return multiFault
 
 
-def feedback_loc(spectrum, formula, tiebrk):
+def feedback_loc(spectrum: Spectrum, formula: str, tiebrk: int):
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
-    sort = localize.localize(spectrum, formula, tiebrk)
-    element = sort[0][1]
+    sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
+    element = sort.get_next()
     tests_removed = remove_from_tests(element, spectrum)
-    i = 1
     while (len(tests_removed) == 0):  # sanity check
-        if (i >= len(sort)):
+        if (not sort.has_next()):
             count_non_removed = len(spectrum.failing)
             print("WARNING: flitsr found", count_non_removed,
                   "failing test(s) that it could not explain",
                   file=sys.stderr)
             return []
         # continue trying the next element if available
-        element = sort[i][1]
+        element = sort.get_next().elem
         tests_removed = remove_from_tests(element, spectrum)
-        i += 1
     faulty = feedback_loc(spectrum, formula, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
@@ -79,32 +81,32 @@ def feedback_loc(spectrum, formula, tiebrk):
     return faulty
 
 
-def run(spectrum, mode, flitsr=False, tiebrk=0, multi=0):
-    sort = localize.localize(spectrum, mode, tiebrk)
-    localize.orig = copy.deepcopy(sort)
+def run(spectrum: Spectrum, formula, flitsr=False, tiebrk=0, multi=0):
+    sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
+    score.set_orig(sort)
     if (flitsr):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
-            faulty = feedback_loc(newSpectrum, mode, tiebrk)
+            faulty = feedback_loc(newSpectrum, formula, tiebrk)
             faulty.reverse()
             if (not faulty == []):
                 for x in sort:
-                    if (x[1] in faulty):
-                        x[0] = val
+                    if (x.elem in faulty):
+                        x.score = val
                         val = val-1
-            # The next iteration can be either multi-fault, or multi-explanation
+            # Next iteration can be either multi-fault, or multi-explanation
             # multi-fault -> we assume multiple faults exist
-            # multi-explanation -> we assume there are multiple explanations for
-            # the same faults
+            # multi-explanation -> we assume there are multiple explanations
+            # for the same faults
             multiRemove(newSpectrum, faulty)
             # Reset the coverage matrix and counts
             newSpectrum.reset()
             if (not multi):
                 break
             val = val-1
-        sort = localize.sort(sort, True, tiebrk)
-    localize.orig = None
+        sort.sort(True, tiebrk)
+    score.unset_orig()
     return sort
 
 
@@ -118,6 +120,7 @@ def compute_cutoff(cutoff, sort, spectrum, mode, effort=2):
         sort = cutoff_points.cut(cutoff, fault_groups, sort, spectrum.groups,
                                  mode, spectrum.tf, spectrum.tp, effort=effort)
     return sort
+
 
 def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
            prec_rec=None, collapse=False, file=sys.stdout, decimals=2):
@@ -181,10 +184,8 @@ def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
                                                 spectrum.groups, collapse)
                     print("recall at {}: {}".format(entry[1], r), file=file)
     else:
-        names = []
-        for x in sort:
-            names.append(x[1])
-        print_names(details, names, groups, sort, file)
+        print_names(spectrum, sort, file)
+
 
 def main(argv):
     metrics = Suspicious.getNames()
@@ -340,7 +341,6 @@ def main(argv):
         d_p = d.split("/")[0] + ".run"
     # Read the table in and setup parallel if needed
     spectrum = read_table(d, split, method_level=method)
-    print("done computing spectrum")
     if (spectrum is None):
         print("WARNING: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
