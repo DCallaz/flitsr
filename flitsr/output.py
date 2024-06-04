@@ -4,7 +4,8 @@ from flitsr.score import Scores
 from typing import Dict, List, Set
 
 
-def find_group(elem: Spectrum.Element, spectrum: Spectrum) -> List[Spectrum.Element]:
+def find_group(elem: Spectrum.Element,
+               spectrum: Spectrum) -> List[Spectrum.Element]:
     for group in spectrum.groups:
         if (elem in group):
             return group
@@ -45,16 +46,17 @@ def print_table(spectrum):
 
 def find_faults(spectrum: Spectrum) -> Dict[int, List[Spectrum.Element]]:
     actual_faults: Dict[int, List[Spectrum.Element]] = dict()
-    for elem in spectrum.elements:
-        if (elem.faults):
-            for fault in elem.faults:
-                if (fault not in actual_faults):
-                    actual_faults[fault] = []
-                actual_faults[fault].append(elem)
+    for group in spectrum.groups:
+        for elem in group:
+            if (elem.faults):
+                for fault in elem.faults:
+                    if (fault not in actual_faults):
+                        actual_faults[fault] = []
+                    actual_faults[fault].append(elem)
     return actual_faults
 
 
-def find_fault_groups(spectrum: Spectrum):
+def find_fault_groups(spectrum: Spectrum) -> Dict[int, Set[int]]:
     faults = find_faults(spectrum)
     fault_groups: Dict[int, Set[int]] = {}
     for i in range(len(spectrum.groups)):

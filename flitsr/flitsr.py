@@ -62,17 +62,18 @@ def feedback_loc(spectrum: Spectrum, formula: str, tiebrk: int):
     if (spectrum.tf == 0):
         return []
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
-    element = sort.get_next()
+    s_iter = iter(sort)
+    element = next(s_iter)
     tests_removed = remove_from_tests(element, spectrum)
     while (len(tests_removed) == 0):  # sanity check
-        if (not sort.has_next()):
+        if ((s2 := next(s_iter, None)) is None):
             count_non_removed = len(spectrum.failing)
             print("WARNING: flitsr found", count_non_removed,
                   "failing test(s) that it could not explain",
                   file=sys.stderr)
             return []
         # continue trying the next element if available
-        element = sort.get_next().elem
+        element = s2.elem
         tests_removed = remove_from_tests(element, spectrum)
     faulty = feedback_loc(spectrum, formula, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
@@ -121,41 +122,46 @@ def compute_cutoff(cutoff, sort, spectrum, mode, effort=2):
     return sort
 
 
-def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
+def output(scores, spectrum, weff=None, top1=None, perc_at_n=False,
            prec_rec=None, collapse=False, file=sys.stdout, decimals=2):
     if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(spectrum)
         if (weff):
             if ("first" in weff):
-                print("wasted effort (first):", weffort.first(faults, sort,
-                    spectrum.groups, collapse), file=file)
+                print("wasted effort (first): {:.{}f}".format(
+                    weffort.first(faults, scores, spectrum, collapse),
+                    decimals), file=file)
             if ("avg" in weff):
-                print("wasted effort (avg):", weffort.average(faults, sort,
-                    spectrum.groups, collapse), file=file)
+                print("wasted effort (avg): {:.{}f}".format(
+                    weffort.average(faults, scores, spectrum, collapse),
+                    decimals), file=file)
             if ("med" in weff):
-                print("wasted effort (median):", weffort.median(faults, sort,
-                    spectrum.groups, collapse), file=file)
+                print("wasted effort (median): {:.{}f}".format(
+                    weffort.median(faults, scores, spectrum, collapse),
+                    decimals), file=file)
             if ("last" in weff):
-                print("wasted effort (last):", weffort.last(faults, sort,
-                    spectrum.groups, collapse), file=file)
+                print("wasted effort (last): {:.{}f}".format(
+                    weffort.last(faults, scores, spectrum, collapse),
+                    decimals), file=file)
         if (top1):
             if ("one" in top1):
-                print("at least 1 ranked #1:", top.one_top1(faults, sort,
-                                                            spectrum.groups),
-                      file=file)
+                print("at least 1 ranked #1: {:.{}f}".format(
+                    top.one_top1(faults, scores, spectrum),
+                    decimals), file=file)
             if ("all" in top1):
-                print("all ranked #1:", top.all_top1(faults, sort,
-                                                     spectrum.groups),
-                      file=file)
+                print("all ranked #1: {:.{}f}".format(
+                    top.all_top1(faults, scores, spectrum),
+                    decimals), file=file)
             if ("perc" in top1):
-                print("percentage ranked #1:", top.percent_top1(faults, sort,
-                                                                spectrum.groups),
-                      file=file)
+                print("percentage ranked #1: {:.{}f}".format(
+                    top.percent_top1(faults, scores, spectrum),
+                    decimals), file=file)
             if ("size" in top1):
-                print("size of #1:", top.size_top1(faults, sort, spectrum.groups),
-                      file=file)
+                print("size of #1: {:.{}f}".format(
+                    top.size_top1(faults, scores, spectrum),
+                    decimals), file=file)
         if (perc_at_n):
-            bumps = percent_at_n.getBumps(faults, sort, spectrum.groups,
+            bumps = percent_at_n.getBumps(faults, scores, spectrum,
                                           collapse=collapse)
             if (perc_at_n == 1):
                 form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
@@ -175,15 +181,17 @@ def output(sort, spectrum, weff=None, top1=None, perc_at_n=False,
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], faults, sort,
-                                                   spectrum.groups, collapse)
-                    print("precision at {}: {}".format(entry[1], p), file=file)
+                    p = precision_recall.precision(entry[1], faults, scores,
+                                                   spectrum, collapse)
+                    print("precision at {}: {:.{}f}".format(entry[1], p,
+                                                            decimals), file=file)
                 elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], faults, sort,
-                                                spectrum.groups, collapse)
-                    print("recall at {}: {}".format(entry[1], r), file=file)
+                    r = precision_recall.recall(entry[1], faults, scores,
+                                                spectrum, collapse)
+                    print("recall at {}: {:.{}f}".format(entry[1], r,
+                                                         decimals), file=file)
     else:
-        print_names(spectrum, sort, file)
+        print_names(spectrum, scores, file)
 
 
 def main(argv):
@@ -327,8 +335,8 @@ def main(argv):
     # If only a ranking is given, print out metrics and return
     if (ranking):
         from flitsr.ranking import read_any_ranking
-        sort, details, groups = read_any_ranking(d, method_level=method)
-        output(sort, details, groups, weff, top1, perc_at_n, prec_rec,
+        scores, spectrum = read_any_ranking(d, method_level=method)
+        output(scores, spectrum, weff, top1, perc_at_n, prec_rec,
                collapse, decimals=decimals)
         return
     # Else, run the full process
@@ -346,7 +354,7 @@ def main(argv):
         return
     if (parallell):
         spectrums = parallel.parallel(d, spectrum, tiebrk, metric,
-                                              parallell)
+                                      parallell)
     else:
         spectrums = [spectrum]
     if (all):  # Run the 'all' script (do all metrics and calculations)
@@ -379,7 +387,8 @@ def main(argv):
             #         rank[1] = counts['map'][rank[1]]
             if (cutoff):
                 sort = compute_cutoff(cutoff, sort, spectrum, metric, effort)
-            output(sort, spectrum, weff, top1, perc_at_n, prec_rec, collapse)
+            output(sort, spectrum, weff, top1, perc_at_n, prec_rec, collapse,
+                   decimals=decimals)
 
 
 if __name__ == "__main__":

@@ -1,61 +1,75 @@
 import copy
+from typing import Dict, List, Iterator, Optional
+from flitsr.output import find_group
+from flitsr.score import Scores
+from flitsr.spectrum import Spectrum
 
-def first(faults, sort, groups, c):
+
+def first(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+          spectrum: Spectrum, c: bool):
     if (len(faults) == 0):
         return 0
-    return method(faults, sort, groups, 1, collapse=c)
+    return method(faults, scores, spectrum, 1, collapse=c)
 
-def average(faults, sort, groups, c):
+
+def average(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+            spectrum: Spectrum, c: bool):
     if (len(faults) == 0):
         return 0
-    return method(faults, sort, groups, len(faults), True, c)
+    return method(faults, scores, spectrum, len(faults), True, c)
 
-def median(faults, sort, groups, c):
+
+def median(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+           spectrum: Spectrum, c: bool):
     if (len(faults) == 0):
         return 0
-    if (len(faults)%2 == 1):
-        return method(faults, sort, groups, int((len(faults)+1)/2), False, c)
+    if (len(faults) % 2 == 1):
+        return method(faults, scores, spectrum,
+                      int((len(faults)+1)/2), False, c)
     else:
-        m1 = method(faults, sort, groups, int(len(faults)/2), False, c)
-        m2 = method(faults, sort, groups, int(len(faults)/2)+1, False, c)
+        m1 = method(faults, scores, spectrum, int(len(faults)/2), False, c)
+        m2 = method(faults, scores, spectrum, int(len(faults)/2)+1, False, c)
         return (m1+m2)/2
 
 
-def last(faults, sort, groups, c):
+def last(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+         spectrum: Spectrum, c: bool):
     if (len(faults) == 0):
         return 0
-    return method(faults, sort, groups, len(faults), collapse=c)
+    return method(faults, scores, spectrum, len(faults), collapse=c)
 
-#<---------------- Helper functions --------------->
-def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort=False):
-    #print("faults:", faults)
-    faults = copy.deepcopy(faults) # needed to remove groups of fault locations
+# <---------------- Helper functions --------------->
+
+
+def method(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+           spectrum: Spectrum, target, avg=False,
+           collapse=False, worst_effort=False):
+    faults = copy.deepcopy(faults)  # need for remove groups of fault locations
     found = False
     actual = 0
     effort = 0
     efforts = []
-    i = 0
-    #print("Groups:",groups)
-    #print("Length:",len(groups))
-    #print("Sort:",sort)
+    cached = None
+    s_iter = iter(scores)
     while (not found):
-        #print("Faults:",faults)
-        uuts,group_len,curr_faults,curr_faulty_groups,i = getTie(i, faults, sort,
-                groups, worst_effort)
-        #print(uuts,group_len,curr_faults,curr_faulty_groups,i)
+        uuts, group_len, curr_faults, curr_faulty_groups, \
+                cached = getTie(faults, s_iter, spectrum, cached, worst_effort)
+        # print(uuts, group_len, curr_faults, curr_faulty_groups, cached)
         actual += curr_faults[0]
         found = (actual >= target)
         if (avg):
-            for j in range(0, curr_faults[0]):
+            for j in range(1, curr_faults[0]+1):
                 if (collapse):
-                    efforts.append(effort+j*((group_len+1)/(curr_faulty_groups+1)-1))
+                    efforts.append(effort +
+                                   j*((group_len+1)/(curr_faulty_groups+1)-1))
                 else:
-                    efforts.append(effort+j*((len(uuts)+1)/(curr_faults[1]+1)-1))
+                    efforts.append(effort +
+                                   j*((len(uuts)+1)/(curr_faults[1]+1)-1))
         if (not found):
             if (collapse):
-                effort += group_len-curr_faulty_groups
+                effort += group_len - curr_faulty_groups
             else:
-                effort += len(uuts)-curr_faults[1]
+                effort += len(uuts) - curr_faults[1]
         else:
             if (collapse):
                 k = target + curr_faults[0] - actual
@@ -68,17 +82,21 @@ def method(faults, sort, groups, target, avg=False, collapse=False, worst_effort
     else:
         return effort
 
-def getTie(i, faults, sort, groups, worst_effort):
-    score = sort[i][0]
-    uuts = []
+
+def getTie(faults: Dict[int, List[Spectrum.Element]],
+           s_iter: Iterator[Scores.Score], spectrum: Spectrum,
+           cached: Optional[Scores.Score], worst_effort: bool):
+    score = cached if (cached is not None) else next(s_iter)
+    s2: Optional[Scores.Score] = score
+    uuts = set()
     group_len = 0
     curr_fault_num = 0
     curr_fault_locs = 0
     curr_faulty_groups = 0
     # Get all UUTs with same score
-    while (i < len(sort) and sort[i][0] == score):
-        #print(i, sort[i][1])
-        uuts.extend(groups[sort[i][1]])
+    while (s2 is not None and s2.score == score.score):
+        group = find_group(s2.elem, spectrum)
+        uuts.update(group)
         group_len += 1
         # Check if fault is in group
         faulty_group = False
@@ -88,11 +106,11 @@ def getTie(i, faults, sort, groups, worst_effort):
             worst_toRemove = []
             locs = item[1]
             for loc in locs:
-                if (loc in groups[sort[i][1]]):
+                if (loc in group):
                     if (worst_effort and len(locs) > 1):
                         worst_toRemove.append(loc)
                         continue
-                    #print("found fault", item[0])
+                    # print("found fault", item[0])
                     curr_fault_num += 1
                     if (loc not in faulty_locs):
                         faulty_locs.append(loc)
@@ -100,7 +118,7 @@ def getTie(i, faults, sort, groups, worst_effort):
                     if (not faulty_group):
                         curr_faulty_groups += 1
                         faulty_group = True
-                    #faults.remove(fault)
+                    # faults.remove(fault)
                     toRemove.add(item[0])
                     break
             if (worst_effort):
@@ -108,5 +126,8 @@ def getTie(i, faults, sort, groups, worst_effort):
                     locs.remove(loc)
         for fault in toRemove:
             faults.pop(fault)
-        i += 1
-    return uuts,group_len,[curr_fault_num,curr_fault_locs],curr_faulty_groups,i
+        s2 = next(s_iter, None)
+    else:
+        cached = s2
+    return uuts, group_len, [curr_fault_num, curr_fault_locs], \
+        curr_faulty_groups, cached

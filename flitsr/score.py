@@ -14,6 +14,12 @@ class Scores:
             self.score = score
             self.exec = exec_count
 
+        def __str__(self):
+            return "(" + str(self.elem) + ", " + str(self.score) + ")"
+
+        def __repr__(self):
+            return str(self)
+
     def __init__(self):
         self.scores: List[Scores.Score] = []
         self.place = 0
@@ -51,16 +57,6 @@ class Scores:
 
     def __next__(self):
         return next(self.scores)
-
-    def get_next(self):
-        if (self.place >= len(self.scores)):
-            return None
-        i = self.place
-        self.place += 1
-        return self.scores[i]
-
-    def has_next(self):
-        return self.place < len(self.scores)
 
     def __len__(self):
         return len(self.scores)
