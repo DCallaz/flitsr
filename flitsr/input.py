@@ -69,20 +69,11 @@ def fill_table(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
         # Loop over all elements in test exec (remove test outcome at the end)
         for i in range(0, len(arr)-1):
             elem = method_map[i]
-            spectrum.addExecution(test, elem, arr[i] != "0")
             if (arr[i] != "0" and elem not in seen):
+                spectrum.addExecution(test, elem, arr[i] != "0")
                 seen.add(elem)
-                if (test.outcome):
-                    spectrum.p[elem] += 1
-                else:
-                    spectrum.f[elem] += 1
         # Use row to merge equivalences
         spectrum.merge_on_test(test)
-        # Increment total counts, and append row to table
-        if (test.outcome):
-            spectrum.tp += 1
-        else:
-            spectrum.tf += 1
     # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from table
     spectrum.remove_unnecessary()

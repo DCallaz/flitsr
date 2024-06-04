@@ -5,13 +5,9 @@ from flitsr.const_iter import ConstIter
 
 
 class Spectrum():
-    """
-    An implementation for a program spectrum.
-    """
+    """An implementation for a program spectrum."""
     class Test():
-        """
-        A test object holds information pertaining to a particular test.
-        """
+        """A test object holds information pertaining to a particular test."""
         def __init__(self, name: str, outcome: bool):
             self.name = name
             self.outcome = outcome
@@ -46,6 +42,7 @@ class Spectrum():
                     self.line = int(details[1])
             self.faults = faults
             self.tup = (self.path, self.method, self.line)
+            self.hash = hash(self.tup)
 
         def isFaulty(self):
             return len(self.faults) > 0
@@ -62,7 +59,7 @@ class Spectrum():
             return self.tup == other.tup
 
         def __hash__(self):
-            return hash(self.tup)
+            return self.hash
 
     class Execution():
         """
@@ -167,6 +164,11 @@ class Spectrum():
         if (outcome is False):
             self.failing.append(t)
         self.spectrum[t] = self.Execution(t, self.elements)
+        # Increment total counts
+        if (outcome):
+            self.tp += 1
+        else:
+            self.tf += 1
 
     def addElement(self, details: List[str], faults: List[int]):
         e = self.Element(details, faults)
@@ -178,6 +180,11 @@ class Spectrum():
 
     def addExecution(self, test: Test, elem: Element, executed: bool):
         self.spectrum[test].addElement(elem, executed)
+        if (executed):
+            if (test.outcome):
+                self.p[elem] += 1
+            else:
+                self.f[elem] += 1
 
     def merge_on_test(self, test: Test):
         """Given one test pertaining to a row in the table, merge the groups"""
