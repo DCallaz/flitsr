@@ -26,7 +26,7 @@ def print_names(spectrum, scores=None, file=sys.stdout):
             print("Faulty grouping:", score.score, "[", file=file)
         group = find_group(score.elem, spectrum)
         for elem in group:
-            print("  ", elem, file=file)
+            print(" ", elem, file=file)
         print("]", file=file)
 
 
