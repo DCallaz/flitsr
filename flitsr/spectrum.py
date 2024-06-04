@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import List, Dict, Any
+from bitarray import bitarray
+from flitsr.const_iter import ConstIter
 
 
 class Spectrum():
@@ -25,17 +27,31 @@ class Spectrum():
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        def __init__(self, details, faults: List[Any]):
-            self.details = details
-            # if (type(details, str) or len(details) == 1):
-            #  self.name = details[0]
+        def __init__(self, details: List[str], faults: List[Any]):
+            if (len(details) < 1):
+                raise ValueError("Unnamed element: ", *details)
+            self.path = details[0]
+            self.method = None
+            self.line = None
+            if (len(details) > 2):
+                if (details[2].isdigit()):
+                    self.line = int(details[2])
+                    self.method = details[1]
+                else:
+                    self.method = details[1] + "|" + details[2]
+            elif (len(details) > 1):
+                if (not details[1].isdigit()):
+                    self.method = details[1]
+                else:
+                    self.line = int(details[1])
             self.faults = faults
+            self.tup = (self.path, self.method, self.line)
 
         def isFaulty(self):
             return len(self.faults) > 0
 
         def __str__(self):
-            return "|".join(self.details) + " " + \
+            return "|".join(str(i) for i in self.tup if i) + " " + \
                    ("(FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
@@ -43,24 +59,28 @@ class Spectrum():
             return str(self)
 
         def __eq__(self, other):
-            return self.details == other.details
+            return self.tup == other.tup
 
         def __hash__(self):
-            return hash(tuple(self.details))
+            return hash(self.tup)
 
     class Execution():
         """
         The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
-        def __init__(self, test: Spectrum.Test):
-            self.elems: List[Spectrum.Element] = []
-            self.exec: Dict[Spectrum.Element, bool] = {}
+
+        def __init__(self, test: Spectrum.Test,
+                     elems: Dict[Spectrum.Element, int]):
+            self.elems = elems
+            self.exec = bitarray(len(self.elems))
             self.test = test
 
         def addElement(self, elem: Spectrum.Element, executed: bool):
-            self.elems.append(elem)
-            self.exec[elem] = executed
+            # Extend the exec array if the elems map has been updated
+            if (len(self.elems) != len(self.exec)):
+                self.exec.extend(ConstIter(len(self.elems)-len(self.exec)))
+            self.exec[self.elems[elem]] = executed
 
         def __len__(self):
             return len(self.elems)
@@ -72,22 +92,25 @@ class Spectrum():
             return self.elems.__next__()
 
         def __getitem__(self, elem: Spectrum.Element):
-            return self.exec.get(elem, False)
+            return self.get(elem, False)
 
         def __setitem__(self, elem: Spectrum.Element, val: bool):
-            self.exec[elem] = val
+            try:
+                self.exec[self.elems[elem]] = val
+            except KeyError:
+                pass
 
         def get(self, elem: Spectrum.Element, default=False):
-            return self.exec.get(elem, default)
-
-        def pop(self, elem, *args):
-            return self.exec.pop(elem, *args)
+            try:
+                return self.exec[self.elems[elem]]
+            except KeyError:
+                return default
 
     def __init__(self) -> None:
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self.tests: List[Spectrum.Test] = []
         self.failing: List[Spectrum.Test] = []
-        self.elements: List[Spectrum.Element] = []
+        self.elements: Dict[Spectrum.Element, int] = {}
         self.p: Dict[Spectrum.Element, int] = dict()
         self.f: Dict[Spectrum.Element, int] = dict()
         self.tp: int = 0
@@ -143,11 +166,11 @@ class Spectrum():
         self.tests.append(t)
         if (outcome is False):
             self.failing.append(t)
-        self.spectrum[t] = self.Execution(t)
+        self.spectrum[t] = self.Execution(t, self.elements)
 
     def addElement(self, details: List[str], faults: List[int]):
         e = self.Element(details, faults)
-        self.elements.append(e)
+        self.elements[e] = len(self.elements)
         self.groups[0].append(e)
         self.f[e] = 0
         self.p[e] = 0
@@ -161,15 +184,15 @@ class Spectrum():
         row = self.spectrum[test]
         new_groups = []
         for group in self.groups:
+            first = row[group[0]]
             eq = [group[0]]
             neq = []
             for elem in group[1:]:
-                if (row[elem] == row[group[0]]):
+                if (row[elem] == first):
                     eq.append(elem)
                 else:
                     neq.append(elem)
-            if (eq != []):
-                new_groups.append(eq)
+            new_groups.append(eq)
             if (neq != []):
                 new_groups.append(neq)
         self.groups = new_groups
@@ -185,8 +208,9 @@ class Spectrum():
         # remove.sort(reverse=True)
         # self.locs -= len(remove)
         for rem in remove:
-            self.elements.remove(rem)
-            self.p.pop(rem)
-            self.f.pop(rem)
-            for test in self.tests:
-                self.spectrum[test].pop(rem, None)  # remove if there
+            self.elements.pop(rem, None)  # remove if there
+            self.p.pop(rem, None)  # remove if there
+            self.f.pop(rem, None)  # remove if there
+            # No need to remove execution (bitarray)
+            # for test in self.tests:
+            #     self.spectrum[test].remove_exec(rem)  # remove if there

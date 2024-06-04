@@ -29,7 +29,8 @@ class Suspicious():
         return func()
 
     @staticmethod
-    def apply_formula(spec: Spectrum, formula: str, tiebrk: int, reverse=True) -> Scores:
+    def apply_formula(spec: Spectrum, formula: str,
+                      tiebrk: int, reverse=True) -> Scores:
         """
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.

@@ -65,12 +65,12 @@ def fill_table(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
     for test in spectrum.tests:
         line = f.readline()
         arr = line.strip().split(' ')
-        seen = []
+        seen = set()
         for i in range(0, int(len(arr)/2)):
             elem = method_map[int(arr[i*2])]
             spectrum.addExecution(test, elem, True)
             if (elem not in seen):
-                seen.append(elem)
+                seen.add(elem)
                 if (test.outcome):
                     spectrum.p[elem] += 1
                 else:
@@ -114,7 +114,7 @@ def read_table(input_path: str, split_faults: bool, method_level=False):
         for elem in spectrum.elements:
             if (elem in unexposed):
                 elem.faults = []
-                print("Dropped faulty UUT:", elem.details, "due to unexposure")
+                print("Dropped faulty UUT:", elem, "due to unexposure")
             fault_items = []
             for item in faults.items():
                 if (elem in item[1]):
