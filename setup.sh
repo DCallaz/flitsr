@@ -3,6 +3,7 @@
 python --version &> /dev/null
 if [ $? -ne 0 ]; then
   echo "ERROR: python not installed. Please install python and rerun this script."
+  exit 1
 fi
 # add the script path to the bashrc/zshrc
 shell="$(ps -p$PPID | grep -v "PID" | awk '{print $4}')"
