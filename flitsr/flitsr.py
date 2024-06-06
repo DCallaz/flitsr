@@ -18,12 +18,13 @@ from flitsr import score
 
 def remove_from_tests(element: Spectrum.Element, spectrum: Spectrum):
     """Removes all the test cases executing the given element"""
-    tests = set()
+    removed = set()
     for test in spectrum:
         if (spectrum[test][element]):
-            spectrum.remove(test)
-            tests.add(test)
-    return tests
+            removed.add(test)
+    for test in removed:
+        spectrum.remove(test)
+    return removed
 
 
 def remove_faulty_elements(spectrum: Spectrum,
@@ -63,7 +64,7 @@ def feedback_loc(spectrum: Spectrum, formula: str, tiebrk: int):
         return []
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     s_iter = iter(sort)
-    element = next(s_iter)
+    element = next(s_iter).elem
     tests_removed = remove_from_tests(element, spectrum)
     while (len(tests_removed) == 0):  # sanity check
         if ((s2 := next(s_iter, None)) is None):
