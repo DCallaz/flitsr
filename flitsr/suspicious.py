@@ -47,7 +47,8 @@ class Suspicious():
     def getNames():
         all_names = dir(Suspicious)
         names = [x for x in all_names if (not x.startswith("_")
-                 and x != "execute" and x != "getNames")]
+                 and x != "execute" and x != "getNames"
+                 and x != "apply_formula")]
         return names
 
     def _ample(self):
