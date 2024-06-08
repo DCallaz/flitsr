@@ -1,38 +1,47 @@
-from flitsr.weffort import getTie
 import math
 import sys
 import copy
 import ast
-from enum import Enum
 import numpy as np
+from enum import Enum
+from typing import Dict, List
+from flitsr.weffort import getTie
+from flitsr.spectrum import Spectrum
+from flitsr.score import Scores
 
 
-def getBumps(faults, ranking, groups, worst_effort=False, collapse=False):
+def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+             spectrum: Spectrum, worst_effort=False, collapse=False):
     if (len(faults) == 0):
         return [0.0]
     faults = copy.deepcopy(faults) # needed to remove groups of fault locations
+    s_iter = iter(scores)
     i = 0
     total = 0
     size = 0
+    cached = None
     if (collapse):
-        size = len(groups)
+        size = len(spectrum.groups)
     else:
-        for group in groups:
+        for group in spectrum.groups:
             size += len(group)
     bumps = [size]
-    while (i < len(ranking)):
-        uuts,group_len,curr_faults,curr_fault_groups,i = getTie(i, faults,
-                ranking, groups, worst_effort)
-        if (collapse):
-            for f in range(curr_fault_groups):
-                expect_value = (group_len+1)/(curr_fault_groups+1) # - 1
-                bumps.append((total+(f+1)*expect_value)/size)
-            total += group_len
-        else:
-            for f in range(curr_faults[0]):
-                expect_value = (len(uuts)+1)/(curr_faults[1]+1) # - 1
-                bumps.append((total+(f+1)*expect_value))
-            total += len(uuts)
+    try:
+        while (True):
+            uuts, group_len, curr_faults, curr_fault_groups, \
+                cached = getTie(faults, s_iter, spectrum, cached, worst_effort)
+            if (collapse):
+                for f in range(curr_fault_groups):
+                    expect_value = (group_len+1)/(curr_fault_groups+1)  # - 1
+                    bumps.append((total+(f+1)*expect_value)/size)
+                total += group_len
+            else:
+                for f in range(curr_faults[0]):
+                    expect_value = (len(uuts)+1)/(curr_faults[1]+1)  # - 1
+                    bumps.append((total+(f+1)*expect_value))
+                total += len(uuts)
+    except StopIteration:
+        pass
     return bumps
 
 

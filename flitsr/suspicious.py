@@ -1,4 +1,7 @@
 import math
+from flitsr.spectrum import Spectrum
+from flitsr.score import Scores
+
 
 class Suspicious():
     """
@@ -25,10 +28,27 @@ class Suspicious():
         func = getattr(self, metric)
         return func()
 
+    @staticmethod
+    def apply_formula(spec: Spectrum, formula: str,
+                      tiebrk: int, reverse=True) -> Scores:
+        """
+        Calculate the scores for each of the elements using the given formula.
+        Assumes a non-empty spectrum.
+        """
+        scores: Scores = Scores()
+        for elem in spec.elements:
+            sus = Suspicious(spec.f[elem], spec.tf, spec.p[elem], spec.tp)
+            exect = spec.p[elem]+spec.f[elem]
+            scores.append(elem, sus.execute(formula), exect)
+        scores.sort(reverse, tiebrk)
+        return scores
+
+    @staticmethod
     def getNames():
         all_names = dir(Suspicious)
         names = [x for x in all_names if (not x.startswith("_")
-            and x != "execute" and x != "getNames")]
+                 and x != "execute" and x != "getNames"
+                 and x != "apply_formula")]
         return names
 
     def _ample(self):

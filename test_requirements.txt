@@ -1,1 +1,3 @@
 pytest==8.1.1
+exrex==0.11.0
+pytest-quickcheck==0.9.0
