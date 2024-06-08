@@ -16,7 +16,7 @@ def average(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
             spectrum: Spectrum, c: bool):
     if (len(faults) == 0):
         return 0
-    return method(faults, scores, spectrum, len(faults), True, c)
+    return method(faults, scores, spectrum, len(faults), avg=True, collapse=c)
 
 
 def median(faults: Dict[int, List[Spectrum.Element]], scores: Scores,

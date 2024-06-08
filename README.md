@@ -9,8 +9,8 @@ faults.
 ### Installation
 To install FLITSR, simply clone this repository and run the `setup.sh` script.
 
-Alternatively, if you do not want to run the `setup.sh` script, you can add the
-following lines to your `.bashrc` manually:
+**Alternatively**, if you do not want to run the `setup.sh` script, you can add
+the following lines to your `.bashrc` manually:
 ```
 export FLITSR_HOME="absolute/path/to/flitsr/directory"
 export PATH="$FLITSR_HOME/bin:$PATH"
@@ -37,10 +37,14 @@ this README.
 ### Running evaluation
 To run the full evaluation on FLITSR, simply use the command:
 ```
-run_all [tcm]
+run_all [-t [<extension>]/-g]
 ```
-in the top level directory for the dataset. If the `tcm` parameter is given, the
-TCM format is assumed, otherwise GZoltar format is assumed.
+in the top level directory for the dataset. If the `-t` option is given (with an
+optional file extension), then the TCM format is assumed, otherwise if the `-g`
+option is given, Gzoltar format is assumed.
+
+See *[the section on the run_all script](#running-evaluation-run_all)* for more
+details.
 ### Input structure
 FLITSR is a pure Spectrum-Based Fault Localization (SBFL) technique, and thus
 only requires the collected coverage information from the execution of the test
@@ -114,13 +118,14 @@ detail.
 ### FLITSR script (`flitsr`)
 Most of the main functionality of FLITSR and its related scripts can be accessed
 by running the `flitsr` command. Running the command with no parameters will
-give the help message containing all the valid arguements the script can take.
+give the help message containing all the valid arguments the script can take.
 For ease of access, these are listed and described here:
 ```
-Usage: flitsr <input file> [<metric>] [split] [method] [worst] [sbfl]
-[first/avg/med/last] [one_top1/all_top1/perc_top1] [perc@n] [precision/recall]@x
-[tiebrk/rndm/otie] [multi] [all] [only_fail] ['aba', 'mba_10_perc', 'mba_5_perc',
-'mba_const_add', 'mba_dominator', 'mba_optimal', 'mba_zombie', 'oba']
+Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve] [sbfl]
+[first/avg/med/last] [one_top1/all_top1/perc_top1] [perc@n/auc/pauc/lauc]
+[precision/recall]@<x> [decimals=<x>] [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]]
+[all] [basis[=<n>]] ['aba', 'basis', 'mba_10_perc', 'mba_5_perc', 'mba_const_add',
+'mba_dominator', 'mba_optimal', 'mba_zombie', 'oba']
 
 Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
 'jaccard', 'naish2', 'ochiai', 'overlap', 'tarantula', 'zoltar']
@@ -159,15 +164,21 @@ Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
         found in the top1 group
       * `all_top1`: The number of faults found in the top1 group
       * `percent_top_1`: The percentage of faults found in the top1 group.
-  * `perc@n`: Produces the percentage-at-N values. The output of this
-    calculation is a list of ranks of all found faults, preceeded by the number
-    of elements in the system. This can be used to generate percentage-at-N/recall
-    graphs.
+  * `perc@n/auc/pauc/lauc`: Produces the percentage-at-N values (i.e. the
+    percentage of faults found at N% of code inspected), or the relevant Area
+    Under Curve (AUC) calculations. The output of the `perc@n` calculation is a
+    list of ranks of all found faults, preceded by the number of elements in
+    the system. This can be used to generate percentage-at-N/recall graphs. The
+    `auc`, `pauc` and `lauc` arguments print the area under the curve produced
+    by the percentage-at-N calculation, as absolute, percentage and log scaled
+    respectively.
   * `precision/recall@<x>`: Produces precision/recall values at a given rank
     `<x>`. Both precision and recall calculations determine the amount of faults
-    `f` found within a certain cutoff point `x` after which precision calculates
+    `f` found within a certain cut-off point `x` after which precision calculates
     `f/x` and recall `f/n` where `n` is the total number of faults in the system.
-* `tiebrk/rndm/otie`: Specifies the tiebreaking strategy to use for FLITSR and
+* `decimals=<x>`: Sets the precision (number of decimal points) for the output
+  of all of the above outputs.
+* `tiebrk/rndm/otie`: Specifies the tie breaking strategy to use for FLITSR and
   the localization. `tiebrk` breaks ties using only execution counts, `rndm` by
   randomly ordering, and `otie` by using the original base metric ranking (in the
   case of FLITSR) and by execution counts otherwise.
@@ -177,11 +188,31 @@ Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
   each metric. Also enables all of the above evaluation calculations. Prints the
   results out to files named `[<flitsr method>_]<metric>.results` for each
   FLITSR method and metric.
-* `aba/mba_<cutoff>/oba`: Cuts off the ranking using the given ABA, MBA or OBA
+* `aba/.../oba`: Cuts off the ranking using the given ABA, MBA or OBA
   cut-off point respectively. This affects both the rank output method and any
   calculations as given above.
 ### Running evaluation (`run_all`)
-TODO
+The flitsr framework comes with the `run_all` script which enables large
+experiments to be run easily. The script can be run in any top-level directory
+with coverage files below. In order to properly find the files, the script can
+be run with a specified depth, and/or the type of coverage (TCM or Gzoltar).
+Since TCM files can have any extension, you may also optionally provide the
+extension to use for your TCM files; If left unset, the default extension is "\*"
+(i.e. anything).
+
+The `run_all` script has the following options (which can be accessed by running
+the script with the `-h` flag):
+```
+USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] [-d <depth>/-t [<ext>]/-g]
+  where:
+    -h                    : Prints this USAGE message
+    -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
+    -b <base dir>         : Set the base directory for running in to <base dir>
+    -d <depth>            : Specifies the depth at which to look for inputs
+    -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
+    -g                    : Look only for GZoltar type inputs
+```
+*NOTE: the `-m` option above is not yet fully implemented.*
 ### Merging results (`merge`)
 Results that are generated by `flitsr` and summarized by the `run_all` script can
 be manually merged to produce averages using the `merge` script. This script
