@@ -132,8 +132,10 @@ def parse_args(args):
 
     # Precision recall type functions
     def pr(value):
-        if (value == "b" or value == "f" or value.isdigit()):
+        if (value == "b" or value == "f"):
             return value
+        elif (value.isdigit()):
+            return int(value)
         else:
             raise ValueError(str(value)+" is not a valid precision/recall "
                     "string value")
