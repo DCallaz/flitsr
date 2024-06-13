@@ -31,7 +31,7 @@ def print_names(spectrum, scores=None, file=sys.stdout):
 
 
 # TODO: this function does not produce nice looking output
-def print_table(spectrum):
+def print_spectrum(spectrum):
     for test in spectrum:
         print(test.name, end=": ")
         row = spectrum[test]

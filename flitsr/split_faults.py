@@ -77,14 +77,14 @@ if __name__ == "__main__":
         else:
             break
     if (gzoltar):
-        from flitsr.input import read_table
+        from flitsr.input import read_spectrum
     else:
-        from flitsr.tcm_input import read_table
-    spectrum = read_table(d, False)
+        from flitsr.tcm_input import read_spectrum
+    spectrum = read_spectrum(d, False)
     faults = find_faults(spectrum)
     print("faults:", faults)
     #print(groups)
-    #print(table)
+    #print_spectrum(spectrum)
     faults, unexposed = split(faults, spectrum)
     print("split faults:", faults)
     print("unexposed:", unexposed)

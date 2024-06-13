@@ -3,7 +3,7 @@ import re
 import os
 from io import TextIOWrapper
 from typing import Dict, Tuple
-from flitsr.output import find_faults, print_table
+from flitsr.output import find_faults, print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum
 
@@ -60,7 +60,7 @@ def construct_tests(tests_reader: TextIOWrapper, spectrum: Spectrum):
         spectrum.addTest(row[0], row[1] == 'PASS')
 
 
-def fill_table(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
+def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
                spectrum: Spectrum):
     for test in spectrum.tests:
         line = bin_file.readline()
@@ -75,19 +75,19 @@ def fill_table(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
         # Use row to merge equivalences
         spectrum.merge_on_test(test)
     # ??? groups.sort(key=lambda group: group[0])
-    # Remove groupings from table
+    # Remove groupings from spectrum
     spectrum.remove_unnecessary()
 
 
-def read_table(input_path: str, split_faults: bool, method_level=False):
+def read_spectrum(input_path: str, split_faults: bool, method_level=False):
     spectrum = Spectrum()
     # Getting the details of the elements
     method_map = construct_details(open(input_path+"/spectra.csv"),
                                    method_level, spectrum)
     # Getting the details of the tests
     construct_tests(open(input_path+"/tests.csv"), spectrum)
-    # Constructing the table
-    fill_table(open(input_path+"/matrix.txt"), method_map, spectrum)
+    # Constructing the spectrum
+    fill_spectrum(open(input_path+"/matrix.txt"), method_map, spectrum)
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(find_faults(spectrum), spectrum)
@@ -109,5 +109,5 @@ def read_table(input_path: str, split_faults: bool, method_level=False):
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    spectrum = read_table(d, False)
-    print_table(spectrum)
+    spectrum = read_spectrum(d, False)
+    print_spectrum(spectrum)

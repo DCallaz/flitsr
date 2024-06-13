@@ -187,7 +187,7 @@ class Spectrum():
                 self.f[elem] += 1
 
     def merge_on_test(self, test: Test):
-        """Given one test pertaining to a row in the table, merge the groups"""
+        """Given one test pertaining to a row in the spectrum, merge the groups"""
         row = self.spectrum[test]
         new_groups = []
         for group in self.groups:

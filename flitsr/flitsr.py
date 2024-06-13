@@ -220,13 +220,13 @@ def main(argv: List[str]):
         return
     # Else, run the full process
     if (input_m):
-        from flitsr.tcm_input import read_table
+        from flitsr.tcm_input import read_spectrum
         d_p = re.sub("\\.\\w+$", ".run", args.input)
     else:
-        from flitsr.input import read_table
+        from flitsr.input import read_spectrum
         d_p = args.input.split("/")[0] + ".run"
-    # Read the table in and setup parallel if needed
-    spectrum = read_table(args.input, args.split, method_level=args.method)
+    # Read the spectrum in and setup parallel if needed
+    spectrum = read_spectrum(args.input, args.split, method_level=args.method)
     if (spectrum is None):
         print("WARNING: Incorrectly formatted input file, terminating...",
               file=sys.stderr)

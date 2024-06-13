@@ -2,7 +2,7 @@ import sys
 import os
 from io import TextIOWrapper
 from typing import Dict, Tuple
-from flitsr.output import find_faults, print_table
+from flitsr.output import find_faults, print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum
 
@@ -60,7 +60,7 @@ def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
         line = f.readline()
 
 
-def fill_table(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
+def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
                spectrum: Spectrum):
     for test in spectrum.tests:
         line = f.readline()
@@ -74,11 +74,11 @@ def fill_table(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
         # Use row to merge equivalences
         spectrum.merge_on_test(test)
     # ??? groups.sort(key=lambda group: group[0])
-    # Remove groupings from table
+    # Remove groupings from spectrum
     spectrum.remove_unnecessary()
 
 
-def read_table(input_path: str, split_faults: bool, method_level=False):
+def read_spectrum(input_path: str, split_faults: bool, method_level=False):
     spectrum = Spectrum()
     method_map: Dict[int, Spectrum.Element]
     file = open(input_path)
@@ -90,14 +90,14 @@ def read_table(input_path: str, split_faults: bool, method_level=False):
             while (not line == '\n'):
                 line = file.readline()
         elif (line.startswith("#tests")):
-            # Constructing the table
+            # Constructing the spectrum
             construct_tests(file, spectrum)
         elif (line.startswith("#uuts")):
             # Getting the details of the project
             method_map = construct_details(file, method_level, spectrum)
         elif (line.startswith("#matrix")):
-            # Filling the table
-            fill_table(file, method_map, spectrum)
+            # Filling the spectrum
+            fill_spectrum(file, method_map, spectrum)
     file.close()
     # Split fault groups if necessary
     if (split_faults):
@@ -120,5 +120,5 @@ def read_table(input_path: str, split_faults: bool, method_level=False):
 
 if __name__ == "__main__":
     d = sys.argv[1]
-    spectrum = read_table(d, False)
-    print_table(spectrum)
+    spectrum = read_spectrum(d, False)
+    print_spectrum(spectrum)
