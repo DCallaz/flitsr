@@ -108,7 +108,7 @@ while read -r dir; do
   cd "$dir"
   for input in $(echo "$inputs" | grep -P "^\Q$dir\E" | xargs -d $'\n' -n 1 basename); do
     #TODO: add metrics
-    run_with_lock flitsr "$input" all
+    run_with_lock flitsr --all "$input"
   done
   wait
   for m in $metrics; do
