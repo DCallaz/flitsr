@@ -1,5 +1,6 @@
 import sys
 from os import path as osp
+from typing import List
 import os
 
 if __name__ == "__main__":
@@ -10,9 +11,10 @@ if __name__ == "__main__":
     savedir = sys.argv[2]
     spectra_lines = open(osp.join(version,"spectra.csv")).readlines()[1:]
     lines = [line.strip().split(":") for line in spectra_lines]
-    coverage = open(osp.join(version, "matrix.txt")).readlines()
-    for i in range(len(coverage)):
-        coverage[i] = coverage[i].split()
+    coverage_all = open(osp.join(version, "matrix.txt")).readlines()
+    coverage: List[List[str]] = [[] for _ in range(len(coverage_all))]
+    for i in range(len(coverage_all)):
+        coverage[i] = coverage_all[i].split()
     i = 0
     new_methods = []
     collapses = []

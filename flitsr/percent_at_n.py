@@ -4,7 +4,7 @@ import copy
 import ast
 import numpy as np
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 from flitsr.weffort import getTie
 from flitsr.spectrum import Spectrum
 from flitsr.score import Scores
@@ -75,12 +75,13 @@ def combine(results):
 
 plot_type = Enum("plot_type", "metric mode")
 
-def read_comb_file(comb_file):
+def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
+        Dict[Tuple[str, str], List[Tuple[float, float]]]]:
     lines = open(comb_file).readlines()
     metrics = []
     modes = []
-    metric = None
-    mode = None
+    metric = ""
+    mode = ""
     points = {}
     for line in lines:
         if (line.startswith("\t\t")):
@@ -173,9 +174,10 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
     plt.show()
 
 
-def auc_calc(points, cut_off=101.0):
+def auc_calc(points: List[Tuple[float, float]],
+             cut_off=101.0):
     points = sorted(points, key=lambda x: x[0])  # sort points, sanity check
-    auc = 0
+    auc: float = 0
     if (len(points) == 0 or points[-1][0] != 100.0):
         points.append((100.0, 100.0))
     for i in range(1, len(points)):
@@ -194,7 +196,7 @@ if __name__ == "__main__":
         elif (mode == "plot"):
             plot_file = sys.argv[2]
             split = plot_type.metric
-            metrics = None
+            metrics: Optional[List[str]] = None
             flitsrs = None
             log = True
             all = False
