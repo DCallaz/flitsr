@@ -117,80 +117,116 @@ The use of the FLITSR tool and its associated scripts is described here in
 detail.
 ### FLITSR script (`flitsr`)
 Most of the main functionality of FLITSR and its related scripts can be accessed
-by running the `flitsr` command. Running the command with no parameters will
-give the help message containing all the valid arguments the script can take.
-For ease of access, these are listed and described here:
+by running the `flitsr` command. Running the command with the `-h` or `--help`
+options will give the help message containing all the valid arguments the script
+can take. For ease of access, these are listed and described here:
 ```
-Usage: flitsr <input file> [<metric>] [split] [method] [worst/best/resolve] [sbfl]
-[first/avg/med/last] [one_top1/all_top1/perc_top1] [perc@n/auc/pauc/lauc]
-[precision/recall]@<x> [decimals=<x>] [tiebrk/rndm/otie] [multi] [parallel[=bdm/msp]]
-[all] [basis[=<n>]] ['aba', 'basis', 'mba_10_perc', 'mba_5_perc', 'mba_const_add',
-'mba_dominator', 'mba_optimal', 'mba_zombie', 'oba']
-
-Where <metric> is one of: ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
-'jaccard', 'naish2', 'ochiai', 'overlap', 'tarantula', 'zoltar']
+usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
+              [-d DECIMALS] [--tiebrk] [--rndm] [--otie] [--first] [--avg]
+              [--med] [--last] [--one-top1] [--all-top1] [--perc-top1]
+              [--perc@n] [--auc] [--pauc] [--lauc] [--precision-at x]
+              [--recall-at x] [--cutoff-eval MODE]
+              [--cutoff-strategy STRATEGY]
+              input
 ```
-* `<input file>`: The coverage file (TCM) or directory (GZoltar) containing the
+#### Positional arguments:
+* `input`: The coverage file (TCM) or directory (GZoltar) containing the
   coverage collected for the system over the test suite
-* `<metric>`: The underlying (SBFL) metric to use when either ranking (if the
-  `sbfl` option is given), or running the FLITSR algorithm
-* `split`: When given, this option causes faults that are a combination of two
+#### Options:
+* `-h`, `--help`: show this help message and exit
+* `-m METRIC`, `--metric METRIC`: The underlying (SBFL) metric to use when
+  either ranking (if the sbfl option is given), or running the FLITSR algorithm.
+  Allowed values are: \[barinel, dstar, gp13, harmonic, hyperbolic, jaccard,
+  naish2, ochiai, overlap, tarantula, zoltar] (default: ochiai)
+* `-s`, `--sbfl`: Disables the FLITSR algorithm so that only the base metric is
+  used to produce the ranking. This is equivalent to using the base metric
+  as-is, but allows the user to run these metrics within the FLITSR
+  framework
+* `-*`, `--multi`: Runs the FLITSR\* (i.e. multi-round) algorithm
+* `-r`, `--ranking`: Changes flitsr's expected input to be an SBFL ranking
+  in Gzoltar or FLITSR format (determined automatically), instead of the usual
+  coverage, and produces the specified calculations (or just the ranking if no
+  calculations are given). NOTE: any non- output based options will be ignored
+  with this option
+* `-c`, `--method`: The default for FLITSR is to use the collected
+  coverage as-is and merely produce the ranking in terms of the names/labels
+  given to the elements. Alternatively, using this option, FLITSR can assume the
+  coverage given is a statement level coverage, and will attempt to collapse
+  this coverage to produce a method level coverage result. This collapse is done
+  by constructing a coverage matrix with only the method names, where the
+  execution of a method is determined by the union of the executions of its
+  statements. Bugs added to the coverage are handled in a similar
+  fashion.
+* `-split`: When given, this option causes faults that are a combination of two
   or more sub-faults in mutually exclusive parts of the system to be split into
   separate identified faults. As a by-product this also drops faults that are
-  not exposed by failing tests.
-* `method`: The default for FLITSR is to use the collected coverage as-is and
-  merely produce the ranking in terms of the names/labels given to the elements.
-  Alternatively, using this option, FLITSR can assume the coverage given is a
-  statement level coverage, and will attempt to collapse this coverage to
-  produce a method level coverage result. This collapse is done by constructing
-  a coverage matrix with only the method names, where the execution of a method
-  is determined by the union of the executions of its statements. Bugs added to
-  the coverage are handled in a similar fashion.
-* `worst`: When using a multi-fault fixing cut-off strategy to produce
-  rankings, FLITSR by default assumes the best case performance. This can be
-  toggled by giving this option to give the worst case performance instead.
-* `sbfl`: Disables the FLITSR algorithm so that only the base metric is used
-  to produce the ranking. This is equivalent to using the base metric as-is, but
-  allows the user to run these metrics within the FLITSR framework.
-* The following arguments replace the default ranking output of FLITSR with
-  evaluation calculations. Multiple of the following arguments can be given in
-  the same call:
-  * `first/avg/med/last`: Produces wasted effort calculations. The wasted effort
-    calculations that can be generated are to the first, median, average, and
-    last faults respectively.
-  * `one_top1/all_top1/perc_top1`: Produces TOP1 calculations. The TOP1
-    calculations that can be produced are:
-      * `one_top1`: A boolean value indicating whether at least one fault was
-        found in the top1 group
-      * `all_top1`: The number of faults found in the top1 group
-      * `percent_top_1`: The percentage of faults found in the top1 group.
-  * `perc@n/auc/pauc/lauc`: Produces the percentage-at-N values (i.e. the
-    percentage of faults found at N% of code inspected), or the relevant Area
-    Under Curve (AUC) calculations. The output of the `perc@n` calculation is a
-    list of ranks of all found faults, preceded by the number of elements in
-    the system. This can be used to generate percentage-at-N/recall graphs. The
-    `auc`, `pauc` and `lauc` arguments print the area under the curve produced
-    by the percentage-at-N calculation, as absolute, percentage and log scaled
-    respectively.
-  * `precision/recall@<x>`: Produces precision/recall values at a given rank
-    `<x>`. Both precision and recall calculations determine the amount of faults
-    `f` found within a certain cut-off point `x` after which precision calculates
-    `f/x` and recall `f/n` where `n` is the total number of faults in the system.
-* `decimals=<x>`: Sets the precision (number of decimal points) for the output
-  of all of the above outputs.
-* `tiebrk/rndm/otie`: Specifies the tie breaking strategy to use for FLITSR and
-  the localization. `tiebrk` breaks ties using only execution counts, `rndm` by
-  randomly ordering, and `otie` by using the original base metric ranking (in the
-  case of FLITSR) and by execution counts otherwise.
-* `multi`: Runs the FLITSR\* (i.e. multi-round) algorithm.
-* `all`: Used in the evaluation of FLITSR against other techniques. Runs all
-  metrics given in `suspicious.py` and both FLITSR and FLITSR\* extensions over
-  each metric. Also enables all of the above evaluation calculations. Prints the
-  results out to files named `[<flitsr method>_]<metric>.results` for each
-  FLITSR method and metric.
-* `aba/.../oba`: Cuts off the ranking using the given ABA, MBA or OBA
-  cut-off point respectively. This affects both the rank output method and any
-  calculations as given above.
+  not exposed by failing tests
+* `-collapse`: Collapse dynamic basic-block groups into singular elements for
+  the ranking an calculations
+* `-a`, `--all`: Used in the evaluation of FLITSR against other techniques.
+  Runs all metrics given in suspicious.py and both FLITSR and FLITSR\* extensions
+  over each metric. Also enables all of the above evaluation calculations. Prints
+  the results out to files named `[<flitsr method>_]<metric>.results` for each
+  FLITSR method and metric
+* `-d DECIMALS`, `--decimals DECIMALS`: Sets the precision (number of decimal
+  points) for the output of all of the calculations (default: 2)
+* `--cutoff-eval MODE`: Specifies the performance mode to use when using a
+  multi-fault fixing cut-off strategy to produce rankings. Allowed values are:
+  \[worst, best, resolve] (default best)
+* `--cutoff-strategy STRATEGY`: Cuts off the ranking using the given
+  strategy's cut-oRf point. This affects both the rank output method and any
+  calculations. Allowed values are: \[aba, basis, mba_10_perc, mba_5_perc,
+  mba_const_add, mba_dominator, mba_optimal, mba_zombie, oba] (default None).
+  For basis, an optional value n may be given (e.g. basis=n) that determines the
+  number of bases included before the cutoff
+
+#### Tie breaking strategy:
+  Specifies the tie breaking strategy to use for FLITSR and the localization
+
+* `-tiebrk`: Breaks ties using only execution counts
+* `-rndm`: Breaks ties by a randomly ordering
+* `-otie`: Breaks ties by using the original base metric ranking (in the case
+  of FLITSR) and by execution counts otherwise
+
+#### Calculations:
+  The following arguments replace the default ranking output of FLITSR with
+  evaluation calculations. Multiple of the following arguments can be given
+  in the same call.
+
+##### Wasted effort:
+* `-first`: Display the wasted effort to the first fault
+* `-avg,` `--average`: Display the wasted effort to the average fault
+* `--med`, `--median`: Display the wasted effort to the median fault
+* `-last`: Display the wasted effort to the last fault
+##### Top1:
+* `-one-top1`: Display a boolean value indicating whether at least one fault
+  was found in the TOP1 group (elements with the highest suspiciousness
+* `-all-top1`: Display the number of faults found in the top1 group
+* `-perc-top1`: Display the percentage of faults found in the top1 group
+##### Percentage at n:
+* `--perc@n`, `--percent-at-n`: Produces the percentage-at-N values (i.e. the
+  percentage of faults found at N% of code inspected). The output of the perc@n
+  calculation is a list of ranks of all found faults, preceded by the number of
+  elements in the system, which can be used to generate
+  percentage-at-N/recall graphs
+* `--auc`, `--area-under-curve`: Dislpays the area under the curve produced by
+  the percentage-at-N calculation
+* `--pauc`, `--percent-area-under-curve`: Dislpays the area under the curve
+  produced by the percentage-at-N calculation as a percentage of the maximum
+  possible value (i.e. closest to perfect recall)
+* `--lauc`, `--log-area-under-curve`: Dislpays the area under the curve
+  produced by the percentage-at-N calculation as a logarithmic percentage of the
+  maximum possible value (i.e. closest to perfect recall). The logarithmic
+  effect causes lower ranks to have a greater effect on the value, which
+  corresponds to the lower ranks being more useful to the developer
+##### Precision and recall:
+* `--precision-at x`: Displays precision values at a given rank `x`. Precision
+  is the amount of faults f found within the cut-off point `x`, out of the
+  number of elements seen (i.e. f/x). Can be specified multiple times
+* `--recall-at x`: Displays recall values at a given rank `x`. Recall is
+  the amount of faults f found within the cut-off point `x`, out of the total
+  number of faults n (i.e. f/n). Can be specified multiple times
+
 ### Running evaluation (`run_all`)
 The flitsr framework comes with the `run_all` script which enables large
 experiments to be run easily. The script can be run in any top-level directory
