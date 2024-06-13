@@ -18,7 +18,7 @@ export PATH="$FLITSR_HOME/bin:$PATH"
 
 To test your installation, from any directory run:
 ```
-flitsr
+flitsr -h
 ```
 which should print the usage message.
 ## Basic usage
