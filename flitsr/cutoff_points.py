@@ -9,6 +9,7 @@ def linear(fault_groups):
     return [x for sub in fault_groups.values() for x in sub]
 
 class cutoff_points:
+    @staticmethod
     def getNames():
         all_names = dir(cutoff_points)
         names = [x for x in all_names if (not x.startswith("__")
