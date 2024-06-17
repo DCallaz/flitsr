@@ -44,6 +44,15 @@ def print_spectrum(spectrum):
             print('-')
 
 
+def print_csv(spectrum, scores, file=sys.stdout):
+    print("name;suspiciousness_value", file=file)
+    for score in scores:
+        group = find_group(score.elem, spectrum)
+        for elem in group:
+            path_part = elem.path.rpartition('.')
+            print(elem.gzoltar_str(), ';', score.score, sep='', file=file)
+
+
 def find_faults(spectrum: Spectrum) -> Dict[int, List[Spectrum.Element]]:
     actual_faults: Dict[int, List[Spectrum.Element]] = dict()
     for group in spectrum.groups:

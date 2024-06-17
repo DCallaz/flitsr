@@ -10,7 +10,7 @@ from flitsr import top
 from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
-from flitsr.output import print_names, find_faults, find_fault_groups
+from flitsr.output import print_csv, print_names, find_faults, find_fault_groups
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
 from flitsr.spectrum import Spectrum
@@ -126,8 +126,8 @@ def compute_cutoff(cutoff, sort, spectrum, mode, effort=2):
 
 
 def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
-           perc_at_n=[], prec_rec=[], collapse=False, file=sys.stdout,
-           decimals=2):
+           perc_at_n=[], prec_rec=[], collapse=False, csv=False, decimals=2,
+           file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec):
         faults = find_faults(spectrum)
         if (weff):
@@ -193,6 +193,8 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
                                                 spectrum, collapse)
                     print("recall at {}: {:.{}f}".format(entry[1], r,
                                                          decimals), file=file)
+    elif (csv):
+        print_csv(spectrum, scores, file)
     else:
         print_names(spectrum, scores, file)
 
@@ -216,7 +218,8 @@ def main(argv: List[str]):
         scores, spectrum = read_any_ranking(args.input,
                 method_level=args.method)
         output(scores, spectrum, args.weff, args.top1, args.perc_at_n,
-                args.prec_rec, args.collapse, decimals=args.decimals)
+               args.prec_rec, args.collapse, csv=args.csv,
+               decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
     if (input_m):
@@ -275,7 +278,8 @@ def main(argv: List[str]):
                 sort = compute_cutoff(args.cutoff_strategy, sort,
                                       spectrum, args.metric, args.cutoff_eval)
             output(sort, spectrum, args.weff, args.top1, args.perc_at_n,
-                   args.prec_rec, args.collapse, decimals=args.decimals)
+                   args.prec_rec, args.collapse, csv=args.csv,
+                   decimals=args.decimals, file=args.output)
 
 
 if __name__ == "__main__":

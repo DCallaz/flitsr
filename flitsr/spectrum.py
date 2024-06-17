@@ -52,6 +52,21 @@ class Spectrum():
                    ("(FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
+        def gzoltar_str(self) -> str:
+            gstring = ''
+            path_part = self.path.rpartition('.')
+            if (path_part[0] != '' and path_part[2] != ''):
+                gstring = path_part[0] + '$' + path_part[2]
+            elif (path_part[0] != '' or path_part[2] != ''):
+                gstring = path_part[0] + path_part[2]
+            if (self.method):
+                gstring += ('#' if (gstring != '') else '') + self.method
+            if (self.line):
+                gstring += (':' if (gstring != '') else '') + str(self.line)
+            if (self.isFaulty()):
+                gstring += ':' + ':'.join(str(x) for x in self.faults)
+            return gstring
+
         def __repr__(self):
             return str(self)
 

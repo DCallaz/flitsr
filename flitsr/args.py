@@ -11,6 +11,14 @@ def parse_args(args):
     parser.add_argument('input', help='The coverage file (TCM) or '
                         'directory (GZoltar) containing the coverage collected'
                         ' for the system over the test suite')
+    parser.add_argument('-o', '--output', action='store', default=sys.stdout,
+            type=argparse.FileType('w'), help='Specify the output file to use '
+            'for all output (default: STDOUT).')
+    parser.add_argument('--csv', action='store_true',
+            help='By default FLITSR will output the ranking in it\'s own '
+            'FLITSR ranking format. Enabling this option will allow FLITSR to '
+            'output the ranking in CSV format compatible with GZoltar\'s CSV '
+            'ranking format instead.')
     parser.add_argument('-m', '--metric', action='store',
             choices=Suspicious.getNames(), default='ochiai', metavar='METRIC',
             help='The underlying (SBFL) metric to use when either ranking '
