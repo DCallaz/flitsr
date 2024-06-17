@@ -1,10 +1,21 @@
 import argparse
 import sys
+from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
 
 
-def parse_args(args):
+def parse_args(argv: List[str]) -> argparse.Namespace:
+    """
+    Parse the arguments defined by args for the flitsr program with python's
+    argparse. The result is an argparse Namespace object which includes all of
+    the arguments parsed (or default values).
+
+    Args:
+      argv: The list of arguments to parse, usual taken from the command
+            line arguments given
+    """
+
     # General options
     parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
             'fault finding/localization tool for multiple faults.')
@@ -190,7 +201,7 @@ def parse_args(args):
             'For basis, an optional value n may be given (e.g. basis=n) '
             'that determines the number of bases included before the cutoff')
 
-    args = parser.parse_args(args)
+    args = parser.parse_args(argv)
     return args
 
 if __name__ == "__main__":

@@ -9,7 +9,8 @@ class Scores:
         """
         A element from a spectrum, together with its scores.
         """
-        def __init__(self, elem: Spectrum.Element, score, exec_count):
+        def __init__(self, elem: Spectrum.Element, score: float,
+                     exec_count: int):
             self.elem = elem
             self.score = score
             self.exec = exec_count
@@ -48,15 +49,12 @@ class Scores:
         else:
             self.scores.sort(key=lambda x: x.score, reverse=reverse)
 
-    def append(self, elem, score, exec_count):
-        score = Scores.Score(elem, score, exec_count)
-        self.scores.append(score)
+    def append(self, elem: Spectrum.Element, score: float, exec_count: int):
+        created = Scores.Score(elem, score, exec_count)
+        self.scores.append(created)
 
     def __iter__(self):
         return iter(self.scores)
-
-    def __next__(self):
-        return next(self.scores)
 
     def __len__(self):
         return len(self.scores)

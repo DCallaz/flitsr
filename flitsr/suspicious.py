@@ -1,4 +1,5 @@
 import math
+from typing import List
 from flitsr.spectrum import Spectrum
 from flitsr.score import Scores
 
@@ -8,7 +9,7 @@ class Suspicious():
     An implementation of ranking metric used for
     fault localization
     """
-    def __init__(self, ef, tf, ep, tp):
+    def __init__(self, ef: int, tf: int, ep: int, tp: int):
         """
         The four basic counts that are parameters to
         different metrics
@@ -24,7 +25,7 @@ class Suspicious():
         self.nf = tf - ef
         self.np = tp - ep
 
-    def execute(self, metric):
+    def execute(self, metric: str) -> float:
         func = getattr(self, metric)
         return func()
 
@@ -44,25 +45,25 @@ class Suspicious():
         return scores
 
     @staticmethod
-    def getNames():
+    def getNames() -> List[str]:
         all_names = dir(Suspicious)
         names = [x for x in all_names if (not x.startswith("_")
                  and x != "execute" and x != "getNames"
                  and x != "apply_formula")]
         return names
 
-    def _ample(self):
+    def _ample(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t2 = 0.0 if (self.ep == 0) else self.ep/self.tp
         return abs(t1 - t2)
 
-    def _anderberg(self):
+    def _anderberg(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = (self.ef + 2*(self.nf + self.ep))
         return self.ef/denominator
 
-    def _arith_mean(self):
+    def _arith_mean(self) -> float:
         denominator = (self.ef + self.ep)*(self.np + self.nf) + self.tf*self.tp
         nominator = 2*self.ef*self.np - 2*self.nf*self.ep
         if (nominator == 0):
@@ -71,7 +72,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _cohen(self):
+    def _cohen(self) -> float:
         denominator = (self.ef + self.ep)*self.tp + self.tf*(self.nf + self.np)
         nominator = 2*self.ef*self.np - 2*self.nf*self.ep
         if (nominator == 0):
@@ -80,16 +81,16 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _dice(self):
+    def _dice(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.tf + self.ep
         return 2*self.ef/denominator
 
-    def _euclid(self):
+    def _euclid(self) -> float:
         return math.sqrt(self.ef + self.np)
 
-    def _fleiss(self):
+    def _fleiss(self) -> float:
         denominator = (2*self.ef*self.nf*self.ep) + (2*self.np*self.nf*self.ep)
         nominator = (4*self.ef*self.np) - (4*self.nf*self.ep) - (self.nf - self.ep)**2
         if (nominator == 0):
@@ -98,7 +99,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _geometric(self):
+    def _geometric(self) -> float:
         denominator = math.sqrt((self.ef + self.ep)*(self.np + self.nf)*self.tf*self.tp)
         nominator = self.ef*self.np - self.nf*self.ep
         if (nominator == 0):
@@ -107,7 +108,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _goodman(self):
+    def _goodman(self) -> float:
         denominator = 2*self.ef + self.nf + self.ep
         nominator = 2*self.ef - self.nf - self.ep
         if (nominator == 0):
@@ -116,7 +117,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _hamann(self):
+    def _hamann(self) -> float:
         denominator = self.tf + self.tp
         nominator = self.ef + self.np  - self.nf - self.ep
         if (nominator == 0):
@@ -125,10 +126,10 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _hamming(self):
+    def _hamming(self) -> float:
         return self.ef + self.np
 
-    def harmonic(self):
+    def harmonic(self) -> float:
         n1 = (self.ef*self.np - self.nf*self.ep)
         n2 = ((self.ef + self.ep)*(self.np + self.nf) + self.tf*self.tp)
         nominator = n1*n2
@@ -139,7 +140,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def jaccard(self) :
+    def jaccard(self) -> float:
         """
         Ref: Chen, M. Y., Kiciman, E., Fratkin, E., Fox, A., and Brewer, E. A.
         Pinpoint: Problem determination in large, dynamicinternet services.
@@ -153,7 +154,7 @@ class Suspicious():
         denominator = self.tf + self.ep
         return self.ef/denominator
 
-    def _kulczynski1(self):
+    def _kulczynski1(self) -> float:
         denominator = self.nf + self.ep
         if (self.ef == 0):
             return 0.0
@@ -161,12 +162,12 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _kulczynski2(self):
+    def _kulczynski2(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t2 = 0.0 if (self.ef == 0) else self.ef/(self.ef + self.ep)
         return 0.5*(t1 + t2)
 
-    def _m1(self):
+    def _m1(self) -> float:
         denominator = self.nf + self.ep
         nominator = self.ef + self.np
         if (nominator == 0):
@@ -175,13 +176,13 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _m2(self):
+    def _m2(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.ef + self.np + 2*(self.ef + self.ep)
         return self.ef/denominator
 
-    def ochiai(self) :
+    def ochiai(self) -> float:
         """
         Ref: Ochiai, A. Zoogeographical studies on the soleoid
         fishes found in japan and its neighhouring regions-ii.
@@ -195,7 +196,7 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _ochiai2(self):
+    def _ochiai2(self) -> float:
         nominator = self.ef*self.np
         denominator = math.sqrt((self.ef + self.ep)*(self.np + self.nf)*self.tf*self.tp)
         if (nominator == 0):
@@ -204,7 +205,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def overlap(self):
+    def overlap(self) -> float:
         denominator = min(self.ef, self.nf, self.ep)
         if (self.ef == 0):
             return 0.0
@@ -212,7 +213,7 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _rogers_tanimoto(self):
+    def _rogers_tanimoto(self) -> float:
         nominator = self.ef + self.np
         denominator = self.ef + self.np + 2*(self.nf + self.ep)
         if (nominator == 0):
@@ -221,25 +222,25 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _rogot1(self):
+    def _rogot1(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/(2*self.ef + self.nf + self.ep)
         t2 = 0.0 if (self.np == 0) else self.np/(2*self.np + self.nf + self.ep)
         return 0.5*(t1 + t2)
 
-    def _rogot2(self):
+    def _rogot2(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/(self.ef + self.ep)
         t2 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t3 = 0.0 if (self.np == 0) else self.np/self.tp
         t4 = 0.0 if (self.np == 0) else self.np/(self.np + self.nf)
         return 0.25*(t1 + t2 + t3 + t4)
 
-    def _russell_rao(self):
+    def _russell_rao(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.tf + self.tp
         return self.ef/denominator
 
-    def _scott(self):
+    def _scott(self) -> float:
         nominator = 4*self.ef*self.np - 4*self.nf*self.ep - (self.nf - self.ep)**2
         denominator = (2*self.ef + self.nf + self.ep)*(2*self.np + self.nf + self.ep)
         if (nominator == 0):
@@ -248,28 +249,28 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _simpl_match(self):
+    def _simpl_match(self) -> float:
         nominator = self.ef + self.np
         if (nominator == 0):
             return 0.0
         denominator = self.tf + self.tp
         return nominator/denominator
 
-    def _sokal(self):
+    def _sokal(self) -> float:
         nominator = 2*(self.ef + self.np)
         denominator = nominator + self.nf + self.ep
         if (nominator == 0):
             return 0.0
         return nominator/denominator
 
-    def _sorensen_dice(self):
+    def _sorensen_dice(self) -> float:
         nominator = 2*self.ef
         if (nominator == 0):
             return 0.0
         denominator = nominator + self.nf + self.ep
         return nominator/denominator
 
-    def tarantula(self) :
+    def tarantula(self) -> float:
         """
         Ref: Jones, J. A., and Harrold, M. J.Empirical evaluation
         of the Tarantula automatic fault-localization technique.
@@ -285,13 +286,13 @@ class Suspicious():
         denominator = nominator + passed_component
         return nominator/denominator
 
-    def _wong1(self):
+    def _wong1(self) -> float:
         return self.ef
 
-    def _wong2(self) :
+    def _wong2(self) -> float:
         return self.ef - self.ep
 
-    def _wong3(self):
+    def _wong3(self) -> float:
         if (self.ep <= 2):
             return self.ef - self.ep
         elif (self.ep <= 10):
@@ -299,21 +300,21 @@ class Suspicious():
         else:
             return self.ef - (2.8 + 0.001*(self.ep - 10))
 
-    def zoltar(self):
+    def zoltar(self) -> float:
         if self.ef == 0 :
             return  0.0
         multifault_component = 10000*(self.nf*self.ep)/self.ef
         denominator =  self.tf + self.ep + multifault_component
         return self.ef / denominator
 
-    def naish2(self):
+    def naish2(self) -> float:
         """
         Ref: Naish, L., Lee, H. J., Ramamohanarao, K. A model for spectra-based software
         diagnosis. ACM Trans. Softw. Eng. Methodol. (2011), 20(3):1-32
         """
         return self.ef - (self.ep/(self.tp+1))
 
-    def dstar(self, p=2) :
+    def dstar(self, p=2) -> float:
         """
         Ref: Wong, W. E., Debroy, V., Gao, R., and Li, Y.
         The dstar method for effective software fault localization.
@@ -327,7 +328,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def gp13(self) :
+    def gp13(self) -> float:
         """
         Yoo, S. Evolving human competitive spectra-based fault localisation
         techniques. In: Proceedings of the 4th International Conference onSearch
@@ -338,7 +339,7 @@ class Suspicious():
         denominator = 2*self.ep + self.ef
         return self.ef*(1 + 1/denominator)
 
-    def hyperbolic(self):
+    def hyperbolic(self) -> float:
         if (self.ef + self.ep == 0 or self.tf == 0):
             return 0.0
         K1 = 0.375
@@ -348,7 +349,7 @@ class Suspicious():
         t2 = K3/(K2 + self.ep/(self.ef + self.ep))
         return t1 + t2
 
-    def _old_barinel(self):
+    def _old_barinel(self) -> float:
         if (self.nf == 0 or self.ep + self.ef == 0):
             return 0.0
         if (self.ep == 0):
@@ -357,7 +358,7 @@ class Suspicious():
             h = self.ep/(self.ep + self.ef)
         return h**(self.ep) * (1-h)**(self.ef)
 
-    def barinel(self):
+    def barinel(self) -> float:
         if (self.nf == 0 or self.ep + self.ef == 0):
             return 0.0
         if (self.ep == 0):

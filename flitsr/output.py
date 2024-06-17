@@ -1,7 +1,7 @@
 import sys
+from typing import Dict, List, Set
 from flitsr.spectrum import Spectrum
 from flitsr.score import Scores
-from typing import Dict, List, Set
 
 
 def find_group(elem: Spectrum.Element,
@@ -31,7 +31,7 @@ def print_names(spectrum, scores=None, file=sys.stdout):
 
 
 # TODO: this function does not produce nice looking output
-def print_spectrum(spectrum):
+def print_spectrum(spectrum: Spectrum):
     for test in spectrum:
         print(test.name, end=": ")
         row = spectrum[test]
@@ -44,7 +44,7 @@ def print_spectrum(spectrum):
             print('-')
 
 
-def print_csv(spectrum, scores, file=sys.stdout):
+def print_csv(spectrum: Spectrum, scores: Scores, file=sys.stdout):
     print("name;suspiciousness_value", file=file)
     for score in scores:
         group = find_group(score.elem, spectrum)

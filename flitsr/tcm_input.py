@@ -8,7 +8,7 @@ from flitsr.spectrum import Spectrum
 
 
 def construct_details(f: TextIOWrapper, method_level: bool,
-                      spectrum: Spectrum):
+                      spectrum: Spectrum) -> Dict[int, Spectrum.Element]:
     """
     Fills the spectrum object with elements read in from the open file 'f'.
     """
@@ -78,7 +78,8 @@ def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
     spectrum.remove_unnecessary()
 
 
-def read_spectrum(input_path: str, split_faults: bool, method_level=False):
+def read_spectrum(input_path: str, split_faults: bool,
+                  method_level=False) -> Spectrum:
     spectrum = Spectrum()
     method_map: Dict[int, Spectrum.Element]
     file = open(input_path)

@@ -16,10 +16,12 @@ class cutoff_points:
             and x != "cut" and x != "getNames" and x != "method")]
         return names
 
+    @staticmethod
     def cut(cutoff, fault_groups, scores, groups, formula, tp, tf, effort=2):
         func = getattr(cutoff_points, cutoff)
         return func(fault_groups, scores, groups, formula, tp, tf, effort)
 
+    @staticmethod
     def basis(basis_num, fault_groups, items, groups, formula, tp, tf, effort):
         new_items = []
         first_fault = -1
@@ -141,6 +143,7 @@ class cutoff_points:
                 temp_items = []
         return new_items
 
+    @staticmethod
     def method(stop_score, fault_groups, items, groups, effort, rank=False):
         new_items = []
         first_fault = -1

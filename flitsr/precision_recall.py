@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from math import comb, factorial
 from flitsr.weffort import getTie
 from flitsr.spectrum import Spectrum
@@ -8,7 +8,7 @@ from flitsr.score import Scores
 
 def precision(n: Any, faults: Dict[int, List[Spectrum.Element]],
               scores: Scores, spectrum: Spectrum, perc=False,
-              worst_effort=False, collapse=False):
+              worst_effort=False, collapse=False) -> float:
     if (len(faults) == 0):
         return 0.0
     fault_num, total = method(n, faults, scores, spectrum, perc,
@@ -18,7 +18,7 @@ def precision(n: Any, faults: Dict[int, List[Spectrum.Element]],
 
 def recall(n: Any, faults: Dict[int, List[Spectrum.Element]],
            scores: Scores, spectrum: Spectrum, perc=False,
-           worst_effort=False, collapse=False):
+           worst_effort=False, collapse=False) -> float:
     if (len(faults) == 0):
         return 0.0
     fault_num, total = method(n, faults, scores, spectrum, perc,
@@ -26,9 +26,9 @@ def recall(n: Any, faults: Dict[int, List[Spectrum.Element]],
     return fault_num/len(faults)
 
 
-def method(n: Any, faults: Dict[int, List[Spectrum.Element]],
-           scores: Scores, spectrum: Spectrum,
-           perc: bool, worst_effort: bool, collapse: bool):
+def method(n: Any, faults: Dict[int, List[Spectrum.Element]], scores: Scores,
+           spectrum: Spectrum, perc: bool, worst_effort: bool,
+           collapse: bool) -> Tuple[int, int]:
     size = 0
     if (collapse):
         size = len(spectrum.groups)

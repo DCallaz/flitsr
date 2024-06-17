@@ -5,7 +5,7 @@ from flitsr.output import find_group
 
 
 def one_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum):
+             spectrum: Spectrum) -> bool:
     uuts = get_top1(scores, spectrum)
     for fault in faults.values():
         for loc in fault:
@@ -15,7 +15,7 @@ def one_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 
 
 def all_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum):
+             spectrum: Spectrum) -> bool:
     uuts = get_top1(scores, spectrum)
     count = 0
     for fault in faults.values():
@@ -27,7 +27,7 @@ def all_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 
 
 def percent_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-                 spectrum: Spectrum):
+                 spectrum: Spectrum) -> float:
     if (len(faults) == 0):
         return 100
     else:
@@ -42,7 +42,7 @@ def percent_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 
 
 def size_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-              spectrum: Spectrum):
+              spectrum: Spectrum) -> int:
     uuts = get_top1(scores, spectrum)
     return len(uuts)
 
@@ -50,7 +50,7 @@ def size_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 # <------------------------- Helper functions ---------------------->
 
 
-def get_top1(scores: Scores, spectrum: Spectrum):
+def get_top1(scores: Scores, spectrum: Spectrum) -> Set[Spectrum.Element]:
     s_iter = iter(scores)
     score = next(s_iter)
     uuts: Set[Spectrum.Element] = set()

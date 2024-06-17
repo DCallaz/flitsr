@@ -44,7 +44,7 @@ class Spectrum():
             self.tup = (self.path, self.method, self.line)
             self.hash = hash(self.tup)
 
-        def isFaulty(self):
+        def isFaulty(self) -> bool:
             return len(self.faults) > 0
 
         def __str__(self):
@@ -100,9 +100,6 @@ class Spectrum():
         def __iter__(self):
             return self.elems.__iter__()
 
-        def __next__(self):
-            return self.elems.__next__()
-
         def __getitem__(self, elem: Spectrum.Element):
             return self.get(elem, False)
 
@@ -112,13 +109,13 @@ class Spectrum():
             except KeyError:
                 pass
 
-        def get(self, elem: Spectrum.Element, default=False):
+        def get(self, elem: Spectrum.Element, default=False) -> bool:
             try:
-                return self.exec[self.elems[elem]]
+                return bool(self.exec[self.elems[elem]])
             except KeyError:
                 return default
 
-    def __init__(self) -> None:
+    def __init__(self):
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self.tests: List[Spectrum.Test] = []
         self.failing: List[Spectrum.Test] = []
@@ -135,9 +132,6 @@ class Spectrum():
 
     def __iter__(self):
         return self.failing.__iter__()
-
-    def __next__(self):
-        return self.failing.__next__()
 
     def locs(self):
         return len(self.elements)
@@ -185,7 +179,7 @@ class Spectrum():
         else:
             self.tf += 1
 
-    def addElement(self, details: List[str], faults: List[int]):
+    def addElement(self, details: List[str], faults: List[int]) -> Element:
         e = self.Element(details, faults)
         self.elements[e] = len(self.elements)
         self.groups[0].append(e)

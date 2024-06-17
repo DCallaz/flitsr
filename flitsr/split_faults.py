@@ -4,7 +4,8 @@ from flitsr.output import find_fault_groups, find_faults
 from typing import Dict, List
 
 
-def getMapping(faults: Dict[int, List[Spectrum.Element]], spectrum: Spectrum):
+def getMapping(faults: Dict[int, List[Spectrum.Element]],
+               spectrum: Spectrum) -> Dict[Spectrum.Element, int]:
     faults_comb = [e for l in faults.values() for e in l]
     mapping: Dict[Spectrum.Element, int] = {}
     for elem in faults_comb:
@@ -14,21 +15,22 @@ def getMapping(faults: Dict[int, List[Spectrum.Element]], spectrum: Spectrum):
     return mapping
 
 
-def bit(test, equiv, mapping, spectrum):
+def bit(test: Spectrum.Test, equiv: List[Spectrum.Element],
+        mapping: Dict[Spectrum.Element, int], spectrum: Spectrum) -> bool:
     b = False
     for fault in equiv:
         b = b or spectrum[test][mapping[fault]]
     return b
 
 
-def split(faults, spectrum):
+def split(faults: Dict[int, List[Spectrum.Element]], spectrum: Spectrum):
     mapping = getMapping(faults, spectrum)
     if (faults == {}):
         return {}, []
     ftemp = [([elem], f[0], False) for f in faults.items() for elem in f[1]]
     # print("Failures before", failures)
     for test in spectrum:
-        merge = {}
+        merge: Dict[int, List[Spectrum.Element]] = {}
         remain = []
         for equiv in ftemp:
             if (bit(test, equiv[0], mapping, spectrum)):
@@ -42,7 +44,7 @@ def split(faults, spectrum):
                 remain.append((item[1], item[0], True))
         ftemp = remain
     # print(ftemp)
-    fmap = {}
+    fmap: Dict[float, List[List[Spectrum.Element]]] = {}
     unexposed = []
     for equiv in ftemp:
         if (not equiv[2]):
@@ -50,12 +52,12 @@ def split(faults, spectrum):
             continue
         fmap.setdefault(equiv[1], []).append(equiv[0])
     new_faults = {}
-    for item in fmap.items():
-        if (len(item[1]) == 1):
-            new_faults[item[0]] = item[1][0]
+    for item2 in fmap.items():
+        if (len(item2[1]) == 1):
+            new_faults[item2[0]] = item2[1][0]
         else:
-            for i in range(len(item[1])):
-                new_faults[float("{}.{}".format(item[0], i+1))] = item[1][i]
+            for i in range(len(item2[1])):
+                new_faults[float("{}.{}".format(item2[0], i+1))] = item2[1][i]
     return new_faults, unexposed
 
 

@@ -18,7 +18,8 @@ from flitsr import score
 from flitsr.args import parse_args
 
 
-def remove_from_tests(element: Spectrum.Element, spectrum: Spectrum):
+def remove_from_tests(element: Spectrum.Element,
+                      spectrum: Spectrum) -> Set[Spectrum.Test]:
     """Removes all the test cases executing the given element"""
     removed = set()
     for test in spectrum:
@@ -42,7 +43,7 @@ def remove_faulty_elements(spectrum: Spectrum,
     tests_removed.difference_update(toRemove)
 
 
-def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]):
+def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
     nonFaulty = set(spectrum.elements).difference(faulty)
     multiFault = False
     for test in reversed(spectrum.tests):
@@ -60,7 +61,8 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]):
     return multiFault
 
 
-def feedback_loc(spectrum: Spectrum, formula: str, tiebrk: int):
+def feedback_loc(spectrum: Spectrum, formula: str,
+                 tiebrk: int) -> List[Spectrum.Element]:
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
@@ -85,7 +87,8 @@ def feedback_loc(spectrum: Spectrum, formula: str, tiebrk: int):
     return faulty
 
 
-def run(spectrum: Spectrum, formula, flitsr=False, tiebrk=0, multi=0):
+def run(spectrum: Spectrum, formula: str, flitsr=False,
+        tiebrk=0, multi=0) -> score.Scores:
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
     if (flitsr):
@@ -113,7 +116,8 @@ def run(spectrum: Spectrum, formula, flitsr=False, tiebrk=0, multi=0):
     return sort
 
 
-def compute_cutoff(cutoff, sort, spectrum, mode, effort=2):
+def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
+                   mode: str, effort=2) -> score.Scores:
     fault_groups = find_fault_groups(spectrum)
     if (cutoff.startswith("basis")):
         sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,

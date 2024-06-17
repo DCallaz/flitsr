@@ -11,7 +11,8 @@ from flitsr.score import Scores
 
 
 def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum, worst_effort=False, collapse=False):
+             spectrum: Spectrum, worst_effort=False,
+             collapse=False) -> List[float]:
     if (len(faults) == 0):
         return [0.0]
     faults = copy.deepcopy(faults) # needed to remove groups of fault locations
@@ -25,7 +26,7 @@ def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
     else:
         for group in spectrum.groups:
             size += len(group)
-    bumps = [size]
+    bumps = [float(size)]
     try:
         while (True):
             uuts, group_len, curr_faults, curr_fault_groups, \
@@ -45,9 +46,9 @@ def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
     return bumps
 
 
-def combine(results):
+def combine(results: List[Tuple[float, List[float]]]) -> List[Tuple[float, float]]:
     size = len(results)
-    total = 0
+    total = 0.0
     pointers = [0]*size
     final = [len(r[1]) for r in results]
     combined = []
@@ -99,12 +100,12 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
     return metrics, modes, points
 
 
-def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
-         flitsrs=None):
-    from matplotlib import pyplot as plt
-    import matplotlib.cm as cm
-    modes = []
-    comb_points = {}
+def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
+         metrics=None, flitsrs=None):
+    from matplotlib import pyplot as plt # type: ignore
+    import matplotlib.cm as cm # type: ignore
+    modes: List[str] = []
+    comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
     if (metrics is None):
         metrics, modes, comb_points = read_comb_file(plot_file)
     else:
@@ -112,8 +113,8 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
     points = {}
     for item in comb_points.items():
         key = item[0]
-        x = [0]
-        y = [0]
+        x = [0.0]
+        y = [0.0]
         for inc in item[1]:
             x.append(inc[0])
             y.append(inc[1])
@@ -175,9 +176,9 @@ def plot(plot_file, log=True, all=False, type=plot_type.metric, metrics=None,
 
 
 def auc_calc(points: List[Tuple[float, float]],
-             cut_off=101.0):
+             cut_off=101.0) -> float:
     points = sorted(points, key=lambda x: x[0])  # sort points, sanity check
-    auc: float = 0
+    auc = 0.0
     if (len(points) == 0 or points[-1][0] != 100.0):
         points.append((100.0, 100.0))
     for i in range(1, len(points)):

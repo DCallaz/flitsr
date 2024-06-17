@@ -9,7 +9,7 @@ from flitsr.spectrum import Spectrum
 
 
 def construct_details(f: TextIOWrapper, method_level: bool,
-                      spectrum: Spectrum):
+                      spectrum: Spectrum) -> Dict[int, Spectrum.Element]:
     """
     Fills the spectrum object with elements read in from the open file 'f'.
     """
@@ -61,7 +61,7 @@ def construct_tests(tests_reader: TextIOWrapper, spectrum: Spectrum):
 
 
 def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
-               spectrum: Spectrum):
+                  spectrum: Spectrum):
     for test in spectrum.tests:
         line = bin_file.readline()
         arr = line.strip().split()
@@ -79,7 +79,8 @@ def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Elemen
     spectrum.remove_unnecessary()
 
 
-def read_spectrum(input_path: str, split_faults: bool, method_level=False):
+def read_spectrum(input_path: str, split_faults: bool,
+                  method_level=False) -> Spectrum:
     spectrum = Spectrum()
     # Getting the details of the elements
     method_map = construct_details(open(input_path+"/spectra.csv"),

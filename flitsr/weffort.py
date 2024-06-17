@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List, Iterator, Optional
+from typing import Dict, List, Set, Iterator, Tuple, Optional
 from flitsr.output import find_group
 from flitsr.score import Scores
 from flitsr.spectrum import Spectrum
@@ -43,7 +43,7 @@ def last(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 
 def method(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
            spectrum: Spectrum, target, avg=False,
-           collapse=False, worst_effort=False):
+           collapse=False, worst_effort=False) -> float:
     faults = copy.deepcopy(faults)  # need for remove groups of fault locations
     found = False
     actual = 0
@@ -85,7 +85,9 @@ def method(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
 
 def getTie(faults: Dict[int, List[Spectrum.Element]],
            s_iter: Iterator[Scores.Score], spectrum: Spectrum,
-           cached: Optional[Scores.Score], worst_effort: bool):
+           cached: Optional[Scores.Score], worst_effort: bool) -> Tuple[
+                   Set[Spectrum.Element], int, Tuple[int, int], int,
+                   Optional[Scores.Score]]:
     score = cached if (cached is not None) else next(s_iter)
     s2: Optional[Scores.Score] = score
     uuts = set()
@@ -129,5 +131,5 @@ def getTie(faults: Dict[int, List[Spectrum.Element]],
         s2 = next(s_iter, None)
     else:
         cached = s2
-    return uuts, group_len, [curr_fault_num, curr_fault_locs], \
+    return uuts, group_len, (curr_fault_num, curr_fault_locs), \
         curr_faulty_groups, cached

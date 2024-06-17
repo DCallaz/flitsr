@@ -4,12 +4,12 @@ from flitsr.percent_at_n import combine
 import os
 from os import path as osp
 from flitsr.file import File
-from typing import Set, Dict, Any
+from typing import Set, Dict, List, Any
 
 PERC_N = "percentage at n"
 
 
-def readBlock(file: File):
+def readBlock(file: File) -> List[str]:
     block = []
     line = file.readline()
     if (": " not in line):
@@ -56,7 +56,7 @@ if __name__ == "__main__":
             break
 
     # Initialize the script
-    def find_dirs(dirs, path, depth=1, max=None):
+    def find_dirs(dirs: List[str], path, depth=1, max=None):
         for dir in os.scandir(path):
             if (dir.is_dir()):
                 new_path = dir.path

@@ -1,4 +1,4 @@
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt # type: ignore
 from matplotlib import ticker as mtick
 import re
 import os
