@@ -21,22 +21,26 @@ run_with_lock() {
   )&
 }
 
-USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] [-d <depth>/-t [<ext>]/-g]
+USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
+[-d <depth>/-t [<ext>]/-g] [-c <cores>]
   where:
     -h                    : Prints this USAGE message
     -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
     -b <base dir>         : Set the base directory for running in to <base dir>
     -d <depth>            : Specifies the depth at which to look for inputs
     -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
-    -g                    : Look only for GZoltar type inputs"
+    -g                    : Look only for GZoltar type inputs
+    -c <cores>            : Sets the number of cores to run in parallel on (default automatic)"
 
-N=6
-open_sem $N
-
+if [ "$(command -v nproc 2>&1)" ]; then
+  N="$(nproc --all)"
+else
+  N="1"
+fi
 metrics=""
 base_dir="$PWD"
 tcm_ext="*"
-while getopts ":d:m:b:tgh" opt; do
+while getopts ":d:c:m:b:tgh" opt; do
   case ${opt} in
     d )
       depth="$OPTARG"
@@ -50,6 +54,16 @@ while getopts ":d:m:b:tgh" opt; do
         OPTIND=$((OPTIND + 1))
         tcm_ext="$nextopt"
       fi
+      ;;
+    c )
+      if [[ ! "$OPTARG" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: Number of cores must be a number"
+        echo "$USAGE"
+        exit 1
+      elif [ "$(command -v nproc 2>&1)" ] && [ "$OPTARG" -gt "$(nproc --all)" ]; then
+        echo "WARNING: Number of given cores is greater than the number of actual cores"
+      fi
+      N="$OPTARG"
       ;;
     g )
       tcm=0
@@ -74,6 +88,8 @@ while getopts ":d:m:b:tgh" opt; do
   esac
 done
 shift $((OPTIND -1))
+
+open_sem $N
 
 if [ ! "$depth" ] && [ ! "$tcm" ]; then
   echo "ERROR: Please specify a depth or input type"
