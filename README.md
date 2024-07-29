@@ -4,16 +4,21 @@ faults.
 ## Setup
 ### Requirements
 * `python3`
-* `numpy`
-* `matplotlib` (optional, used for evaluation)
 ### Installation
 To install FLITSR, simply clone this repository and run the `setup.sh` script.
 
-**Alternatively**, if you do not want to run the `setup.sh` script, you can add
-the following lines to your `.bashrc` manually:
+**Alternatively**, if you do not want to run the `setup.sh` script, you run the
+following lines, or add them to your `.bashrc` file for future sessions:
 ```
 export FLITSR_HOME="absolute/path/to/flitsr/directory"
 export PATH="$FLITSR_HOME/bin:$PATH"
+```
+
+Then run the following commands to set up FLITSR:
+
+```
+python -m venv "$FLITSR_HOME/.venv"
+$FLITSR_HOME/.venv/bin/pip install -r "$FLITSR_HOME/requirements.txt"
 ```
 
 To test your installation, from any directory run:
