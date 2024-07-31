@@ -109,12 +109,12 @@ cd "$base_dir"
 
 if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
   inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
-              -type f -name "spectra.csv" | xargs -n 1 dirname | sort -v)"
+              -type f -name "spectra.csv" | xargs -n 1 dirname | sort -V)"
 elif [ "$tcm" ] && [ "$tcm" -eq 1 ]; then
   inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
-              -type f -name "*.$tcm_ext" | sort -v)"
+              -type f -name "*.$tcm_ext" | sort -V)"
 else
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} | sort -v)"
+  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} | sort -V)"
 fi
 
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
