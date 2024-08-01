@@ -1,34 +1,28 @@
 import copy
 from typing import Any, Dict, List, Tuple
 from math import comb, factorial
-from flitsr.weffort import getTie
 from flitsr.spectrum import Spectrum
-from flitsr.score import Scores
+from flitsr.score import Ties
 
 
-def precision(n: Any, faults: Dict[int, List[Spectrum.Element]],
-              scores: Scores, spectrum: Spectrum, perc=False,
+def precision(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
               worst_effort=False, collapse=False) -> float:
-    if (len(faults) == 0):
+    if (len(ties.faults) == 0):
         return 0.0
-    fault_num, total = method(n, faults, scores, spectrum, perc,
-                              worst_effort, collapse)
+    fault_num, total = method(n, ties, spectrum, perc, worst_effort, collapse)
     return fault_num/total
 
 
-def recall(n: Any, faults: Dict[int, List[Spectrum.Element]],
-           scores: Scores, spectrum: Spectrum, perc=False,
+def recall(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
            worst_effort=False, collapse=False) -> float:
-    if (len(faults) == 0):
+    if (len(ties.faults) == 0):
         return 0.0
-    fault_num, total = method(n, faults, scores, spectrum, perc,
-                              worst_effort, collapse)
-    return fault_num/len(faults)
+    fault_num, total = method(n, ties, spectrum, perc, worst_effort, collapse)
+    return fault_num/len(ties.faults)
 
 
-def method(n: Any, faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-           spectrum: Spectrum, perc: bool, worst_effort: bool,
-           collapse: bool) -> Tuple[int, int]:
+def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
+           worst_effort: bool, collapse: bool) -> Tuple[int, int]:
     size = 0
     if (collapse):
         size = len(spectrum.groups)
@@ -38,37 +32,34 @@ def method(n: Any, faults: Dict[int, List[Spectrum.Element]], scores: Scores,
     if (n == "b"):
         n = -1
     elif (n == "f"):
-        n = len(faults)
+        n = len(ties.faults)
     elif (perc):
         n = n * size
-    faults = copy.deepcopy(faults) # needed to remove groups of fault locations
-    s_iter = iter(scores)
+    tie_iter = iter(ties)
     total = 0
-    cached = None
     fault_num = 0
     try:
         while (total < n):
-            uuts, group_len, curr_faults, curr_faulty_groups, \
-                cached = getTie(faults, s_iter, spectrum, cached, worst_effort)
+            tie = next(tie_iter)
             if (collapse):  # TODO: actual calculation for collapse
                 add = 0
-                if (total+group_len > n and curr_faulty_groups > 0):
+                if (total+tie.group_len > n and tie.fault_groups > 0):
                     x = n - total
-                    for i in range(curr_faulty_groups):
-                        expected_value = (i+1)*(group_len+1)/(curr_faulty_groups+1)
+                    for i in range(tie.fault_groups):
+                        expected_value = (i+1)*(tie.group_len+1)/(tie.fault_groups+1)
                         if (expected_value <= x):
                             add += 1
                     total += x
                 else:
-                    add = curr_faulty_groups
-                    total += group_len
+                    add = tie.fault_groups
+                    total += tie.group_len
                 fault_num += add
             else:
                 add = 0
-                if (total+len(uuts) > n and curr_faults[0] > 0):
+                if (total+len(tie.elems) > n and tie.num_faults > 0):
                     p = int(n - total)
-                    m = len(uuts)
-                    n_f = curr_faults[1]
+                    m = len(tie.elems)
+                    n_f = tie.fault_locs
                     outer_top = factorial(m-p) * factorial(p)
                     outer_bot = factorial(m)
                     for x in range(1, p+1):
@@ -80,8 +71,8 @@ def method(n: Any, faults: Dict[int, List[Spectrum.Element]], scores: Scores,
                     #         add += 1
                     total += p
                 else:
-                    add = curr_faults[0]
-                    total += len(uuts)
+                    add = tie.num_faults
+                    total += len(tie.elems)
                 fault_num += add
     except StopIteration:
         pass

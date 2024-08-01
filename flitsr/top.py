@@ -1,62 +1,48 @@
-from typing import List, Dict, Set
-from flitsr.score import Scores
-from flitsr.spectrum import Spectrum
-from flitsr.output import find_group
+from flitsr.score import Ties
 
 
-def one_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum) -> bool:
-    uuts = get_top1(scores, spectrum)
-    for fault in faults.values():
+def one_top1(ties: Ties) -> bool:
+    tie = get_top1(ties)
+    for fault in ties.faults.values():
         for loc in fault:
-            if (loc in uuts):
+            if (loc in tie.elems):
                 return True
     return False
 
 
-def all_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum) -> bool:
-    uuts = get_top1(scores, spectrum)
+def all_top1(ties: Ties) -> bool:
+    tie = get_top1(ties)
     count = 0
-    for fault in faults.values():
+    for fault in ties.faults.values():
         for loc in fault:
-            if (loc in uuts):
+            if (loc in tie.elems):
                 count += 1
                 break  # Only consider first location of fault
-    return (count == len(faults))
+    return (count == len(ties.faults))
 
 
-def percent_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-                 spectrum: Spectrum) -> float:
-    if (len(faults) == 0):
+def percent_top1(ties: Ties) -> float:
+    if (len(ties.faults) == 0):
         return 100
     else:
-        uuts = get_top1(scores, spectrum)
+        tie = get_top1(ties)
         count = 0
-        for fault in faults.values():
+        for fault in ties.faults.values():
             for loc in fault:
-                if (loc in uuts):
+                if (loc in tie.elems):
                     count += 1
                     break
-        return (count/len(faults))*100
+        return (count/len(ties.faults))*100
 
 
-def size_top1(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-              spectrum: Spectrum) -> int:
-    uuts = get_top1(scores, spectrum)
-    return len(uuts)
+def size_top1(ties: Ties) -> int:
+    tie = get_top1(ties)
+    return len(tie.elems)
 
 
 # <------------------------- Helper functions ---------------------->
 
 
-def get_top1(scores: Scores, spectrum: Spectrum) -> Set[Spectrum.Element]:
-    s_iter = iter(scores)
-    score = next(s_iter)
-    uuts: Set[Spectrum.Element] = set()
-    uuts.update(find_group(score.elem, spectrum))
-    # Get all UUTs with same score
-    while ((s2 := next(s_iter, None)) and s2.score == score.score):
-        # print(i, sort[i][1])
-        uuts.update(find_group(s2.elem, spectrum))
-    return uuts
+def get_top1(ties: Ties) -> Ties.Tie:
+    tie_iter = iter(ties)
+    return next(tie_iter)

@@ -10,7 +10,7 @@ from flitsr import top
 from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
-from flitsr.output import print_csv, print_names, find_faults, find_fault_groups
+from flitsr.output import print_csv, print_names
 from flitsr.suspicious import Suspicious
 from flitsr.cutoff_points import cutoff_points
 from flitsr.spectrum import Spectrum
@@ -57,7 +57,8 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
             spectrum.remove(test, hard=True)
         else:  # need to remove all faults from this test case
             for elem in faulty:
-                spectrum[test][elem] = False
+                if (spectrum[test][elem]):
+                    spectrum.remove_execution(test, elem)
     return multiFault
 
 
@@ -118,7 +119,7 @@ def run(spectrum: Spectrum, formula: str, flitsr=False,
 
 def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
                    mode: str, effort=2) -> score.Scores:
-    fault_groups = find_fault_groups(spectrum)
+    fault_groups = spectrum.get_fault_groups()
     if (cutoff.startswith("basis")):
         sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
                                    sort, spectrum.groups, mode, spectrum.tf,
@@ -133,44 +134,43 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], collapse=False, csv=False, decimals=2,
            file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec):
-        faults = find_faults(spectrum)
+        ties: score.Ties = scores.get_ties(spectrum, worst_effort=False)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(
-                    weffort.first(faults, scores, spectrum, collapse),
+                    weffort.first(ties, collapse),
                     decimals), file=file)
             if ("avg" in weff):
                 print("wasted effort (avg): {:.{}f}".format(
-                    weffort.average(faults, scores, spectrum, collapse),
+                    weffort.average(ties, collapse),
                     decimals), file=file)
             if ("med" in weff):
                 print("wasted effort (median): {:.{}f}".format(
-                    weffort.median(faults, scores, spectrum, collapse),
+                    weffort.median(ties, collapse),
                     decimals), file=file)
             if ("last" in weff):
                 print("wasted effort (last): {:.{}f}".format(
-                    weffort.last(faults, scores, spectrum, collapse),
+                    weffort.last(ties, collapse),
                     decimals), file=file)
         if (top1):
             if ("one" in top1):
                 print("at least 1 ranked #1: {:.{}f}".format(
-                    top.one_top1(faults, scores, spectrum),
+                    top.one_top1(ties),
                     decimals), file=file)
             if ("all" in top1):
                 print("all ranked #1: {:.{}f}".format(
-                    top.all_top1(faults, scores, spectrum),
+                    top.all_top1(ties),
                     decimals), file=file)
             if ("perc" in top1):
                 print("percentage ranked #1: {:.{}f}".format(
-                    top.percent_top1(faults, scores, spectrum),
+                    top.percent_top1(ties),
                     decimals), file=file)
             if ("size" in top1):
                 print("size of #1: {:.{}f}".format(
-                    top.size_top1(faults, scores, spectrum),
+                    top.size_top1(ties),
                     decimals), file=file)
         if (perc_at_n):
-            bumps = percent_at_n.getBumps(faults, scores, spectrum,
-                                          collapse=collapse)
+            bumps = percent_at_n.getBumps(ties, spectrum, collapse=collapse)
             auc = percent_at_n.auc_calc(percent_at_n.combine([(bumps[0],bumps[1:])]))
             if ('perc' in perc_at_n):
                 form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
@@ -188,13 +188,13 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], faults, scores,
-                                                   spectrum, collapse)
+                    p = precision_recall.precision(entry[1], ties, spectrum,
+                                                   collapse)
                     print("precision at {}: {:.{}f}".format(entry[1], p,
                                                             decimals), file=file)
                 elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], faults, scores,
-                                                spectrum, collapse)
+                    r = precision_recall.recall(entry[1], ties, spectrum,
+                                                collapse)
                     print("recall at {}: {:.{}f}".format(entry[1], r,
                                                          decimals), file=file)
     elif (csv):

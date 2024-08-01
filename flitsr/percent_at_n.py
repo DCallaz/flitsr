@@ -5,22 +5,17 @@ import ast
 import numpy as np
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
-from flitsr.weffort import getTie
 from flitsr.spectrum import Spectrum
-from flitsr.score import Scores
+from flitsr.score import Ties
 
 
-def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-             spectrum: Spectrum, worst_effort=False,
+def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
              collapse=False) -> List[float]:
-    if (len(faults) == 0):
+    if (len(ties.faults) == 0):
         return [0.0]
-    faults = copy.deepcopy(faults) # needed to remove groups of fault locations
-    s_iter = iter(scores)
-    i = 0
+    tie_iter = iter(ties)
     total = 0
     size = 0
-    cached = None
     if (collapse):
         size = len(spectrum.groups)
     else:
@@ -29,18 +24,17 @@ def getBumps(faults: Dict[int, List[Spectrum.Element]], scores: Scores,
     bumps = [float(size)]
     try:
         while (True):
-            uuts, group_len, curr_faults, curr_fault_groups, \
-                cached = getTie(faults, s_iter, spectrum, cached, worst_effort)
+            tie = next(tie_iter)
             if (collapse):
-                for f in range(curr_fault_groups):
-                    expect_value = (group_len+1)/(curr_fault_groups+1)  # - 1
+                for f in range(tie.fault_groups):
+                    expect_value = (tie.group_len+1)/(tie.fault_groups+1)  # -1
                     bumps.append((total+(f+1)*expect_value)/size)
-                total += group_len
+                total += tie.group_len
             else:
-                for f in range(curr_faults[0]):
-                    expect_value = (len(uuts)+1)/(curr_faults[1]+1)  # - 1
+                for f in range(tie.num_faults):
+                    expect_value = (len(tie.elems)+1)/(tie.fault_locs+1)  # -1
                     bumps.append((total+(f+1)*expect_value))
-                total += len(uuts)
+                total += len(tie.elems)
     except StopIteration:
         pass
     return bumps
@@ -76,6 +70,7 @@ def combine(results: List[Tuple[float, List[float]]]) -> List[Tuple[float, float
 
 plot_type = Enum("plot_type", "metric mode")
 
+
 def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
         Dict[Tuple[str, str], List[Tuple[float, float]]]]:
     lines = open(comb_file).readlines()
@@ -102,8 +97,8 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
 
 def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
          metrics=None, flitsrs=None):
-    from matplotlib import pyplot as plt # type: ignore
-    import matplotlib.cm as cm # type: ignore
+    from matplotlib import pyplot as plt
+    import matplotlib.cm as cm  # type: ignore
     modes: List[str] = []
     comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
     if (metrics is None):

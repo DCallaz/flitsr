@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 from bitarray import bitarray
 from flitsr.const_iter import ConstIter
 
@@ -125,6 +125,7 @@ class Spectrum():
         self.tp: int = 0
         self.tf: int = 0
         self.groups: List[List[Spectrum.Element]] = [[]]
+        self.group_dict: Dict[Spectrum.Element, List[Spectrum.Element]] = {}
         self.removed: List[Spectrum.Test] = []
 
     def __getitem__(self, t: Test):
@@ -138,9 +139,11 @@ class Spectrum():
 
     def remove(self, test: Spectrum.Test, hard=False):
         self.tests.remove(test)
-        if (test in self.failing):
+        if (test.outcome is True):
+            self.tp -= 1
+        else:
             self.failing.remove(test)
-        self.tf -= 1
+            self.tf -= 1
         for elem in self.elements:
             if (self.spectrum[test][elem]):
                 if (test.outcome is True):
@@ -149,6 +152,16 @@ class Spectrum():
                     self.f[elem] -= 1
         if (not hard):
             self.removed.append(test)
+
+    def remove_execution(self, test: Spectrum.Test, elem: Spectrum.Element):
+        if (self.spectrum[test][elem]):
+            self.spectrum[test][elem] = False
+            if (test.outcome is True):
+                self.p[elem] -= 1
+            else:
+                self.f[elem] -= 1
+        else:
+            raise ValueError("Cannot remove an execution that does not exist")
 
     def reset(self):
         """Re-activates all the tests and recomputes counts"""
@@ -195,8 +208,13 @@ class Spectrum():
             else:
                 self.f[elem] += 1
 
-    def merge_on_test(self, test: Test):
-        """Given one test pertaining to a row in the spectrum, merge the groups"""
+    def split_groups_on_test(self, test: Test):
+        """
+        Given one test pertaining to a row in the spectrum, split the groups
+        according to the coverage. The split will potentially split each group
+        in half, based on those elements that are executed in the test, and
+        those that are not.
+        """
         row = self.spectrum[test]
         new_groups = []
         for group in self.groups:
@@ -221,6 +239,7 @@ class Spectrum():
         remove = []
         for group in self.groups:
             remove.extend(group[1:])
+            self.group_dict[group[0]] = group
         # remove.sort(reverse=True)
         # self.locs -= len(remove)
         for rem in remove:
@@ -230,3 +249,38 @@ class Spectrum():
             # No need to remove execution (bitarray)
             # for test in self.tests:
             #     self.spectrum[test].remove_exec(rem)  # remove if there
+
+    def get_group(self, elem: Spectrum.Element) -> List[Spectrum.Element]:
+        # Faster way for exposed elements
+        if (elem in self.group_dict):
+            return self.group_dict[elem]
+        # Slower way for un-exposed elements
+        for group in self.groups:
+            if (elem in group):
+                return group
+        # Error if not found in either way
+        raise KeyError("Element \""+str(elem)+"\" not found in a spectrum group")
+
+    def get_faults(self) -> Dict[int, List[Spectrum.Element]]:
+        actual_faults: Dict[int, List[Spectrum.Element]] = dict()
+        for group in self.groups:
+            for elem in group:
+                if (elem.faults):
+                    for fault in elem.faults:
+                        if (fault not in actual_faults):
+                            actual_faults[fault] = []
+                        actual_faults[fault].append(elem)
+        return actual_faults
+
+    def get_fault_groups(self) -> Dict[int, Set[int]]:
+        faults = self.get_faults()
+        fault_groups: Dict[int, Set[int]] = {}
+        for i in range(len(self.groups)):
+            for (fault_num, fault_locs) in faults.items():
+                for fault_loc in fault_locs:
+                    if (fault_loc in self.groups[i]):
+                        if (fault_num not in fault_groups):
+                            fault_groups[fault_num] = set()
+                        fault_groups[fault_num].add(i)
+                        break
+        return fault_groups

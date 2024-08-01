@@ -69,6 +69,7 @@ def read_ranking(ranking_file: str,
         i += 1
     # Hard-code the groups for a pre-determined spectrum
     spectrum.groups = [[elem] for elem in spectrum.elements]
+    spectrum.remove_unnecessary()
     return scores, spectrum
 
 

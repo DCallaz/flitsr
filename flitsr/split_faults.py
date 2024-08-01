@@ -1,6 +1,5 @@
 import sys
 from flitsr.spectrum import Spectrum
-from flitsr.output import find_fault_groups, find_faults
 from typing import Dict, List
 
 
@@ -83,7 +82,7 @@ if __name__ == "__main__":
     else:
         from flitsr.tcm_input import read_spectrum
     spectrum = read_spectrum(d, False)
-    faults = find_faults(spectrum)
+    faults = spectrum.get_faults()
     print("faults:", faults)
     #print(groups)
     #print_spectrum(spectrum)

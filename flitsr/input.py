@@ -3,7 +3,7 @@ import re
 import os
 from io import TextIOWrapper
 from typing import Dict, Tuple
-from flitsr.output import find_faults, print_spectrum
+from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum
 
@@ -73,7 +73,7 @@ def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Elemen
                 spectrum.addExecution(test, elem, arr[i] != "0")
                 seen.add(elem)
         # Use row to merge equivalences
-        spectrum.merge_on_test(test)
+        spectrum.split_groups_on_test(test)
     # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from spectrum
     spectrum.remove_unnecessary()
@@ -91,7 +91,7 @@ def read_spectrum(input_path: str, split_faults: bool,
     fill_spectrum(open(input_path+"/matrix.txt"), method_map, spectrum)
     # Split fault groups if necessary
     if (split_faults):
-        faults, unexposed = split(find_faults(spectrum), spectrum)
+        faults, unexposed = split(spectrum.get_faults(), spectrum)
         for elem in spectrum.elements:
             if (elem in unexposed):
                 elem.faults = []
