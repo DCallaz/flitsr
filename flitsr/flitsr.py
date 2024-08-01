@@ -88,7 +88,7 @@ def feedback_loc(spectrum: Spectrum, formula: str,
 
 
 def run(spectrum: Spectrum, formula: str, flitsr=False,
-        tiebrk=0, multi=0) -> score.Scores:
+        tiebrk=0, multi=False) -> score.Scores:
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
     if (flitsr):
@@ -242,7 +242,7 @@ def main(argv: List[str]):
         # TODO: Fix parallel below
         # spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
         #                               args.metric, args.parallel)
-        print("Parallel not supported at the moment...")
+        raise NotImplementedError("Parallel not supported at the moment")
     else:
         spectrums = [spectrum]
     if (args.all):  # Run the 'all' script (do all metrics and calculations)
@@ -250,7 +250,12 @@ def main(argv: List[str]):
         types = ["base_", "flitsr_", "flitsr_multi_"]
         for m in range(len(metrics)):
             for i in range(3):
-                file = open(types[i]+metrics[m]+"_"+d_p, "x")
+                filename = types[i]+metrics[m]+"_"+d_p
+                try:
+                    file = open(filename, "x")
+                except FileExistsError:
+                    print("WARNING: overriding file", filename, file=sys.stderr)
+                    file = open(filename, 'w')
                 # TODO: Decide whether to include the parallel here
                 # if (m == 'parallel'):
                 #     spectrums = parallel.parallel(args.input, spectrum,
@@ -263,9 +268,11 @@ def main(argv: List[str]):
                 # else:
                 sort = run(spectrum, metrics[m], i >= 1, 3, (i == 2)*2)
                 output(sort, spectrum, weff=["first", "avg", "med", "last"],
-                        perc_at_n=['perc'],prec_rec=[('p', 1), ('p', 5), ('p', 10),
-                        ('p', "f"), ('r', 1), ('r', 5), ('r', 10), ('r', "f")],
-                        collapse=args.collapse, file=file)
+                       perc_at_n=['perc'], prec_rec=[('p', 1), ('p', 5),
+                                                     ('p', 10), ('p', "f"),
+                                                     ('r', 1), ('r', 5),
+                                                     ('r', 10), ('r', "f")],
+                       collapse=args.collapse, file=file)
                 file.close()
                 # end else above
                 spectrum.reset()

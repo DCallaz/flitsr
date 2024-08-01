@@ -122,7 +122,7 @@ directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
-  for input in $(echo "$inputs" | grep -P "^\Q$dir\E" | xargs -d $'\n' -n 1 basename); do
+  for input in $(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename); do
     #TODO: add metrics
     run_with_lock flitsr --all "$input"
   done
