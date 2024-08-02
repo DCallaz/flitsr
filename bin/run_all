@@ -123,8 +123,7 @@ while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
   for input in $(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename); do
-    #TODO: add metrics
-    run_with_lock flitsr --all "$input"
+    run_with_lock flitsr --all -m ${metrics[@]} "$input"
   done
   wait
   for m in $metrics; do
