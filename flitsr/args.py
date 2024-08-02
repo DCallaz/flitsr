@@ -177,13 +177,13 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'out of the total number of faults n (i.e. f/n). Can be specified '
             'multiple times')
 
-    # TODO: Add parallel args when implemented
-    # parallel_opts = ['bdm', 'msp', 'hwk', 'vwk']
-    # parser.add_argument('-p', '--parallel', action='store',
-    #         choices=parallel_opts, metavar='ALGORITHM',
-    #         help='Run one of the parallel debugging algorithms on the spectrum '
-    #         'to produce multiple spectrums, and process all other options on '
-    #         'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
+    # Parallel options
+    parallel_opts = ['bdm', 'msp', 'hwk', 'vwk']
+    parser.add_argument('-p', '--parallel', action='store',
+             choices=parallel_opts, metavar='ALGORITHM',
+             help='Run one of the parallel debugging algorithms on the spectrum '
+             'to produce multiple spectrums, and process all other options on '
+             'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
 
     # TODO: Add OBA and worst args if necessary
     cut_eval_opts=['worst', 'best', 'resolve']

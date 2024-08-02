@@ -220,7 +220,7 @@ def main(argv: List[str]):
     if (args.ranking):
         from flitsr.ranking import read_any_ranking
         scores, spectrum = read_any_ranking(args.input,
-                method_level=args.method)
+                                            method_level=args.method)
         output(scores, spectrum, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.collapse, csv=args.csv,
                decimals=args.decimals, file=args.output)
@@ -239,10 +239,8 @@ def main(argv: List[str]):
               file=sys.stderr)
         return
     if (hasattr(args, 'parallel') and args.parallel):
-        # TODO: Fix parallel below
-        # spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
-        #                               args.metric, args.parallel)
-        raise NotImplementedError("Parallel not supported at the moment")
+        spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
+                                      args.metric, args.parallel)
     else:
         spectrums = [spectrum]
     if (args.all):  # Run the 'all' script (do all metrics and calculations)

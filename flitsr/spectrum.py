@@ -163,6 +163,15 @@ class Spectrum():
         else:
             raise ValueError("Cannot remove an execution that does not exist")
 
+    def remove_element(self, element: Spectrum.Element):
+        self.elements.pop(element, None)  # remove if there
+        self.p.pop(element, None)  # remove if there
+        self.f.pop(element, None)  # remove if there
+        # No need to remove execution (bitarray)
+        # for test in self.tests:
+        #     self.spectrum[test].remove_exec(rem)  # remove if there
+        return element
+
     def reset(self):
         """Re-activates all the tests and recomputes counts"""
         for test in self.removed:
@@ -242,15 +251,14 @@ class Spectrum():
             self.group_dict[group[0]] = group
         # remove.sort(reverse=True)
         # self.locs -= len(remove)
-        for rem in remove:
-            self.elements.pop(rem, None)  # remove if there
-            self.p.pop(rem, None)  # remove if there
-            self.f.pop(rem, None)  # remove if there
-            # No need to remove execution (bitarray)
-            # for test in self.tests:
-            #     self.spectrum[test].remove_exec(rem)  # remove if there
+        for elem in remove:
+            self.remove_element(elem)
 
     def get_group(self, elem: Spectrum.Element) -> List[Spectrum.Element]:
+        """
+        Given an element, return the group of elements with identical coverage
+        that this element is apart of.
+        """
         # Faster way for exposed elements
         if (elem in self.group_dict):
             return self.group_dict[elem]
