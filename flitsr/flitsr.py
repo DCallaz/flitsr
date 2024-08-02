@@ -16,6 +16,7 @@ from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr import score
 from flitsr.args import parse_args
+from flitsr.flitsr_types import Flitsr_Type
 
 
 def remove_from_tests(element: Spectrum.Element,
@@ -88,11 +89,11 @@ def feedback_loc(spectrum: Spectrum, formula: str,
     return faulty
 
 
-def run(spectrum: Spectrum, formula: str, flitsr=False,
-        tiebrk=0, multi=False) -> score.Scores:
+def run(spectrum: Spectrum, formula: str, flitsr_type: Flitsr_Type,
+        tiebrk=0) -> score.Scores:
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
-    if (flitsr):
+    if (flitsr_type != Flitsr_Type.BASE):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
@@ -109,7 +110,7 @@ def run(spectrum: Spectrum, formula: str, flitsr=False,
             # multi-explanation -> we assume there are multiple explanations
             # for the same faults
             multiRemove(newSpectrum, faulty)
-            if (not multi):
+            if (flitsr_type != Flitsr_Type.FLITSR_MULTI):
                 break
             val = val-1
         sort.sort(True, tiebrk)
@@ -208,17 +209,6 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
 
 def main(argv: List[str]):
     args: Namespace = parse_args(argv[1:])
-    if (osp.isfile(args.input)):
-        input_m = 1
-    elif (osp.isdir(args.input) and
-            osp.isfile(osp.join(args.input, "matrix.txt"))):
-        input_m = 0
-    else:
-        print("ERROR:", args.input, "does not exist")
-        quit()
-    if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
-        args.sbfl = False
-        args.multi = 1
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.ranking import read_any_ranking
@@ -229,7 +219,7 @@ def main(argv: List[str]):
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
-    if (input_m):
+    if (args.input_m):
         from flitsr.tcm_input import read_spectrum
         d_p = re.sub("\\.\\w+$", ".run", args.input)
     else:
@@ -241,57 +231,45 @@ def main(argv: List[str]):
         print("WARNING: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
         return
-    if (hasattr(args, 'parallel') and args.parallel):
-        spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
-                                      args.metric, args.parallel)
-    else:
-        spectrums = [spectrum]
-    if (args.all):  # Run the 'all' script (do all metrics and calculations)
-        metrics = Suspicious.getNames()
-        types = ["base_", "flitsr_", "flitsr_multi_"]
-        for m in range(len(metrics)):
-            for i in range(3):
-                filename = types[i]+metrics[m]+"_"+d_p
+    # Execute techniques
+    for metric in args.metrics:
+        for flitsr_type in args.types:
+            # Get the output channel
+            if (len(args.metrics) == 1):
+                output_file = args.output
+            else:
+                # store output files in the current directory
+                input_filename = osp.basename(d_p)
+                filename = (flitsr_type.value + '_' + metric + '_' +
+                            input_filename)
                 try:
-                    file = open(filename, "x")
+                    output_file = open(filename, "x")
                 except FileExistsError:
-                    print("WARNING: overriding file", filename, file=sys.stderr)
-                    file = open(filename, 'w')
-                # TODO: Decide whether to include the parallel here
-                # if (m == 'parallel'):
-                #     spectrums = parallel.parallel(args.input, spectrum,
-                #             args.tiebrk, args.metric, args.parallel)
-                #     output(sort, spectrum, weff=["first","med","last"],
-                #            perc_at_n=['perc'],prec_rec=[('p', 1), ('p', 5), ('p', 10),
-                #                                  ('p', "f"), ('r', 1), ('r', 5),
-                #                                  ('r', 10), ('r', "f")],
-                #             collapse=args.collapse, file=file, decimals=args.decimals)
-                # else:
-                sort = run(spectrum, metrics[m], i >= 1, 3, (i == 2)*2)
-                output(sort, spectrum, weff=["first", "avg", "med", "last"],
-                       perc_at_n=['perc'], prec_rec=[('p', 1), ('p', 5),
-                                                     ('p', 10), ('p', "f"),
-                                                     ('r', 1), ('r', 5),
-                                                     ('r', 10), ('r', "f")],
-                       collapse=args.collapse, file=file)
-                file.close()
-                # end else above
-                spectrum.reset()
-    else:  # Just run the given metric and calculations
-        for i, spectrum in enumerate(spectrums):
-            if (i > 0):
-                print("<---------------------- Next Ranking ---------------------->")
-            sort = run(spectrum, args.metric, not args.sbfl, args.tiebrk,
-                       args.multi)
-            # if ('map' in counts): # Map back if parallel
-            #     for rank in sort:
-            #         rank[1] = counts['map'][rank[1]]
-            if (args.cutoff_strategy):
-                sort = compute_cutoff(args.cutoff_strategy, sort,
-                                      spectrum, args.metric, args.cutoff_eval)
-            output(sort, spectrum, args.weff, args.top1, args.perc_at_n,
-                   args.prec_rec, args.collapse, csv=args.csv,
-                   decimals=args.decimals, file=args.output)
+                    print("WARNING: overriding file", filename,
+                          file=sys.stderr)
+                    output_file = open(filename, 'w')
+            # Check for parallel
+            if (args.parallel):
+                spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
+                                              metric, args.parallel)
+            else:
+                spectrums = [spectrum]
+            # Run each spectrum
+            for i, spectrum in enumerate(spectrums):
+                if (i > 0):
+                    print("<---------------------- Next Ranking ---------------------->")
+                # Run techniques
+                sort = run(spectrum, metric, flitsr_type, args.tiebrk)
+                # Compute cut-off
+                if (args.cutoff_strategy):
+                    sort = compute_cutoff(args.cutoff_strategy, sort,
+                                          spectrum, metric,
+                                          args.cutoff_eval)
+                # Compute and print output
+                output(sort, spectrum, args.weff, args.top1, args.perc_at_n,
+                       args.prec_rec, args.collapse, csv=args.csv,
+                       decimals=args.decimals, file=output_file)
+            spectrum.reset()
 
 
 if __name__ == "__main__":

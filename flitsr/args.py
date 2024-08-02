@@ -1,8 +1,10 @@
 import argparse
 import sys
+from os import path as osp
 from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
+from flitsr.flitsr_types import Flitsr_Type
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -15,11 +17,18 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
       argv: The list of arguments to parse, usual taken from the command
             line arguments given
     """
+    # Check file exists function
+    def check_file(filename):
+        if (osp.exists(filename)):
+            return filename
+        else:
+            raise argparse.ArgumentTypeError(f'Could not find input file: \"{filename}\"')
 
     # General options
     parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
             'fault finding/localization tool for multiple faults.')
-    parser.add_argument('input', help='The coverage file (TCM) or '
+    parser.add_argument('input', type=check_file,
+                        help='The coverage file (TCM) or '
                         'directory (GZoltar) containing the coverage collected'
                         ' for the system over the test suite')
     parser.add_argument('-o', '--output', action='store', default=sys.stdout,
@@ -30,12 +39,16 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'FLITSR ranking format. Enabling this option will allow FLITSR to '
             'output the ranking in CSV format compatible with GZoltar\'s CSV '
             'ranking format instead.')
-    parser.add_argument('-m', '--metric', action='store',
-            choices=Suspicious.getNames(), default='ochiai', metavar='METRIC',
-            help='The underlying (SBFL) metric to use when either ranking '
-            '(if the sbfl option is given), or running the FLITSR algorithm.'
-            ' Allowed values are: ['+', '.join(Suspicious.getNames())+']'
-            ' (default: %(default)s)')
+    default_metric = 'ochiai'
+    parser.add_argument('-m', '--metric', dest='metrics', action='extend',
+            nargs='*', choices=Suspicious.getNames(True), metavar='METRIC',
+            help='The underlying (SBFL) metric(s) to use when either ranking '
+            '(if the sbfl option is given), or running the FLITSR algorithm. '
+            'Option may be supplied multiple times and with multiple values. '
+            'Specifying multiple metrics will output the results of each '
+            'metric to a seperate file using the metric\'s name instead of '
+            'stdout. Allowed values are: ['+', '.join(Suspicious.getNames(True))+'] '
+            '(default: {})'.format(default_metric))
     parser.add_argument('-s', '--sbfl', action='store_true',
             help='Disables the FLITSR algorithm so that only the base metric '
             'is used to produce the ranking. This is equivalent to using the '
@@ -202,7 +215,41 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'that determines the number of bases included before the cutoff')
 
     args = parser.parse_args(argv)
+    # Set the metrics based on 'all' or the default metric
+    if (args.metrics is None):
+        if (args.all is True):
+            args.metrics = Suspicious.getNames()
+        else:
+            args.metrics = [default_metric]
+    # Set the flitsr types based on 'all' or what is set
+    if (args.all is True):
+        args.types = list(Flitsr_Type)
+        if (len(args.weff) == 0 and len(args.top1) == 0 and
+                len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
+            args.weff = ["first", "avg", "med", "last"]
+            args.perc_at_n = ["perc"]
+            args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
+                             ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
+    else:
+        if (args.sbfl is True):
+            args.types = [Flitsr_Type.BASE]
+        elif (args.multi is True):
+            args.types = [Flitsr_Type.FLITSR_MULTI]
+        else:
+            args.types = [Flitsr_Type.FLITSR]
+    # Check the input file type and set input method
+    if (osp.isfile(args.input)):
+        args.input_m = 1
+    elif (osp.isdir(args.input) and
+            osp.isfile(osp.join(args.input, "matrix.txt"))):
+        args.input_m = 0
+    else:
+        parser.error("Input file type not supported")
+    if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
+        args.sbfl = False
+        args.multi = 1
     return args
+
 
 if __name__ == "__main__":
     args = parse_args(sys.argv[1:])

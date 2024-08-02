@@ -45,25 +45,30 @@ class Suspicious():
         return scores
 
     @staticmethod
-    def getNames() -> List[str]:
-        all_names = dir(Suspicious)
-        names = [x for x in all_names if (not x.startswith("_")
-                 and x != "execute" and x != "getNames"
-                 and x != "apply_formula")]
+    def getNames(all_names=False) -> List[str]:
+        if (all_names):
+            all_names = dir(Suspicious)
+            names = [x for x in all_names if (not x.startswith("_")
+                     and x != "execute" and x != "getNames"
+                     and x != "apply_formula")]
+        else:
+            names = ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
+                     'jaccard', 'naish2', 'ochiai', 'overlap', 'tarantula',
+                     'zoltar']
         return names
 
-    def _ample(self) -> float:
+    def ample(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t2 = 0.0 if (self.ep == 0) else self.ep/self.tp
         return abs(t1 - t2)
 
-    def _anderberg(self) -> float:
+    def anderberg(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = (self.ef + 2*(self.nf + self.ep))
         return self.ef/denominator
 
-    def _arith_mean(self) -> float:
+    def arith_mean(self) -> float:
         denominator = (self.ef + self.ep)*(self.np + self.nf) + self.tf*self.tp
         nominator = 2*self.ef*self.np - 2*self.nf*self.ep
         if (nominator == 0):
@@ -72,7 +77,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _cohen(self) -> float:
+    def cohen(self) -> float:
         denominator = (self.ef + self.ep)*self.tp + self.tf*(self.nf + self.np)
         nominator = 2*self.ef*self.np - 2*self.nf*self.ep
         if (nominator == 0):
@@ -81,16 +86,16 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _dice(self) -> float:
+    def dice(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.tf + self.ep
         return 2*self.ef/denominator
 
-    def _euclid(self) -> float:
+    def euclid(self) -> float:
         return math.sqrt(self.ef + self.np)
 
-    def _fleiss(self) -> float:
+    def fleiss(self) -> float:
         denominator = (2*self.ef*self.nf*self.ep) + (2*self.np*self.nf*self.ep)
         nominator = (4*self.ef*self.np) - (4*self.nf*self.ep) - (self.nf - self.ep)**2
         if (nominator == 0):
@@ -99,7 +104,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _geometric(self) -> float:
+    def geometric(self) -> float:
         denominator = math.sqrt((self.ef + self.ep)*(self.np + self.nf)*self.tf*self.tp)
         nominator = self.ef*self.np - self.nf*self.ep
         if (nominator == 0):
@@ -108,7 +113,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _goodman(self) -> float:
+    def goodman(self) -> float:
         denominator = 2*self.ef + self.nf + self.ep
         nominator = 2*self.ef - self.nf - self.ep
         if (nominator == 0):
@@ -117,7 +122,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _hamann(self) -> float:
+    def hamann(self) -> float:
         denominator = self.tf + self.tp
         nominator = self.ef + self.np  - self.nf - self.ep
         if (nominator == 0):
@@ -126,7 +131,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _hamming(self) -> float:
+    def hamming(self) -> float:
         return self.ef + self.np
 
     def harmonic(self) -> float:
@@ -154,7 +159,7 @@ class Suspicious():
         denominator = self.tf + self.ep
         return self.ef/denominator
 
-    def _kulczynski1(self) -> float:
+    def kulczynski1(self) -> float:
         denominator = self.nf + self.ep
         if (self.ef == 0):
             return 0.0
@@ -162,12 +167,12 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _kulczynski2(self) -> float:
+    def kulczynski2(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t2 = 0.0 if (self.ef == 0) else self.ef/(self.ef + self.ep)
         return 0.5*(t1 + t2)
 
-    def _m1(self) -> float:
+    def m1(self) -> float:
         denominator = self.nf + self.ep
         nominator = self.ef + self.np
         if (nominator == 0):
@@ -176,7 +181,7 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _m2(self) -> float:
+    def m2(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.ef + self.np + 2*(self.ef + self.ep)
@@ -196,7 +201,7 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _ochiai2(self) -> float:
+    def ochiai2(self) -> float:
         nominator = self.ef*self.np
         denominator = math.sqrt((self.ef + self.ep)*(self.np + self.nf)*self.tf*self.tp)
         if (nominator == 0):
@@ -213,7 +218,7 @@ class Suspicious():
             return math.inf
         return self.ef/denominator
 
-    def _rogers_tanimoto(self) -> float:
+    def rogers_tanimoto(self) -> float:
         nominator = self.ef + self.np
         denominator = self.ef + self.np + 2*(self.nf + self.ep)
         if (nominator == 0):
@@ -222,25 +227,25 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _rogot1(self) -> float:
+    def rogot1(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/(2*self.ef + self.nf + self.ep)
         t2 = 0.0 if (self.np == 0) else self.np/(2*self.np + self.nf + self.ep)
         return 0.5*(t1 + t2)
 
-    def _rogot2(self) -> float:
+    def rogot2(self) -> float:
         t1 = 0.0 if (self.ef == 0) else self.ef/(self.ef + self.ep)
         t2 = 0.0 if (self.ef == 0) else self.ef/self.tf
         t3 = 0.0 if (self.np == 0) else self.np/self.tp
         t4 = 0.0 if (self.np == 0) else self.np/(self.np + self.nf)
         return 0.25*(t1 + t2 + t3 + t4)
 
-    def _russell_rao(self) -> float:
+    def russell_rao(self) -> float:
         if (self.ef == 0):
             return 0.0
         denominator = self.tf + self.tp
         return self.ef/denominator
 
-    def _scott(self) -> float:
+    def scott(self) -> float:
         nominator = 4*self.ef*self.np - 4*self.nf*self.ep - (self.nf - self.ep)**2
         denominator = (2*self.ef + self.nf + self.ep)*(2*self.np + self.nf + self.ep)
         if (nominator == 0):
@@ -249,21 +254,21 @@ class Suspicious():
             return math.inf
         return nominator/denominator
 
-    def _simpl_match(self) -> float:
+    def simpl_match(self) -> float:
         nominator = self.ef + self.np
         if (nominator == 0):
             return 0.0
         denominator = self.tf + self.tp
         return nominator/denominator
 
-    def _sokal(self) -> float:
+    def sokal(self) -> float:
         nominator = 2*(self.ef + self.np)
         denominator = nominator + self.nf + self.ep
         if (nominator == 0):
             return 0.0
         return nominator/denominator
 
-    def _sorensen_dice(self) -> float:
+    def sorensen_dice(self) -> float:
         nominator = 2*self.ef
         if (nominator == 0):
             return 0.0
@@ -286,13 +291,13 @@ class Suspicious():
         denominator = nominator + passed_component
         return nominator/denominator
 
-    def _wong1(self) -> float:
+    def wong1(self) -> float:
         return self.ef
 
-    def _wong2(self) -> float:
+    def wong2(self) -> float:
         return self.ef - self.ep
 
-    def _wong3(self) -> float:
+    def wong3(self) -> float:
         if (self.ep <= 2):
             return self.ef - self.ep
         elif (self.ep <= 10):
