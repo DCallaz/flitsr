@@ -2,7 +2,7 @@ import argparse
 import sys
 from typing import List
 from flitsr.suspicious import Suspicious
-from flitsr.cutoff_points import cutoff_points
+from flitsr import cutoff_points
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -191,7 +191,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             choices=cut_eval_opts, help='Specifies the performance mode to use '
             'when using a multi-fault fixing cut-off strategy to produce '
             'rankings. Allowed values are: ['+', '.join(cut_eval_opts)+']'+
-            ' (default %(default)s)', default='best')
+            ' (default %(default)s)', default='worst')
     cutoff_opts = cutoff_points.getNames()
     parser.add_argument('--cutoff-strategy', action='store', metavar='STRATEGY',
             choices=cutoff_opts, help='Cuts off the ranking using the given '

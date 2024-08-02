@@ -279,16 +279,3 @@ class Spectrum():
                             actual_faults[fault] = []
                         actual_faults[fault].append(elem)
         return actual_faults
-
-    def get_fault_groups(self) -> Dict[int, Set[int]]:
-        faults = self.get_faults()
-        fault_groups: Dict[int, Set[int]] = {}
-        for i in range(len(self.groups)):
-            for (fault_num, fault_locs) in faults.items():
-                for fault_loc in fault_locs:
-                    if (fault_loc in self.groups[i]):
-                        if (fault_num not in fault_groups):
-                            fault_groups[fault_num] = set()
-                        fault_groups[fault_num].add(i)
-                        break
-        return fault_groups

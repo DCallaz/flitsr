@@ -12,7 +12,7 @@ from flitsr import parallel
 from flitsr import precision_recall
 from flitsr.output import print_csv, print_names
 from flitsr.suspicious import Suspicious
-from flitsr.cutoff_points import cutoff_points
+from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr import score
 from flitsr.args import parse_args
@@ -118,15 +118,18 @@ def run(spectrum: Spectrum, formula: str, flitsr=False,
 
 
 def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
-                   mode: str, effort=2) -> score.Scores:
-    fault_groups = spectrum.get_fault_groups()
+                   mode: str, effort: str) -> score.Scores:
+    faults = spectrum.get_faults()
     if (cutoff.startswith("basis")):
-        sort = cutoff_points.basis(int(cutoff.split("=")[1]), fault_groups,
-                                   sort, spectrum.groups, mode, spectrum.tf,
-                                   spectrum.tp, effort=effort)
+        if ('=' in cutoff):
+            num_bases = int(cutoff.split('=')[1])
+        else:
+            num_bases = 1
+        sort = cutoff_points.basis(num_bases, spectrum, faults, sort, mode,
+                                   effort=effort)
     else:
-        sort = cutoff_points.cut(cutoff, fault_groups, sort, spectrum.groups,
-                                 mode, spectrum.tf, spectrum.tp, effort=effort)
+        sort = cutoff_points.cut(cutoff, spectrum, faults, sort, mode,
+                                 effort=effort)
     return sort
 
 
@@ -214,8 +217,8 @@ def main(argv: List[str]):
         print("ERROR:", args.input, "does not exist")
         quit()
     if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
-        flitsr = True
-        multi = 1
+        args.sbfl = False
+        args.multi = 1
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.ranking import read_any_ranking
