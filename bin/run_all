@@ -127,7 +127,7 @@ while read -r dir; do
     run_with_lock flitsr --all $m_metrics "$input"
   done
   wait
-  for m in $metrics; do
+  for m in "${metrics[@]}"; do
     while read -r t || [ -n "$t" ]; do
       for file in "$t${m}_"*.run; do
         orig=${file#"$t${m}_"}
