@@ -37,7 +37,7 @@ if [ "$(command -v nproc 2>&1)" ]; then
 else
   N="1"
 fi
-metrics=""
+metrics=()
 base_dir="$PWD"
 tcm_ext="*"
 while getopts ":d:c:m:b:tgh" opt; do
@@ -73,7 +73,7 @@ while getopts ":d:c:m:b:tgh" opt; do
       base_dir="$(readlink -f "$(echo ${base_dir/"~"/~})")"
       ;;
     m )
-      metrics+=" ${OPTARG//,/ }"
+      metrics+=("${OPTARG//,/ }")
       ;;
     h )
       echo "$USAGE"
@@ -102,7 +102,7 @@ elif [ "$depth" ] && [[ ! "$depth" =~ ^[0-9]+$ ]]; then
 fi
 
 if [ "$metrics" == "" ]; then
-  metrics=$($FLITSR_HOME/.venv/bin/python -m flitsr.get_metric_names)
+  metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.get_metric_names))
 fi
 
 cd "$base_dir"
@@ -123,7 +123,8 @@ while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
   for input in $(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename); do
-    run_with_lock flitsr --all -m ${metrics[@]} "$input"
+    m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
+    run_with_lock flitsr --all $m_metrics "$input"
   done
   wait
   for m in $metrics; do

@@ -40,11 +40,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'output the ranking in CSV format compatible with GZoltar\'s CSV '
             'ranking format instead.')
     default_metric = 'ochiai'
-    parser.add_argument('-m', '--metric', dest='metrics', action='extend',
-            nargs='*', choices=Suspicious.getNames(True), metavar='METRIC',
+    parser.add_argument('-m', '--metric', dest='metrics', action='append',
+            choices=Suspicious.getNames(True), metavar='METRIC',
             help='The underlying (SBFL) metric(s) to use when either ranking '
             '(if the sbfl option is given), or running the FLITSR algorithm. '
-            'Option may be supplied multiple times and with multiple values. '
+            'Option may be supplied multiple times to run multiple metrics. '
             'Specifying multiple metrics will output the results of each '
             'metric to a seperate file using the metric\'s name instead of '
             'stdout. Allowed values are: ['+', '.join(Suspicious.getNames(True))+'] '
