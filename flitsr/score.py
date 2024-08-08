@@ -22,45 +22,50 @@ class Scores:
             return str(self)
 
     def __init__(self):
-        self.scores: List[Scores.Score] = []
+        self._scores: List[Scores.Score] = []
+        self.elem_map: Dict[Spectrum.Element, Scores.Score] = {}
         self.place = 0
 
     def __getitem__(self, elem):
-        for score in self.scores:
-            if (score.elem == elem):
-                return score
+        return self.elem_map[elem]
 
     def sort(self, reverse: bool, tiebrk: int):
         if (tiebrk == 1):  # Sorted by execution counts
-            self.scores.sort(key=lambda x: x.exec, reverse=reverse)
-            self.scores.sort(key=lambda x: x.score, reverse=reverse)
+            self._scores.sort(key=lambda x: x.exec, reverse=reverse)
+            self._scores.sort(key=lambda x: x.score, reverse=reverse)
         elif (tiebrk == 2):  # random ordering
-            random.shuffle(self.scores)
-            self.scores.sort(key=lambda x: x.score, reverse=reverse)
+            random.shuffle(self._scores)
+            self._scores.sort(key=lambda x: x.score, reverse=reverse)
         elif (tiebrk == 3):  # original ranking tie break
             if (orig is not None):  # sort by original rank then exec count
-                self.scores.sort(key=lambda x: orig[x.elem].exec,
-                                 reverse=reverse)
-                self.scores.sort(key=lambda x: orig[x.elem].score,
-                                 reverse=reverse)
+                self._scores.sort(key=lambda x: orig[x.elem].exec,
+                                  reverse=reverse)
+                self._scores.sort(key=lambda x: orig[x.elem].score,
+                                  reverse=reverse)
             else:  # if no orig, still sort by current execution count
-                self.scores.sort(key=lambda x: x.exec, reverse=reverse)
-            self.scores.sort(key=lambda x: x.score, reverse=reverse)
+                self._scores.sort(key=lambda x: x.exec, reverse=reverse)
+            self._scores.sort(key=lambda x: x.score, reverse=reverse)
         else:
-            self.scores.sort(key=lambda x: x.score, reverse=reverse)
+            self._scores.sort(key=lambda x: x.score, reverse=reverse)
 
     def append(self, elem: Spectrum.Element, score: float, exec_count: int):
         created = Scores.Score(elem, score, exec_count)
-        self.scores.append(created)
+        self._scores.append(created)
+        self.elem_map[elem] = created
+
+    def extend(self, scores: List[Score]):
+        self._scores.extend(scores)
+        for score in scores:
+            self.elem_map[score.elem] = score
 
     def get_ties(self, spectrum: Spectrum, worst_effort: bool):
         return Ties(spectrum, self, worst_effort)
 
     def __iter__(self):
-        return iter(self.scores)
+        return iter(self._scores)
 
     def __len__(self):
-        return len(self.scores)
+        return len(self._scores)
 
 
 class Ties:

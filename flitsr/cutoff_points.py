@@ -23,11 +23,11 @@ def basis(basis_num: int, spectrum: Spectrum,
             temp_items.append(next_score)
             next_score = next(s_iter, None)
         if (effort == 'worst' or first_fault == -1):
-            new_scores.scores.extend(temp_items)
+            new_scores.extend(temp_items)
         elif (effort == 'best'):
-            new_scores.scores.extend(temp_items[:first_fault+1])
+            new_scores.extend(temp_items[:first_fault+1])
         elif (effort == 'resolve'):
-            new_scores.scores.append(temp_items[first_fault])
+            new_scores.extend([temp_items[first_fault]])
         if (next_score is not None and score.score-1 != next_score.score):
             seen_basis += 1
         score = next_score
@@ -90,7 +90,7 @@ def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
             if (any(next_score.elem in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
-            new_scores.scores.append(next_score)
+            new_scores.extend([next_score])
             size += len(spectrum.get_group(next_score.elem))
             next_score = next(s_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
@@ -119,7 +119,7 @@ def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
             if (any(next_score.elem in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
-            new_scores.scores.append(next_score)
+            new_scores.extend([next_score])
             size += len(spectrum.get_group(next_score.elem))
             next_score = next(s_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
@@ -146,7 +146,7 @@ def aba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
             temp_scores.append(next_score)
             next_score = next(s_iter, None)
         if (fault):
-            new_scores.scores.extend(temp_scores)
+            new_scores.extend(temp_scores)
             temp_scores.clear()
         score = next_score
     return new_scores
@@ -173,11 +173,11 @@ def method(stop_score: float, spectrum: Spectrum,
             size += len(spectrum.get_group(next_score.elem))
             next_score = next(s_iter, None)
         if (effort == 'worst' or score.score > stop_score or first_fault == -1):
-            new_scores.scores.extend(temp_scores)
+            new_scores.extend(temp_scores)
         elif (effort == 2):
-            new_scores.scores.extend(temp_scores[:first_fault+1])
+            new_scores.extend(temp_scores[:first_fault+1])
         else:
-            new_scores.scores.append(temp_scores[first_fault])
+            new_scores.extend([temp_scores[first_fault]])
         score = next_score
     return new_scores
 
