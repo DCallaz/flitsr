@@ -54,7 +54,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'is used to produce the ranking. This is equivalent to using the '
             'base metric as-is, but allows the user to run these metrics '
             'within the FLITSR framework')
-    parser.add_argument('-*', '--multi', action='store_true',
+    parser.add_argument('--multi', action='store_true',
             help='Runs the FLITSR* (i.e. multi-round) algorithm')
     parser.add_argument('-r', '--ranking', action='store_true',
             help='Changes flitsr\'s expected input to be an SBFL ranking in '
