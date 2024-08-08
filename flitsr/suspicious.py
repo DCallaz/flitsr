@@ -1,4 +1,6 @@
 import math
+import argparse
+import sys
 from typing import List
 from flitsr.spectrum import Spectrum
 from flitsr.score import Scores
@@ -371,3 +373,14 @@ class Suspicious():
         else:
             h = self.ep/(self.ep + self.ef)
         return h**(self.ep) * (1-h)**(11)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Prints the pre-selected "
+                                     "list of popular metrics.")
+    parser.add_argument('-a', '--all', action='store_true', help="Print all "
+                        "available metrics instead of only the pre-selected "
+                        "popular metrics.")
+    args = parser.parse_args(sys.argv[1:])
+    names = Suspicious.getNames(args.all)
+    print(*names)

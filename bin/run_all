@@ -102,7 +102,7 @@ elif [ "$depth" ] && [[ ! "$depth" =~ ^[0-9]+$ ]]; then
 fi
 
 if [ "$metrics" == "" ]; then
-  metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.get_metric_names))
+  metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.suspicious))
 fi
 
 cd "$base_dir"
