@@ -86,7 +86,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'Runs all metrics given in suspicious.py and both FLITSR and '
             'FLITSR* extensions over each metric. Also enables all of the '
             'above evaluation calculations. Prints the results out to files '
-            'named [<flitsr method>_]<metric>.results for each FLITSR method '
+            'named [<flitsr method>_]<metric>.run for each FLITSR method '
             'and metric')
     parser.add_argument('-d', '--decimals', action='store', type=int,
             default=2, help='Sets the precision (number of decimal points) for '

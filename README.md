@@ -141,13 +141,19 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
 * `-h`, `--help`: show this help message and exit
 * `-m METRIC`, `--metric METRIC`: The underlying (SBFL) metric to use when
   either ranking (if the sbfl option is given), or running the FLITSR algorithm.
-  Allowed values are: \[barinel, dstar, gp13, harmonic, hyperbolic, jaccard,
-  naish2, ochiai, overlap, tarantula, zoltar] (default: ochiai)
+  Option may be supplied multiple times to run multiple metrics. Specifying
+  multiple metrics will output the results of each metric to a seperate file
+  using the metric's name instead of stdout. Allowed values are: \[ample,
+  anderberg, arith_mean, barinel, cohen, dice, dstar, euclid, fleiss, geometric,
+  goodman, gp13, hamann, hamming, harmonic, hyperbolic, jaccard, kulczynski1,
+  kulczynski2, m1, m2, naish2, ochiai, ochiai2, overlap, rogers_tanimoto,
+  rogot1, rogot2, russell_rao, scott, simpl_match, sokal, sorensen_dice,
+  tarantula, wong1, wong2, wong3, zoltar] (default: ochiai)
 * `-s`, `--sbfl`: Disables the FLITSR algorithm so that only the base metric is
   used to produce the ranking. This is equivalent to using the base metric
   as-is, but allows the user to run these metrics within the FLITSR
   framework
-* `-*`, `--multi`: Runs the FLITSR\* (i.e. multi-round) algorithm
+* `--multi`: Runs the FLITSR\* (i.e. multi-round) algorithm
 * `-r`, `--ranking`: Changes flitsr's expected input to be an SBFL ranking
   in Gzoltar or FLITSR format (determined automatically), instead of the usual
   coverage, and produces the specified calculations (or just the ranking if no
@@ -171,15 +177,18 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
 * `-a`, `--all`: Used in the evaluation of FLITSR against other techniques.
   Runs all metrics given in suspicious.py and both FLITSR and FLITSR\* extensions
   over each metric. Also enables all of the above evaluation calculations. Prints
-  the results out to files named `[<flitsr method>_]<metric>.results` for each
+  the results out to files named `[<flitsr method>_]<metric>.run` for each
   FLITSR method and metric
 * `-d DECIMALS`, `--decimals DECIMALS`: Sets the precision (number of decimal
   points) for the output of all of the calculations (default: 2)
+* `-p ALGORITHM`, `--parallel ALGORITHM`: Run one of the parallel debugging
+  algorithms on the spectrum to produce multiple spectrums, and process all
+  other options on each spectrum. Allowed values are: [bdm, msp, hwk, vwk]
 * `--cutoff-eval MODE`: Specifies the performance mode to use when using a
   multi-fault fixing cut-off strategy to produce rankings. Allowed values are:
-  \[worst, best, resolve] (default best)
+  \[worst, best, resolve] (default worst)
 * `--cutoff-strategy STRATEGY`: Cuts off the ranking using the given
-  strategy's cut-oRf point. This affects both the rank output method and any
+  strategy's cut-off point. This affects both the rank output method and any
   calculations. Allowed values are: \[aba, basis, mba_10_perc, mba_5_perc,
   mba_const_add, mba_dominator, mba_optimal, mba_zombie, oba] (default None).
   For basis, an optional value n may be given (e.g. basis=n) that determines the
