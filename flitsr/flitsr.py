@@ -19,16 +19,20 @@ from flitsr.args import parse_args
 from flitsr.flitsr_types import Flitsr_Type
 
 
-def remove_from_tests(element: Spectrum.Element,
-                      spectrum: Spectrum) -> Set[Spectrum.Test]:
-    """Removes all the test cases executing the given element"""
-    removed = set()
+def tests_executing(element: Spectrum.Element, spectrum: Spectrum,
+                    remove=False) -> Set[Spectrum.Test]:
+    """
+    Finds all the test cases executing the given element, and (optionally)
+    removes them from the spectrum.
+    """
+    executing = set()
     for test in spectrum:
         if (spectrum[test][element]):
-            removed.add(test)
-    for test in removed:
-        spectrum.remove(test)
-    return removed
+            executing.add(test)
+    if (remove):
+        for test in executing:
+            spectrum.remove(test)
+    return executing
 
 
 def remove_faulty_elements(spectrum: Spectrum,
@@ -45,21 +49,28 @@ def remove_faulty_elements(spectrum: Spectrum,
 
 
 def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
-    nonFaulty = set(spectrum.elements).difference(faulty)
+    """
+    Remove the elements given by faulty from the spectrum, and remove any test
+    cases executing these elements only.
+    """
+    # Get tests executing elems in faulty set
+    executing: Set[Spectrum.Test] = set()
+    for elem in faulty:
+        exe = tests_executing(elem, spectrum)
+        executing.update(exe)
+
+    # Remove all elements in faulty set
+    for elem in faulty:
+        spectrum.remove_element(elem)
+
     multiFault = False
-    for test in reversed(spectrum.tests):
-        remove = True
-        for elem in nonFaulty:
+    for test in executing:
+        for elem in spectrum.elements:  # remaining elements not in faulty
             if (spectrum[test][elem]):
-                remove = False
                 break
-        if (remove):  # this test case can be removed
+        else:
             multiFault = True
             spectrum.remove(test, hard=True)
-        else:  # need to remove all faults from this test case
-            for elem in faulty:
-                if (spectrum[test][elem]):
-                    spectrum.remove_execution(test, elem)
     return multiFault
 
 
@@ -71,7 +82,7 @@ def feedback_loc(spectrum: Spectrum, formula: str,
     sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     s_iter = iter(sort)
     element = next(s_iter).elem
-    tests_removed = remove_from_tests(element, spectrum)
+    tests_removed = tests_executing(element, spectrum, remove=True)
     while (len(tests_removed) == 0):  # sanity check
         if ((s2 := next(s_iter, None)) is None):
             count_non_removed = len(spectrum.failing)
@@ -81,7 +92,7 @@ def feedback_loc(spectrum: Spectrum, formula: str,
             return []
         # continue trying the next element if available
         element = s2.elem
-        tests_removed = remove_from_tests(element, spectrum)
+        tests_removed = tests_executing(element, spectrum, remove=True)
     faulty = feedback_loc(spectrum, formula, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):

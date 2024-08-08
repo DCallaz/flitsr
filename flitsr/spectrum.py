@@ -145,23 +145,19 @@ class Spectrum():
             self.failing.remove(test)
             self.tf -= 1
         for elem in self.elements:
-            if (self.spectrum[test][elem]):
-                if (test.outcome is True):
-                    self.p[elem] -= 1
-                else:
-                    self.f[elem] -= 1
+            self.remove_execution(test, elem, hard=False)
         if (not hard):
             self.removed.append(test)
 
-    def remove_execution(self, test: Spectrum.Test, elem: Spectrum.Element):
+    def remove_execution(self, test: Spectrum.Test, elem: Spectrum.Element,
+                         hard=True):
         if (self.spectrum[test][elem]):
-            self.spectrum[test][elem] = False
+            if (hard):
+                self.spectrum[test][elem] = False
             if (test.outcome is True):
                 self.p[elem] -= 1
             else:
                 self.f[elem] -= 1
-        else:
-            raise ValueError("Cannot remove an execution that does not exist")
 
     def remove_element(self, element: Spectrum.Element):
         self.elements.pop(element, None)  # remove if there
