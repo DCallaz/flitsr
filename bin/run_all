@@ -127,7 +127,7 @@ while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
   if [ -n "$recover" ] && [ -f "results" ]; then
-    echo "Recovered $dir, skipping..."
+    echo "Recovered ${dir#./}, skipping..."
     cd "$base_dir"
     continue
   fi
