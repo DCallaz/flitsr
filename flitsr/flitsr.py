@@ -256,9 +256,14 @@ def main(argv: List[str]):
                 try:
                     output_file = open(filename, "x")
                 except FileExistsError:
-                    print("WARNING: overriding file", filename,
-                          file=sys.stderr)
-                    output_file = open(filename, 'w')
+                    if (args.no_override):
+                        # print("WARNING: Skipping execution of already "
+                        #       "existing file", filename, file=sys.stderr)
+                        continue
+                    else:
+                        print("WARNING: overriding file", filename,
+                              file=sys.stderr)
+                        output_file = open(filename, 'w')
             # Check for parallel
             if (args.parallel):
                 spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,

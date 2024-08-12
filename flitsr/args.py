@@ -88,6 +88,13 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'above evaluation calculations. Prints the results out to files '
             'named [<flitsr method>_]<metric>.run for each FLITSR method '
             'and metric')
+    parser.add_argument('--no-override', action='store_true',
+                        help='By default FLITSR will override the output '
+                        'file(s) if they already exist, printing a warning '
+                        'message. This option instead allows FLITSR to leave '
+                        'output files that already exist, skipping that '
+                        'output and continuing with the rest of the outputs '
+                        '(if any)')
     parser.add_argument('-d', '--decimals', action='store', type=int,
             default=2, help='Sets the precision (number of decimal points) for '
             'the output of all of the calculations (default: %(default)s)')

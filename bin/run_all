@@ -22,7 +22,7 @@ run_with_lock() {
 }
 
 USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
-[-d <depth>/-t [<ext>]/-g] [-c <cores>]
+[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r]
   where:
     -h                    : Prints this USAGE message
     -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
@@ -30,7 +30,8 @@ USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
     -d <depth>            : Specifies the depth at which to look for inputs
     -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
     -g                    : Look only for GZoltar type inputs
-    -c <cores>            : Sets the number of cores to run in parallel on (default automatic)"
+    -c <cores>            : Sets the number of cores to run in parallel on (default automatic)
+    -r                    : Recover from a partial run_all run by re-using existing files"
 
 if [ "$(command -v nproc 2>&1)" ]; then
   N="$(nproc --all)"
@@ -40,7 +41,7 @@ fi
 metrics=()
 base_dir="$PWD"
 tcm_ext="*"
-while getopts ":d:c:m:b:tgh" opt; do
+while getopts ":d:c:m:b:tgrh" opt; do
   case ${opt} in
     d )
       depth="$OPTARG"
@@ -74,6 +75,9 @@ while getopts ":d:c:m:b:tgh" opt; do
       ;;
     m )
       metrics+=("${OPTARG//,/ }")
+      ;;
+    r )
+      recover="True"
       ;;
     h )
       echo "$USAGE"
@@ -122,9 +126,14 @@ directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
+  if [ -n "$recover" ] && [ -f "results" ]; then
+    echo "Recovered $dir, skipping..."
+    cd "$base_dir"
+    continue
+  fi
   for input in $(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename); do
     m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
-    run_with_lock flitsr --all $m_metrics "$input"
+    run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics "$input"
   done
   wait
   for m in "${metrics[@]}"; do
