@@ -179,11 +179,18 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
   over each metric. Also enables all of the above evaluation calculations. Prints
   the results out to files named `[<flitsr method>_]<metric>.run` for each
   FLITSR method and metric
+* `--no-override`: By default FLITSR will override the output file(s) if they
+  already exist, printing a warning message. This option instead allows FLITSR
+  to leave output files that already exist, skipping that output and continuing
+  with the rest of the outputs (if any)
 * `-d DECIMALS`, `--decimals DECIMALS`: Sets the precision (number of decimal
   points) for the output of all of the calculations (default: 2)
 * `-p ALGORITHM`, `--parallel ALGORITHM`: Run one of the parallel debugging
   algorithms on the spectrum to produce multiple spectrums, and process all
   other options on each spectrum. Allowed values are: [bdm, msp, hwk, vwk]
+* `--artemis`: Run the ARTEMIS technique on the spectrum to produce the ranked
+  lists. This option my be combined with FLITSR and parallel to produce a hybrid
+  technique.
 * `--cutoff-eval MODE`: Specifies the performance mode to use when using a
   multi-fault fixing cut-off strategy to produce rankings. Allowed values are:
   \[worst, best, resolve] (default worst)
