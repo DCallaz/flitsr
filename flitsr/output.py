@@ -8,7 +8,7 @@ def print_names(spectrum, scores=None, file=sys.stdout):
     no_scores = False
     if (scores is None):  # make a tempoorary Scores object
         scores = Scores()
-        for elem in spectrum.elements:
+        for elem in spectrum.elements():
             scores.append(elem, 0, 0)
         no_scores = True
     for score in scores:

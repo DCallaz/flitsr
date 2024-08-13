@@ -62,7 +62,7 @@ def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
 
 def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
                spectrum: Spectrum):
-    for test in spectrum.tests:
+    for test in spectrum.tests():
         line = f.readline()
         arr = line.strip().split(' ')
         seen = set()
@@ -103,7 +103,7 @@ def read_spectrum(input_path: str, split_faults: bool,
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(spectrum.get_faults(), spectrum)
-        for elem in spectrum.elements:
+        for elem in spectrum.elements():
             if (elem in unexposed):
                 elem.faults = []
                 print("Dropped faulty UUT:", elem, "due to unexposure")

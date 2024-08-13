@@ -39,7 +39,7 @@ class Suspicious():
         Assumes a non-empty spectrum.
         """
         scores: Scores = Scores()
-        for elem in spec.elements:
+        for elem in spec.elements():
             sus = Suspicious(spec.f[elem], spec.tf, spec.p[elem], spec.tp)
             exect = spec.p[elem]+spec.f[elem]
             scores.append(elem, sus.execute(formula), exect)

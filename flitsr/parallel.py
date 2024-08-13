@@ -25,7 +25,7 @@ def partition_table(d: str, spectrum: Spectrum,
         new_spectrum = copy.deepcopy(spectrum)
         tests = [int(i) for i in partition.strip().split("\n")]
         toRemove = set()
-        for (i, test) in enumerate(new_spectrum.tests):
+        for (i, test) in enumerate(new_spectrum.tests()):
             if (i not in tests):
                 toRemove.add(test)
         for test in toRemove:
@@ -38,7 +38,7 @@ def partition_table(d: str, spectrum: Spectrum,
 def trim_elements(spectrum):
     """Remove elements that are not in this block (i.e. ef = 0)"""
     toRemove = set()
-    for elem in spectrum.elements:
+    for elem in spectrum.elements():
         if (spectrum.f[elem] == 0):
             toRemove.add(elem)
     for elem in toRemove:

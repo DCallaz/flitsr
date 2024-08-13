@@ -117,9 +117,9 @@ class Spectrum():
 
     def __init__(self):
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
-        self.tests: List[Spectrum.Test] = []
+        self._tests: List[Spectrum.Test] = []
         self.failing: List[Spectrum.Test] = []
-        self.elements: Dict[Spectrum.Element, int] = {}
+        self._elements: Dict[Spectrum.Element, int] = {}
         self.p: Dict[Spectrum.Element, int] = dict()
         self.f: Dict[Spectrum.Element, int] = dict()
         self.tp: int = 0
@@ -134,17 +134,23 @@ class Spectrum():
     def __iter__(self):
         return self.failing.__iter__()
 
+    def elements(self):
+        return list(self._elements.keys())
+
+    def tests(self):
+        return self._tests
+
     def locs(self):
-        return len(self.elements)
+        return len(self._elements)
 
     def remove(self, test: Spectrum.Test, hard=False):
-        self.tests.remove(test)
+        self._tests.remove(test)
         if (test.outcome is True):
             self.tp -= 1
         else:
             self.failing.remove(test)
             self.tf -= 1
-        for elem in self.elements:
+        for elem in self.elements():
             self.remove_execution(test, elem, hard=False)
         if (not hard):
             self.removed.append(test)
@@ -160,24 +166,24 @@ class Spectrum():
                 self.f[elem] -= 1
 
     def remove_element(self, element: Spectrum.Element):
-        self.elements.pop(element, None)  # remove if there
+        self._elements.pop(element, None)  # remove if there
         self.p.pop(element, None)  # remove if there
         self.f.pop(element, None)  # remove if there
         # No need to remove execution (bitarray)
-        # for test in self.tests:
+        # for test in self.tests():
         #     self.spectrum[test].remove_exec(rem)  # remove if there
         return element
 
     def reset(self):
         """Re-activates all the tests and recomputes counts"""
         for test in self.removed:
-            self.tests.append(test)
+            self._tests.append(test)
             if (test.outcome is True):
                 self.tp += 1
             else:
                 self.failing.append(test)
                 self.tf += 1
-            for elem in self.elements:
+            for elem in self.elements():
                 if (self.spectrum[test][elem]):
                     if (test.outcome is True):
                         self.p[elem] += 1
@@ -187,10 +193,10 @@ class Spectrum():
 
     def addTest(self, name: str, outcome: bool):
         t = self.Test(name, outcome)
-        self.tests.append(t)
+        self._tests.append(t)
         if (outcome is False):
             self.failing.append(t)
-        self.spectrum[t] = self.Execution(t, self.elements)
+        self.spectrum[t] = self.Execution(t, self._elements)
         # Increment total counts
         if (outcome):
             self.tp += 1
@@ -199,7 +205,7 @@ class Spectrum():
 
     def addElement(self, details: List[str], faults: List[int]) -> Element:
         e = self.Element(details, faults)
-        self.elements[e] = len(self.elements)
+        self._elements[e] = len(self._elements)
         self.groups[0].append(e)
         self.f[e] = 0
         self.p[e] = 0

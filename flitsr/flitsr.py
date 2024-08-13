@@ -65,7 +65,7 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
 
     multiFault = False
     for test in executing:
-        for elem in spectrum.elements:  # remaining elements not in faulty
+        for elem in spectrum.elements():  # remaining elements not in faulty
             if (spectrum[test][elem]):
                 break
         else:
