@@ -17,6 +17,7 @@ from flitsr.spectrum import Spectrum
 from flitsr import score
 from flitsr.args import parse_args
 from flitsr.flitsr_types import Flitsr_Type
+from flitsr.artemis_wrapper import run_artemis
 
 
 def tests_executing(element: Spectrum.Element, spectrum: Spectrum,
@@ -75,11 +76,14 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
 
 
 def feedback_loc(spectrum: Spectrum, formula: str,
-                 tiebrk: int) -> List[Spectrum.Element]:
+                 artemis: bool, tiebrk: int) -> List[Spectrum.Element]:
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
-    sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
+    if (artemis):
+        sort = run_artemis(spectrum, formula)
+    else:
+        sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     s_iter = iter(sort)
     element = next(s_iter).elem
     tests_removed = tests_executing(element, spectrum, remove=True)
@@ -93,7 +97,7 @@ def feedback_loc(spectrum: Spectrum, formula: str,
         # continue trying the next element if available
         element = s2.elem
         tests_removed = tests_executing(element, spectrum, remove=True)
-    faulty = feedback_loc(spectrum, formula, tiebrk)
+    faulty = feedback_loc(spectrum, formula, artemis, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
         faulty.append(element)
@@ -101,14 +105,17 @@ def feedback_loc(spectrum: Spectrum, formula: str,
 
 
 def run(spectrum: Spectrum, formula: str, flitsr_type: Flitsr_Type,
-        tiebrk=0) -> score.Scores:
-    sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
+        artemis: bool, tiebrk=0) -> score.Scores:
+    if (artemis):
+        sort = run_artemis(spectrum, formula)
+    else:
+        sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
     if (flitsr_type != Flitsr_Type.BASE):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
-            faulty = feedback_loc(newSpectrum, formula, tiebrk)
+            faulty = feedback_loc(newSpectrum, formula, artemis, tiebrk)
             if (not faulty == []):
                 for x in sort:
                     if (x.elem in faulty):
@@ -275,7 +282,8 @@ def main(argv: List[str]):
                 if (i > 0):
                     print("<---------------------- Next Ranking ---------------------->")
                 # Run techniques
-                sort = run(spectrum, metric, flitsr_type, args.tiebrk)
+                sort = run(spectrum, metric, flitsr_type, args.artemis,
+                           args.tiebrk)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     sort = compute_cutoff(args.cutoff_strategy, sort,

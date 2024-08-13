@@ -205,6 +205,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
              'to produce multiple spectrums, and process all other options on '
              'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
 
+    parser.add_argument('--artemis', action='store_true',
+                        help='Run the ARTEMIS technique on the spectrum to '
+                        'produce the ranked lists. This option may be '
+                        'combined with FLITSR and parallel to produce a '
+                        'hybrid technique.')
+
     # TODO: Add OBA and worst args if necessary
     cut_eval_opts=['worst', 'best', 'resolve']
     parser.add_argument('--cutoff-eval', action='store', metavar='MODE',
