@@ -21,6 +21,24 @@ run_with_lock() {
   )&
 }
 
+# Progress bar
+progress () {
+  if [ $# -lt 2 ]; then
+    echo "USAGE: progress <current> <total>"
+    return 1
+  fi
+  cur=$1
+  max=$2
+  size=$(tput cols)
+  size=$(($size-7))
+  perc=$(($cur*100/$max))
+  nfill=$(($cur*$size/$max))
+  nempty=$(($size-$nfill))
+  fill="$(printf '%*s' $nfill | tr ' ' '#')"
+  empty="$(printf '%*s' $nempty)"
+  printf "\r[$fill$empty] %3i%%" $perc
+}
+
 USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
 [-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r]
   where:
@@ -131,11 +149,17 @@ while read -r dir; do
     cd "$base_dir"
     continue
   fi
-  for input in $(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename); do
+  inputs=($(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename))
+  num_inputs="${#inputs[@]}"
+  i=0
+  for input in "${inputs[@]}"; do
     m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
     run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics "$input"
+    ((i++))
+    progress $i $num_inputs
   done
   wait
+  echo
   for m in "${metrics[@]}"; do
     while read -r t || [ -n "$t" ]; do
       for file in "$t${m}_"*.run; do
