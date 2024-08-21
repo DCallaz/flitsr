@@ -1,56 +1,39 @@
 import sys
 from flitsr.spectrum import Spectrum
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 
-def getMapping(faults: Dict[int, List[Spectrum.Element]],
-               spectrum: Spectrum) -> Dict[Spectrum.Element, int]:
-    faults_comb = [e for l in faults.values() for e in l]
-    mapping: Dict[Spectrum.Element, int] = {}
-    for elem in faults_comb:
-        for i in range(len(spectrum.groups)):
-            if elem in spectrum.groups[i]:
-                mapping[elem] = i
-    return mapping
-
-
-def bit(test: Spectrum.Test, equiv: List[Spectrum.Element],
-        mapping: Dict[Spectrum.Element, int], spectrum: Spectrum) -> bool:
-    b = False
-    for fault in equiv:
-        b = b or spectrum[test][mapping[fault]]
-    return b
-
-
-def split(faults: Dict[int, List[Spectrum.Element]], spectrum: Spectrum):
-    mapping = getMapping(faults, spectrum)
+def split(faults: Dict[float, List[Spectrum.Element]],
+          spectrum: Spectrum) -> Tuple[Dict[float, List[Spectrum.Element]],
+                                       Set[Spectrum.Element]]:
+    """
+    Splits fault groups that are a combination of two or more sub-faults in
+    mutually exclusive parts of the system into separate faults. Also finds
+    faults that are not exposed and returns them separately.
+    """
     if (faults == {}):
-        return {}, []
+        return {}, set()
     ftemp = [([elem], f[0], False) for f in faults.items() for elem in f[1]]
-    # print("Failures before", failures)
-    for test in spectrum:
-        merge: Dict[int, List[Spectrum.Element]] = {}
+    for test in spectrum.failing:
+        merge: Dict[float, List[Spectrum.Element]] = {}
         remain = []
         for equiv in ftemp:
-            if (bit(test, equiv[0], mapping, spectrum)):
-                if (equiv[1] not in merge):
-                    merge[equiv[1]] = []
-                merge[equiv[1]] += equiv[0]
+            if (any(spectrum[test][e] for e in equiv[0])):
+                merge.setdefault(equiv[1], []).extend(equiv[0])
             else:
                 remain.append(equiv)
         if (len(merge) != 0):
-            for item in merge.items():
-                remain.append((item[1], item[0], True))
+            for (f_num, f_locs) in merge.items():
+                remain.append((f_locs, f_num, True))
         ftemp = remain
-    # print(ftemp)
     fmap: Dict[float, List[List[Spectrum.Element]]] = {}
-    unexposed = []
+    unexposed: Set[Spectrum.Element] = set()
     for equiv in ftemp:
         if (not equiv[2]):
-            unexposed.extend(equiv[0])
+            unexposed.update(equiv[0])
             continue
         fmap.setdefault(equiv[1], []).append(equiv[0])
-    new_faults = {}
+    new_faults: Dict[float, List[Spectrum.Element]] = {}
     for item2 in fmap.items():
         if (len(item2[1]) == 1):
             new_faults[item2[0]] = item2[1][0]
@@ -84,8 +67,8 @@ if __name__ == "__main__":
     spectrum = read_spectrum(d, False)
     faults = spectrum.get_faults()
     print("faults:", faults)
-    #print(groups)
-    #print_spectrum(spectrum)
+    # print(groups)
+    # print_spectrum(spectrum)
     faults, unexposed = split(faults, spectrum)
     print("split faults:", faults)
     print("unexposed:", unexposed)

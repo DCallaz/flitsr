@@ -2,7 +2,7 @@ import sys
 import re
 import os
 from io import TextIOWrapper
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum
@@ -92,18 +92,20 @@ def read_spectrum(input_path: str, split_faults: bool,
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(spectrum.get_faults(), spectrum)
-        for elem in spectrum.elements():
-            if (elem in unexposed):
-                elem.faults = []
-                print("Dropped faulty UUT:", elem, "due to unexposure")
-            fault_items = []
-            for item in faults.items():
-                if (elem in item[1]):
-                    fault_items.append(item[0])
-            if (len(fault_items) != 0):
-                elem.faults = fault_items
+        for elem in unexposed:
+            elem.faults.clear()
+            print("WARNING: Dropped faulty UUT:", elem, "due to unexposure",
+                  file=sys.stderr)
+        # Get element's fault lists
+        fault_lists: Dict[Spectrum.Element, List[float]] = {}
+        for (f_num, f_locs) in faults.items():
+            for elem in f_locs:
+                fault_lists.setdefault(elem, []).append(f_num)
+        # Set element's fault lists
+        for (elem, f_list) in fault_lists.items():
+            elem.faults = f_list
         if (len(faults) == 0):
-            print("No exposable faults in", input_path)
+            print("No exposable faults in", input_path, file=sys.stderr)
             quit()
     return spectrum
 
