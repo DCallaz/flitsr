@@ -119,7 +119,8 @@ class Spectrum():
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self._tests: List[Spectrum.Test] = []
         self.failing: List[Spectrum.Test] = []
-        self._elements: Dict[Spectrum.Element, int] = {}
+        self._curr_elements: List[Spectrum.Element] = []
+        self._full_elements: Dict[Spectrum.Element, int] = {}
         self.p: Dict[Spectrum.Element, int] = dict()
         self.f: Dict[Spectrum.Element, int] = dict()
         self.tp: int = 0
@@ -135,13 +136,13 @@ class Spectrum():
         return self.failing.__iter__()
 
     def elements(self):
-        return list(self._elements.keys())
+        return self._curr_elements
 
     def tests(self):
         return self._tests
 
     def locs(self):
-        return len(self._elements)
+        return len(self._curr_elements)
 
     def remove(self, test: Spectrum.Test, hard=False):
         self._tests.remove(test)
@@ -166,7 +167,8 @@ class Spectrum():
                 self.f[elem] -= 1
 
     def remove_element(self, element: Spectrum.Element):
-        self._elements.pop(element, None)  # remove if there
+        if (element in self._curr_elements):
+            self._curr_elements.remove(element)  # remove if there
         self.p.pop(element, None)  # remove if there
         self.f.pop(element, None)  # remove if there
         # No need to remove execution (bitarray)
@@ -196,7 +198,7 @@ class Spectrum():
         self._tests.append(t)
         if (outcome is False):
             self.failing.append(t)
-        self.spectrum[t] = self.Execution(t, self._elements)
+        self.spectrum[t] = self.Execution(t, self._full_elements)
         # Increment total counts
         if (outcome):
             self.tp += 1
@@ -205,7 +207,8 @@ class Spectrum():
 
     def addElement(self, details: List[str], faults: List[int]) -> Element:
         e = self.Element(details, faults)
-        self._elements[e] = len(self._elements)
+        self._full_elements[e] = len(self._full_elements)
+        self._curr_elements.append(e)
         self.groups[0].append(e)
         self.f[e] = 0
         self.p[e] = 0
