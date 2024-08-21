@@ -144,15 +144,15 @@ if __name__ == "__main__":
         # print("\\begin{longtable}", file=tex_file)
         print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
               file=tex_file)
-        print("Metric & "+' & '.join([c for c in calcs if c != PERC_N])+"\\\\",
+        print("Metric & "+' & '.join([c for c in sorted(calcs) if c != PERC_N])+"\\\\",
               file=tex_file)
 
     # Print out merged results
-    for metric in metrics:
+    for metric in sorted(metrics):
         print(metric.capitalize())
         if (PERC_N in calcs):
             print(metric.capitalize(), file=perc_file)
-        for mode in modes:
+        for mode in sorted(modes):
             print('\t', mode.replace("_", " ").title())
             if (PERC_N in calcs):
                 print('\t', mode.replace("_", " ").title(), file=perc_file)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
                 print('%25s' % (metric.capitalize() + " " +
                                 mode.replace("_", " ").title()), end=" & ",
                       file=tex_file)
-            for j, calc in enumerate(calcs):
+            for j, calc in enumerate(sorted(calcs)):
                 if (calc == PERC_N):
                     comb = combine(avgs[mode][metric][calc])
                     print("\t\t", calc+":", comb, file=perc_file)
