@@ -87,13 +87,14 @@ def read_flitsr_ranking(ranking_file: str) -> Tuple[Scores, Spectrum]:
         line = f.readline().strip()
         groups.append([])
         while (not line.startswith("]")):
-            m = re.fullmatch("\\s*(\\S*)\\s*(?:\\(FAULT ([0-9,]+)\\))?", line)
+            m = re.fullmatch("\\s*(\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
             if (m is None):
                 raise ValueError("Incorrectly formatted line \"" + line +
                                  "\" when reading input ranking file")
             details = m.group(1).split('|')
             if (m.group(2)):
-                faults = [int(i) for i in m.group(2).split(',')]
+                faults = [int(i) if i.isdecimal() else float(i)
+                          for i in m.group(2).split(',')]
             else:
                 faults = []
             elem = spectrum.addElement(details, faults)

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Union
 from bitarray import bitarray
 from flitsr.const_iter import ConstIter
 
@@ -205,7 +205,7 @@ class Spectrum():
         else:
             self.tf += 1
 
-    def addElement(self, details: List[str], faults: List[int]) -> Element:
+    def addElement(self, details: List[str], faults: List[Any]) -> Element:
         e = self.Element(details, faults)
         self._full_elements[e] = len(self._full_elements)
         self._curr_elements.append(e)
@@ -274,8 +274,8 @@ class Spectrum():
         # Error if not found in either way
         raise KeyError("Element \""+str(elem)+"\" not found in a spectrum group")
 
-    def get_faults(self) -> Dict[int, List[Spectrum.Element]]:
-        actual_faults: Dict[int, List[Spectrum.Element]] = dict()
+    def get_faults(self) -> Dict[Any, List[Spectrum.Element]]:
+        actual_faults: Dict[Any, List[Spectrum.Element]] = dict()
         for group in self.groups:
             for elem in group:
                 if (elem.faults):
