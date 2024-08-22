@@ -126,11 +126,13 @@ by running the `flitsr` command. Running the command with the `-h` or `--help`
 options will give the help message containing all the valid arguments the script
 can take. For ease of access, these are listed and described here:
 ```
-usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
-              [-d DECIMALS] [--tiebrk] [--rndm] [--otie] [--first] [--avg]
-              [--med] [--last] [--one-top1] [--all-top1] [--perc-top1]
-              [--perc@n] [--auc] [--pauc] [--lauc] [--precision-at x]
-              [--recall-at x] [--cutoff-eval MODE]
+usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi] [-r] [-c]
+              [--split] [--collapse] [-a] [--no-override] [-d DECIMALS]
+              [--tiebrk] [--rndm] [--otie] [--first] [--avg] [--med] [--last]
+              [--weffort N] [--one-top1] [--all-top1] [--perc-top1] [--perc@n]
+              [--auc] [--pauc] [--lauc] [--precision-at x] [--recall-at x]
+              [--fault-num] [--fault-ids] [--fault-elems] [--fault-all]
+              [-p ALGORITHM] [--artemis] [--cutoff-eval MODE]
               [--cutoff-strategy STRATEGY]
               input
 ```
@@ -139,6 +141,11 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
   coverage collected for the system over the test suite
 #### Options:
 * `-h`, `--help`: show this help message and exit
+* `-o OUTPUT`, `--output OUTPUT`: Specify the output file to use for all output
+  (default: STDOUT).
+* `--csv`: By default FLITSR will output the ranking in it's own FLITSR ranking
+  format. Enabling this option will allow FLITSR to output the ranking in CSV
+  format compatible with GZoltar's CSV ranking format instead.
 * `-m METRIC`, `--metric METRIC`: The underlying (SBFL) metric to use when
   either ranking (if the sbfl option is given), or running the FLITSR algorithm.
   Option may be supplied multiple times to run multiple metrics. Specifying
@@ -157,7 +164,7 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
 * `-r`, `--ranking`: Changes flitsr's expected input to be an SBFL ranking
   in Gzoltar or FLITSR format (determined automatically), instead of the usual
   coverage, and produces the specified calculations (or just the ranking if no
-  calculations are given). NOTE: any non- output based options will be ignored
+  calculations are given). NOTE: any non-output based options will be ignored
   with this option
 * `-c`, `--method`: The default for FLITSR is to use the collected
   coverage as-is and merely produce the ranking in terms of the names/labels
@@ -219,6 +226,7 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
 * `-avg,` `--average`: Display the wasted effort to the average fault
 * `--med`, `--median`: Display the wasted effort to the median fault
 * `-last`: Display the wasted effort to the last fault
+* `--weffort N`: Display the wasted effort to the Nth fault
 ##### Top1:
 * `-one-top1`: Display a boolean value indicating whether at least one fault
   was found in the TOP1 group (elements with the highest suspiciousness
@@ -247,6 +255,11 @@ usage: flitsr [-h] [-m METRIC] [-s] [-*] [-r] [-c] [--split] [--collapse] [-a]
 * `--recall-at x`: Displays recall values at a given rank `x`. Recall is
   the amount of faults f found within the cut-off point `x`, out of the total
   number of faults n (i.e. f/n). Can be specified multiple times
+##### Faults:
+* `--fault-num`: Display the number of faults in the program
+* `--fault-ids`: Display the IDs of the faults in the program
+* `--fault-elems`: Display the elements that are faulty in the program
+* `--fault-all`: Display all info of the faults in the program
 
 ### Running evaluation (`run_all`)
 The flitsr framework comes with the `run_all` script which enables large

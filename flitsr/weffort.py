@@ -32,6 +32,12 @@ def last(ties: Ties, c: bool):
         return 0
     return method(ties, len(ties.faults), collapse=c)
 
+
+def nth(ties: Ties, n: int, c: bool):
+    if (len(ties.faults) == 0):
+        return 0
+    return method(ties, min(len(ties.faults), n), collapse=c)
+
 # <---------------- Helper functions --------------->
 
 

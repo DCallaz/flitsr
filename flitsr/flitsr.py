@@ -153,9 +153,9 @@ def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
 
 
 def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
-           perc_at_n=[], prec_rec=[], collapse=False, csv=False, decimals=2,
-           file=sys.stdout):
-    if (weff or top1 or perc_at_n or prec_rec):
+           perc_at_n=[], prec_rec=[], faults=[], collapse=False,
+           csv=False, decimals=2, file=sys.stdout):
+    if (weff or top1 or perc_at_n or prec_rec or faults):
         ties: score.Ties = scores.get_ties(spectrum, worst_effort=False)
         if (weff):
             if ("first" in weff):
@@ -173,6 +173,10 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
             if ("last" in weff):
                 print("wasted effort (last): {:.{}f}".format(
                     weffort.last(ties, collapse),
+                    decimals), file=file)
+            for nth in [w for w in weff if type(w) == int]:
+                print("wasted effort ({}): {:.{}f}".format(
+                    nth, weffort.nth(ties, int(nth), collapse),
                     decimals), file=file)
         if (top1):
             if ("one" in top1):
@@ -219,6 +223,17 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
                                                 collapse)
                     print("recall at {}: {:.{}f}".format(entry[1], r,
                                                          decimals), file=file)
+        if (faults):
+            if ("num" in faults):
+                print("fault number: {}".format(len(ties.faults)), file=file)
+            if ("ids" in faults):
+                print("fault ids: {}".format(list(ties.faults.keys())),
+                      file=file)
+            if ("elems" in faults):
+                print("fault elements: {}".format([e for es in ties.faults.values()
+                                                   for e in es]), file=file)
+            if ("all" in faults):
+                print("fault info: {}".format(ties.faults), file=file)
     elif (csv):
         print_csv(spectrum, scores, file)
     else:
@@ -233,7 +248,7 @@ def main(argv: List[str]):
         scores, spectrum = read_any_ranking(args.input,
                                             method_level=args.method)
         output(scores, spectrum, args.weff, args.top1, args.perc_at_n,
-               args.prec_rec, args.collapse, csv=args.csv,
+               args.prec_rec, args.faults, args.collapse, csv=args.csv,
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
@@ -253,7 +268,7 @@ def main(argv: List[str]):
     for metric in args.metrics:
         for flitsr_type in args.types:
             # Get the output channel
-            if (len(args.metrics) == 1):
+            if (len(args.metrics) == 1 and not args.all):
                 output_file = args.output
             else:
                 # store output files in the current directory
@@ -291,7 +306,7 @@ def main(argv: List[str]):
                                           args.cutoff_eval)
                 # Compute and print output
                 output(sort, spectrum, args.weff, args.top1, args.perc_at_n,
-                       args.prec_rec, args.collapse, csv=args.csv,
+                       args.prec_rec, args.faults, args.collapse, csv=args.csv,
                        decimals=args.decimals, file=output_file)
             spectrum.reset()
 

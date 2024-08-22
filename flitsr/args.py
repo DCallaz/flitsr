@@ -117,6 +117,13 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'FLITSR with evaluation calculations. Multiple of the following '
             'arguments can be given in the same call')
 
+    # check type of general weffort
+    def check_fault_type(nth):
+        if (int(nth) > 0):
+            return int(nth)
+        else:
+            raise argparse.ArgumentTypeError(f'Invalid fault number {nth}')
+
     # Wasted effort calcuation options
     calc_grp.add_argument('--first', dest='weff', action='append_const',
             default=[], const='first',
@@ -129,6 +136,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             help='Display the wasted effort to the median fault')
     calc_grp.add_argument('--last', dest='weff', action='append_const',
             const='last', help='Display the wasted effort to the last fault')
+    calc_grp.add_argument('--weffort', dest='weff', action='append', metavar='N',
+            type=check_fault_type, help='Display the wasted effort to the Nth fault')
 
     # TOP1 calculation options
     calc_grp.add_argument('--one-top1', dest='top1',
@@ -197,6 +206,20 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'out of the total number of faults n (i.e. f/n). Can be specified '
             'multiple times')
 
+    # Fault output options
+    calc_grp.add_argument('--fault-num', dest='faults', action='append_const',
+                          const='num', default=[],
+                          help='Display the number of faults in the program')
+    calc_grp.add_argument('--fault-ids', dest='faults', action='append_const',
+                          const='ids',
+                          help='Display the IDs of the faults in the program')
+    calc_grp.add_argument('--fault-elems', dest='faults',
+                          action='append_const', const='elems',
+                          help='Display the elements that are faulty in the program')
+    calc_grp.add_argument('--fault-all', dest='faults', action='append_const',
+                          const='all',
+                          help='Display all info of the faults in the program')
+
     # Parallel options
     parallel_opts = ['bdm', 'msp', 'hwk', 'vwk']
     parser.add_argument('-p', '--parallel', action='store',
@@ -239,10 +262,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         args.types = list(Flitsr_Type)
         if (len(args.weff) == 0 and len(args.top1) == 0 and
                 len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
-            args.weff = ["first", "avg", "med", "last"]
+            args.weff = ["first", "avg", "med", "last", 2, 3, 5]
             args.perc_at_n = ["perc"]
             args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
                              ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
+            args.faults = ["num"]
     else:
         if (args.sbfl is True):
             args.types = [Flitsr_Type.BASE]
