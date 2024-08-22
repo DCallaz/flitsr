@@ -40,7 +40,7 @@ progress () {
 }
 
 USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
-[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r]
+[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>]
   where:
     -h                    : Prints this USAGE message
     -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
@@ -49,7 +49,8 @@ USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
     -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
     -g                    : Look only for GZoltar type inputs
     -c <cores>            : Sets the number of cores to run in parallel on (default automatic)
-    -r                    : Recover from a partial run_all run by re-using existing files"
+    -r                    : Recover from a partial run_all run by re-using existing files
+    -a <flitsr arg>       : Specify an argument to give to the flitsr program"
 
 if [ "$(command -v nproc 2>&1)" ]; then
   N="$(nproc --all)"
@@ -57,9 +58,10 @@ else
   N="1"
 fi
 metrics=()
+args=()
 base_dir="$PWD"
 tcm_ext="*"
-while getopts ":d:c:m:b:tgrh" opt; do
+while getopts ":d:c:m:b:a:tgrh" opt; do
   case ${opt} in
     d )
       depth="$OPTARG"
@@ -90,6 +92,9 @@ while getopts ":d:c:m:b:tgrh" opt; do
     b )
       base_dir="$OPTARG"
       base_dir="$(readlink -f "$(echo ${base_dir/"~"/~})")"
+      ;;
+    a )
+      args+=("$OPTARG")
       ;;
     m )
       metrics+=("${OPTARG//,/ }")
@@ -141,6 +146,7 @@ fi
 
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 
+m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
 while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
@@ -153,8 +159,8 @@ while read -r dir; do
   num_inputs="${#inputs[@]}"
   i=0
   for input in "${inputs[@]}"; do
-    m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
-    run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics "$input"
+    run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
+                    ${args:+ ${args[@]}} "$input"
     ((i++))
     progress $i $num_inputs
   done
