@@ -147,6 +147,7 @@ fi
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 
 m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
+declare -A error_files  # array for error messages
 while read -r dir; do
   echo "Running ${dir#./}"
   cd "$dir"
@@ -159,8 +160,9 @@ while read -r dir; do
   num_inputs="${#proj_inp[@]}"
   i=0
   for input in "${proj_inp[@]}"; do
+    error_files[$dir,$input]="$(mktemp)"  # temp file for error messages
     run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
-                    ${args:+ ${args[@]}} "$input"
+                    ${args:+ ${args[@]}} "$input" 2> ${error_files[$dir,$input]}
     ((i++))
     progress $i $num_inputs
   done
@@ -180,3 +182,12 @@ while read -r dir; do
   echo "Done in ${dir#./}"
   cd "$base_dir"
 done < <(echo "$directories")
+for i in "${!error_files[@]}"; do
+  if [ -s "${error_files[$i]}" ]; then
+    echo "Dir ${i/,/, File }:"
+    cat "${error_files[$i]}"
+  fi
+done > "$base_dir/results.err"
+if [ ! -s "$base_dir/results.err" ]; then
+  rm "$base_dir/results.err"
+fi
