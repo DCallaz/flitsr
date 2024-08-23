@@ -128,27 +128,23 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
                                          "wspace": 0.2,
                                          "hspace": 0.2} if all else {})
     color = list(cm.rainbow(np.linspace(0, 1, len(split))))
-    style = ["-", "--", ":"]
+    style = [(), (6, 3), (1, 3), (1, 3, 6, 3), (3, 3), (6, 3, 3, 3)]
     marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>']
-    i = 0
     labels = []
-    for s in split:
-        j = 0
-        for m in merged:
+    for (i, s) in enumerate(split):
+        for (j, m) in enumerate(merged):
             if (m == "Base metric" or flitsrs is None or s in flitsrs):
                 if (type == plot_type.mode):
                     point = points[(m, s)]
                 else:
                     point = points[(s, m)]
-                print(point)
+                # print(point)
                 if (all):
                     labels.append(s + " " + (m if m != "Base metric" else ""))
-                    axs.plot(point[0], point[1], style[j], color=color[i],
-                             marker=marker[i], markevery=0.1)
+                    axs.plot(point[0], point[1], dashes=style[j],
+                             color=color[i], marker=marker[i], markevery=0.1)
                 else:
                     axs[i].plot(point[0], point[1])
-                j += 1
-        i += 1
     # plt.step(x,y)
     for i in range(1 if (all) else len(axs)):
         if (all):
@@ -156,7 +152,16 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
         else:
             ax = axs[i]
         if (all):
-            ax.legend(labels)
+            lines = ax.get_lines()[::len(modes)]
+            dummy_lines = []
+            for j in range(len(merged)):
+                dummy_lines.append(ax.plot([], [], c="black",
+                                           dashes=style[j])[0])
+            t_dummy, = ax.plot([], [], marker='None', ls='None')
+            labels = [r'$\mathbf{Metrics\!:}$'] + metrics + \
+                     [r'$\mathbf{Types\!:}$'] + modes
+            all_lines = [t_dummy] + lines + [t_dummy] + dummy_lines
+            ax.legend(all_lines, labels)
             # ax.set_title("")
         else:
             ax.legend(merged)
