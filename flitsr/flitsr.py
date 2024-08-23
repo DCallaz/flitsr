@@ -16,7 +16,7 @@ from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr import score
 from flitsr.args import parse_args
-from flitsr.flitsr_types import Flitsr_Type
+from flitsr.advanced_types import AdvancedType
 from flitsr.artemis_wrapper import run_artemis
 
 
@@ -75,12 +75,12 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
     return multiFault
 
 
-def feedback_loc(spectrum: Spectrum, formula: str,
-                 artemis: bool, tiebrk: int) -> List[Spectrum.Element]:
+def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
+                 tiebrk: int) -> List[Spectrum.Element]:
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
-    if (artemis):
+    if (AdvancedType.ARTEMIS in advanced_type or formula == 'artemis'):
         sort = run_artemis(spectrum, formula)
     else:
         sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
@@ -97,25 +97,25 @@ def feedback_loc(spectrum: Spectrum, formula: str,
         # continue trying the next element if available
         element = s2.elem
         tests_removed = tests_executing(element, spectrum, remove=True)
-    faulty = feedback_loc(spectrum, formula, artemis, tiebrk)
+    faulty = feedback_loc(spectrum, formula, advanced_type, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
         faulty.append(element)
     return faulty
 
 
-def run(spectrum: Spectrum, formula: str, flitsr_type: Flitsr_Type,
-        artemis: bool, tiebrk=0) -> score.Scores:
-    if (artemis):
+def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
+        tiebrk=0) -> score.Scores:
+    if (AdvancedType.ARTEMIS in advanced_type or formula == 'artemis'):
         sort = run_artemis(spectrum, formula)
     else:
         sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
-    if (flitsr_type != Flitsr_Type.BASE):
+    if (AdvancedType.FLITSR in advanced_type):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
-            faulty = feedback_loc(newSpectrum, formula, artemis, tiebrk)
+            faulty = feedback_loc(newSpectrum, formula, advanced_type, tiebrk)
             if (not faulty == []):
                 for x in sort:
                     if (x.elem in faulty):
@@ -128,7 +128,7 @@ def run(spectrum: Spectrum, formula: str, flitsr_type: Flitsr_Type,
             # multi-explanation -> we assume there are multiple explanations
             # for the same faults
             multiRemove(newSpectrum, faulty)
-            if (flitsr_type != Flitsr_Type.FLITSR_MULTI):
+            if (AdvancedType.MULTI not in advanced_type):
                 break
             val = val-1
         sort.sort(True, tiebrk)
@@ -266,15 +266,15 @@ def main(argv: List[str]):
         return
     # Execute techniques
     for metric in args.metrics:
-        for flitsr_type in args.types:
+        for advanced_type in args.types:
             # Get the output channel
-            if (len(args.metrics) == 1 and not args.all):
+            if (len(args.metrics) == 1 and len(args.types) == 1 and not args.all):
                 output_file = args.output
             else:
                 # store output files in the current directory
                 input_filename = osp.basename(d_p)
-                filename = (flitsr_type.value + '_' + metric + '_' +
-                            input_filename)
+                filename = (advanced_type.get_file_name() + '_' + metric + '_'
+                            + input_filename)
                 try:
                     output_file = open(filename, "x")
                 except FileExistsError:
@@ -287,9 +287,10 @@ def main(argv: List[str]):
                               file=sys.stderr)
                         output_file = open(filename, 'w')
             # Check for parallel
-            if (args.parallel):
-                spectrums = parallel.parallel(args.input, spectrum, args.tiebrk,
-                                              metric, args.parallel)
+            if (AdvancedType.PARALLEL in advanced_type):
+                spectrums = parallel.parallel(args.input, spectrum,
+                                              args.tiebrk, metric,
+                                              args.parallel)
             else:
                 spectrums = [spectrum]
             # Run each spectrum
@@ -297,8 +298,7 @@ def main(argv: List[str]):
                 if (i > 0):
                     print("<---------------------- Next Ranking ---------------------->")
                 # Run techniques
-                sort = run(spectrum, metric, flitsr_type, args.artemis,
-                           args.tiebrk)
+                sort = run(spectrum, metric, advanced_type, args.tiebrk)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     sort = compute_cutoff(args.cutoff_strategy, sort,

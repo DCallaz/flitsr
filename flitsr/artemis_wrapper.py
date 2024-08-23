@@ -6,7 +6,9 @@ import numpy as np
 
 def run_artemis(spectrum: Spectrum, metric: str, numUniverse=17,
                 maxUniverse=20, p=1e-5):
-
+    # Set default metric
+    if (metric == 'artemis'):
+        metric = 'ochiai'
     matrix = np.zeros((len(spectrum.tests()), spectrum.locs()))
     errVector = np.zeros(len(spectrum.tests()))
     elements = spectrum.elements()

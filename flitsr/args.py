@@ -4,7 +4,7 @@ from os import path as osp
 from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
-from flitsr.flitsr_types import Flitsr_Type
+from flitsr.advanced_types import AdvancedType
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -259,7 +259,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             args.metrics = [default_metric]
     # Set the flitsr types based on 'all' or what is set
     if (args.all is True):
-        args.types = list(Flitsr_Type)
+        args.types = [AdvancedType.BASE, AdvancedType.FLITSR,
+                      AdvancedType.MULTI]
         if (len(args.weff) == 0 and len(args.top1) == 0 and
                 len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
             args.weff = ["first", "avg", "med", "last", 2, 3, 5]
@@ -268,12 +269,20 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                              ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
             args.faults = ["num"]
     else:
-        if (args.sbfl is True):
-            args.types = [Flitsr_Type.BASE]
-        elif (args.multi is True):
-            args.types = [Flitsr_Type.FLITSR_MULTI]
-        else:
-            args.types = [Flitsr_Type.FLITSR]
+        advanced_type = AdvancedType.BASE
+        # Add FLITSR
+        if (not args.sbfl):
+            advanced_type |= AdvancedType.FLITSR
+        # Add Multi
+        if (args.multi):
+            advanced_type |= AdvancedType.MULTI
+        # Add parallel
+        if (args.parallel):
+            advanced_type |= AdvancedType.PARALLEL
+        # Add ARTEMIS
+        if (args.artemis):
+            advanced_type |= AdvancedType.ARTEMIS
+        args.types = [advanced_type]
     # Check the input file type and set input method
     if (osp.isfile(args.input)):
         args.input_m = 1

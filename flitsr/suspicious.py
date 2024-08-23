@@ -54,9 +54,9 @@ class Suspicious():
                      and x != "execute" and x != "getNames"
                      and x != "apply_formula")]
         else:
-            names = ['barinel', 'dstar', 'gp13', 'harmonic', 'hyperbolic',
-                     'jaccard', 'naish2', 'ochiai', 'overlap', 'tarantula',
-                     'zoltar']
+            names = ['artemis', 'barinel', 'dstar', 'gp13', 'harmonic',
+                     'hyperbolic', 'jaccard', 'naish2', 'ochiai', 'overlap',
+                     'tarantula', 'zoltar']
         return names
 
     def ample(self) -> float:
@@ -78,6 +78,10 @@ class Suspicious():
         elif (denominator == 0):
             return math.inf
         return nominator/denominator
+
+    def artemis(self) -> float:
+        """Dummy implementation to add artemis to list of available metrics"""
+        raise NotImplementedError("Artemis not implemented as a basic metric")
 
     def cohen(self) -> float:
         denominator = (self.ef + self.ep)*self.tp + self.tf*(self.nf + self.np)
