@@ -155,10 +155,10 @@ while read -r dir; do
     cd "$base_dir"
     continue
   fi
-  inputs=($(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename))
-  num_inputs="${#inputs[@]}"
+  proj_inp=($(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename))
+  num_inputs="${#proj_inp[@]}"
   i=0
-  for input in "${inputs[@]}"; do
+  for input in "${proj_inp[@]}"; do
     run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
                     ${args:+ ${args[@]}} "$input"
     ((i++))
