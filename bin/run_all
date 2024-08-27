@@ -164,7 +164,14 @@ while read -r dir; do
     run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
                     ${args:+ ${args[@]}} "$input" 2> ${error_files[$dir,$input]}
     ((i++))
-    progress $i $num_inputs
+    if [ $i -gt $N ]; then
+      progress $(($i - $N)) $num_inputs
+    fi
+  done
+  while [ $(pgrep -s $$ | wc -l) -gt 1 ]; do
+    wait -n
+    ((i++))
+    progress $(($i - $N)) $num_inputs
   done
   wait
   echo
