@@ -159,6 +159,7 @@ while read -r dir; do
   proj_inp=($(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename))
   num_inputs="${#proj_inp[@]}"
   i=0
+  progress 0 $num_inputs
   for input in "${proj_inp[@]}"; do
     error_files[$dir,$input]="$(mktemp)"  # temp file for error messages
     run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
