@@ -25,16 +25,10 @@ def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
     try:
         while (True):
             tie = next(tie_iter)
-            if (collapse):
-                for f in range(tie.fault_groups):
-                    expect_value = (tie.group_len+1)/(tie.fault_groups+1)  # -1
-                    bumps.append((total+(f+1)*expect_value)/size)
-                total += tie.group_len
-            else:
-                for f in range(tie.num_faults):
-                    expect_value = (len(tie.elems)+1)/(tie.fault_locs+1)  # -1
-                    bumps.append((total+(f+1)*expect_value))
-                total += len(tie.elems)
+            for f in range(tie.num_faults()):
+                expect_value = (tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)  # -1
+                bumps.append((total+(f+1)*expect_value))
+            total += tie.len(collapse)
     except StopIteration:
         pass
     return bumps

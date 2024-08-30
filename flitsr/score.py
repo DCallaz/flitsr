@@ -58,8 +58,8 @@ class Scores:
         for score in scores:
             self.elem_map[score.elem] = score
 
-    def get_ties(self, spectrum: Spectrum, worst_effort: bool):
-        return Ties(spectrum, self, worst_effort)
+    def get_ties(self, spectrum: Spectrum):
+        return Ties(spectrum, self)
 
     def __iter__(self):
         return iter(self._scores)
@@ -70,62 +70,84 @@ class Scores:
 
 class Ties:
     class Tie:
-        def __init__(self, faults: Dict[int, List[Spectrum.Element]],
-                     worst_effort: bool):
-            self.elems: Set[Spectrum.Element] = set()
-            self.group_len = 0
-            self.num_faults = 0
-            self.fault_locs = 0
-            self.fault_groups = 0
-            self._faults = faults
-            self._worst_effort = worst_effort
 
-        def add_group(self, group: List[Spectrum.Element]):
-            self.elems.update(group)
-            self.group_len += 1
+        def __init__(self):
+            self._elems: Set[Spectrum.Element] = set()
+            self._group_len = 0
+            self._num_faults = 0
+            self._fault_locs = 0
+            self._fault_groups = 0
+
+        def len(self, collapse=False):
+            """
+            Return either the number of groups (if collapsed), or number of elements
+            in this tie (if not collapsed).
+            """
+            if (collapse):
+                return self._group_len
+            else:
+                return len(self._elems)
+
+        def elems(self):
+            """Return the set of all the elements in this tie"""
+            return self._elems
+
+        def num_faults(self):
+            """
+            Return the number of unique faults found for the first time in this
+            tie
+            """
+            return self._num_faults
+
+        def num_fault_locs(self, collapse=False):
+            """
+            Return the number of faulty locations (either groups or elements) in
+            this tie.
+            """
+            if (collapse):
+                return self._fault_groups
+            else:
+                return self._fault_locs
+
+        def _add_group(self, group: List[Spectrum.Element],
+                       faults: Dict[int, List[Spectrum.Element]],
+                       seen_faults: Set[int]):
+            self._elems.update(group)
+            self._group_len += 1
             # Check if fault is in group
             faulty_group = False
-            toRemove = set()
             seen_fault_locs: Set[Spectrum.Element] = set()
-            for (fault_num, fault_locs) in self._faults.items():
-                worst_toRemove = []
-                for fault_loc in fault_locs:
-                    if (fault_loc in group):
-                        if (self._worst_effort and len(fault_locs) > 1):
-                            worst_toRemove.append(fault_loc)
-                            continue
-                        # print("found fault", fault_num)
-                        self.num_faults += 1
-                        if (fault_loc not in seen_fault_locs):
-                            seen_fault_locs.add(fault_loc)
-                            self.fault_locs += 1
-                        if (not faulty_group):
-                            self.fault_groups += 1
-                            faulty_group = True
-                        # faults.remove(fault)
-                        toRemove.add(fault_num)
-                        break
-                if (self._worst_effort):
-                    for loc in worst_toRemove:
-                        fault_locs.remove(loc)
-            for fault in toRemove:
-                self._faults.pop(fault)
+            for (fault_num, fault_locs) in faults.items():
+                for fault_loc in set(fault_locs).intersection(group):
+                    # Check & update fault number
+                    if (fault_num not in seen_faults):
+                        self._num_faults += 1
+                        seen_faults.add(fault_num)
+                    # Check & update faulty locs
+                    if (fault_loc not in seen_fault_locs):
+                        seen_fault_locs.add(fault_loc)
+                        self._fault_locs += 1
+                    # Check & update faulty group
+                    if (not faulty_group):
+                        self._fault_groups += 1
+                        faulty_group = True
 
-    def __init__(self, spectrum, scores, worst_effort: bool):
+    def __init__(self, spectrum, scores):
         self.faults: Dict[int, List[Spectrum.Element]] = spectrum.get_faults()
         # needed to remove groups of fault locations
         faults = copy.deepcopy(self.faults)
+        seen_faults: Set[int] = set()
         s_iter = iter(scores)
         self.ties: List[Ties.Tie] = []
         # Populate this Ties object
         s2 = next(s_iter, None)  # get the first element
         while (s2 is not None):
             score = s2.score
-            tie = Ties.Tie(faults, worst_effort)
+            tie = Ties.Tie()
             # Get all UUTs with same score
             while (s2 is not None and s2.score == score):
                 group = spectrum.get_group(s2.elem)
-                tie.add_group(group)
+                tie._add_group(group, faults, seen_faults)
                 s2 = next(s_iter, None)
             self.ties.append(tie)
 

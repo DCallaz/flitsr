@@ -5,7 +5,7 @@ def one_top1(ties: Ties) -> bool:
     tie = get_top1(ties)
     for fault in ties.faults.values():
         for loc in fault:
-            if (loc in tie.elems):
+            if (loc in tie.elems()):
                 return True
     return False
 
@@ -15,7 +15,7 @@ def all_top1(ties: Ties) -> bool:
     count = 0
     for fault in ties.faults.values():
         for loc in fault:
-            if (loc in tie.elems):
+            if (loc in tie.elems()):
                 count += 1
                 break  # Only consider first location of fault
     return (count == len(ties.faults))
@@ -29,7 +29,7 @@ def percent_top1(ties: Ties) -> float:
         count = 0
         for fault in ties.faults.values():
             for loc in fault:
-                if (loc in tie.elems):
+                if (loc in tie.elems()):
                     count += 1
                     break
         return (count/len(ties.faults))*100
@@ -37,7 +37,7 @@ def percent_top1(ties: Ties) -> float:
 
 def size_top1(ties: Ties) -> int:
     tie = get_top1(ties)
-    return len(tie.elems)
+    return len(tie.elems())
 
 
 # <------------------------- Helper functions ---------------------->
