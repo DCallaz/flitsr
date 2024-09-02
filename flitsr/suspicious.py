@@ -11,6 +11,8 @@ class Suspicious():
     An implementation of ranking metric used for
     fault localization
     """
+    inf = 2**48
+
     def __init__(self, ef: int, tf: int, ep: int, tp: int):
         """
         The four basic counts that are parameters to
@@ -76,7 +78,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def artemis(self) -> float:
@@ -89,7 +91,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def dice(self) -> float:
@@ -107,7 +109,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def geometric(self) -> float:
@@ -116,7 +118,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def goodman(self) -> float:
@@ -125,7 +127,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def hamann(self) -> float:
@@ -134,7 +136,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def hamming(self) -> float:
@@ -148,7 +150,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def jaccard(self) -> float:
@@ -170,7 +172,7 @@ class Suspicious():
         if (self.ef == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return self.ef/denominator
 
     def kulczynski2(self) -> float:
@@ -184,7 +186,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def m2(self) -> float:
@@ -204,7 +206,7 @@ class Suspicious():
         if (self.ef == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return self.ef/denominator
 
     def ochiai2(self) -> float:
@@ -213,7 +215,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def overlap(self) -> float:
@@ -221,7 +223,7 @@ class Suspicious():
         if (self.ef == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return self.ef/denominator
 
     def rogers_tanimoto(self) -> float:
@@ -230,7 +232,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def rogot1(self) -> float:
@@ -257,7 +259,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif (denominator == 0):
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def simpl_match(self) -> float:
@@ -336,7 +338,7 @@ class Suspicious():
         if (nominator == 0):
             return 0.0
         elif denominator == 0:
-            return math.inf
+            return Suspicious.inf
         return nominator/denominator
 
     def gp13(self) -> float:
