@@ -175,6 +175,7 @@ while read -r dir; do
     progress $(($i - $N)) $num_inputs
   done
   wait
+  progress $num_inputs $num_inputs
   echo
   for m in "${metrics[@]}"; do
     while read -r t || [ -n "$t" ]; do
