@@ -260,7 +260,7 @@ def main(argv: List[str]):
         d_p = args.input.split("/")[0] + ".run"
     # Read the spectrum in and setup parallel if needed
     spectrum = read_spectrum(args.input, args.split, method_level=args.method)
-    if (spectrum is None):
+    if (spectrum is None or len(spectrum.spectrum) == 0):
         print("WARNING: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
         return
@@ -283,7 +283,7 @@ def main(argv: List[str]):
                         #       "existing file", filename, file=sys.stderr)
                         continue
                     else:
-                        print("WARNING: overriding file", filename,
+                        print("ERROR: overriding file", filename,
                               file=sys.stderr)
                         output_file = open(filename, 'w')
             # Check for parallel
