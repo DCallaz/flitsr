@@ -27,7 +27,7 @@ def tests_executing(element: Spectrum.Element, spectrum: Spectrum,
     removes them from the spectrum.
     """
     executing = set()
-    for test in spectrum:
+    for test in spectrum.failing():
         if (spectrum[test][element]):
             executing.add(test)
     if (remove):
@@ -89,7 +89,7 @@ def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
     tests_removed = tests_executing(element, spectrum, remove=True)
     while (len(tests_removed) == 0):  # sanity check
         if ((s2 := next(s_iter, None)) is None):
-            count_non_removed = len(spectrum.failing)
+            count_non_removed = len(spectrum.failing())
             print("WARNING: flitsr found", count_non_removed,
                   "failing test(s) that it could not explain",
                   file=sys.stderr)

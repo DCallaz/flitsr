@@ -24,7 +24,7 @@ def print_names(spectrum, scores=None, file=sys.stdout):
 
 # TODO: this function does not produce nice looking output
 def print_spectrum(spectrum: Spectrum):
-    for test in spectrum:
+    for test in spectrum.tests():
         print(test.name, end=": ")
         row = spectrum[test]
         for elem in row:

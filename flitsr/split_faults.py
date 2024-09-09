@@ -14,7 +14,7 @@ def split(faults: Dict[float, List[Spectrum.Element]],
     if (faults == {}):
         return {}, set()
     ftemp = [([elem], f[0], False) for f in faults.items() for elem in f[1]]
-    for test in spectrum.failing:
+    for test in spectrum.failing():
         merge: Dict[float, List[Spectrum.Element]] = {}
         remain = []
         for equiv in ftemp:
