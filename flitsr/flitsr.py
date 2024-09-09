@@ -20,22 +20,6 @@ from flitsr.advanced_types import AdvancedType
 from flitsr.artemis_wrapper import run_artemis
 
 
-def tests_executing(element: Spectrum.Element, spectrum: Spectrum,
-                    remove=False) -> Set[Spectrum.Test]:
-    """
-    Finds all the test cases executing the given element, and (optionally)
-    removes them from the spectrum.
-    """
-    executing = set()
-    for test in spectrum.failing():
-        if (spectrum[test][element]):
-            executing.add(test)
-    if (remove):
-        for test in executing:
-            spectrum.remove(test)
-    return executing
-
-
 def remove_faulty_elements(spectrum: Spectrum,
                            tests_removed: Set[Spectrum.Test],
                            faulty: List[Spectrum.Element]):
@@ -57,7 +41,7 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
     # Get tests executing elems in faulty set
     executing: Set[Spectrum.Test] = set()
     for elem in faulty:
-        exe = tests_executing(elem, spectrum)
+        exe = spectrum.get_tests(elem, only_failing=True)
         executing.update(exe)
 
     # Remove all elements in faulty set
@@ -86,7 +70,7 @@ def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     s_iter = iter(sort)
     element = next(s_iter).elem
-    tests_removed = tests_executing(element, spectrum, remove=True)
+    tests_removed = spectrum.get_tests(element, only_failing=True, remove=True)
     while (len(tests_removed) == 0):  # sanity check
         if ((s2 := next(s_iter, None)) is None):
             count_non_removed = len(spectrum.failing())
@@ -96,7 +80,7 @@ def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
             return []
         # continue trying the next element if available
         element = s2.elem
-        tests_removed = tests_executing(element, spectrum, remove=True)
+        tests_removed = spectrum.get_tests(element, only_failing=True, remove=True)
     faulty = feedback_loc(spectrum, formula, advanced_type, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
@@ -296,7 +280,7 @@ def main(argv: List[str]):
             # Run each spectrum
             for i, spectrum in enumerate(spectrums):
                 if (i > 0):
-                    print("<---------------------- Next Ranking ---------------------->")
+                    print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='')
                 # Run techniques
                 sort = run(spectrum, metric, advanced_type, args.tiebrk)
                 # Compute cut-off

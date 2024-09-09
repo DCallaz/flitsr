@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set, Union
+from typing import List, Dict, Any, Set
 from bitarray import bitarray
 from flitsr.const_iter import ConstIter
 
@@ -297,3 +297,19 @@ class Spectrum():
                             actual_faults[fault] = []
                         actual_faults[fault].append(elem)
         return actual_faults
+
+    def get_tests(self, element: Spectrum.Element, only_failing=False,
+                  remove=False) -> Set[Spectrum.Test]:
+        """
+        Finds all the test cases executing the given element, and (optionally)
+        removes them from the spectrum.
+        """
+        executing = set()
+        tests = self.failing() if only_failing else self.tests()
+        for test in tests:
+            if (self[test][element]):
+                executing.add(test)
+        if (remove):
+            for test in executing:
+                self.remove(test)
+        return executing
