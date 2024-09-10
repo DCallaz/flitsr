@@ -160,7 +160,7 @@ while read -r dir; do
     cd "$base_dir"
     continue
   fi
-  proj_inp=($(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename))
+  mapfile -t proj_inp < <(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename)
   num_inputs="${#proj_inp[@]}"
   i=0
   progress 0 $num_inputs
@@ -197,7 +197,7 @@ while read -r dir; do
         cat "$file"; rm "$file";
         echo "--------------------------"
       done > "$t${m}.results"
-    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_[^_]+\.run/\1/p" | sort -u)
+    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_.+\.run/\1/p" | sort -u)
   done
   merge > results
   echo "Done in ${dir#./}"
