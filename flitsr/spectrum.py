@@ -139,7 +139,11 @@ class Spectrum():
         return self.spectrum[t]
 
     def __iter__(self):
-        return self.spectrum.values().__iter__()
+        self._iter = iter(self._tests)
+        return self
+
+    def __next__(self):
+        return self.spectrum[next(self._iter)]
 
     def __len__(self):
         return len(self._tests)
@@ -179,8 +183,11 @@ class Spectrum():
                 self.f[elem] -= 1
 
     def remove_element(self, element: Spectrum.Element):
-        if (element in self._curr_elements):
+        try:
             self._curr_elements.remove(element)  # remove if there
+        except ValueError:
+            # Ignore if the element is not in the list
+            pass
         self.p.pop(element, None)  # remove if there
         self.f.pop(element, None)  # remove if there
         # No need to remove execution (bitarray)
