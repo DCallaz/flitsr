@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Dict, Any, Set
 from bitarray import bitarray
+import numpy as np
 from flitsr.const_iter import ConstIter
 
 
@@ -320,3 +321,26 @@ class Spectrum():
             for test in executing:
                 self.remove(test)
         return executing
+
+    def to_matrix(self):
+        """
+        Converts the current spectrum into a numpy matrix and error vector.
+        """
+        # If no matrix already, create one
+        if (not hasattr(self, '_matrix')):
+            # Use all test cases and most elements
+            self._matrix_tests = list(self.spectrum.keys())
+            self._matrix_elems = list(self._curr_elements)
+            self._matrix = np.zeros((len(self._matrix_tests),
+                                     len(self._matrix_elems)))
+            self._errVector = np.zeros(len(self._matrix_tests))
+            for (i, test) in enumerate(self._matrix_tests):
+                for (j, elem) in enumerate(self._matrix_elems):
+                    self._matrix[i][j] = self.spectrum[test][elem]
+                self._errVector[i] = 1 if (test.outcome is False) else 0
+        # Extract submatrix
+        tmask = np.in1d(self._matrix_tests, self._tests)
+        emask = np.in1d(self._matrix_elems, self._curr_elements)
+        matrix = self._matrix[np.ix_(tmask, emask)]
+        errVector = self._errVector[tmask]
+        return matrix, errVector

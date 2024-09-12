@@ -9,13 +9,8 @@ def run_artemis(spectrum: Spectrum, metric: str, numUniverse=17,
     # Set default metric
     if (metric == 'artemis'):
         metric = 'ochiai'
-    matrix = np.zeros((len(spectrum.tests()), spectrum.locs()))
-    errVector = np.zeros(len(spectrum.tests()))
     elements = spectrum.elements()
-    for (i, test) in enumerate(spectrum.tests()):
-        for (j, elem) in enumerate(elements):
-            matrix[i][j] = spectrum[test][elem]
-        errVector[i] = 1 if (test.outcome is False) else 0
+    matrix, errVector = spectrum.to_matrix()
     rankingList = artemis.explorer(matrix, errVector, spectrum.locs(),
                                    metric, numUniverse, maxUniverse, p)
     sortedRankingList = artemis.merge(rankingList, spectrum.locs())
