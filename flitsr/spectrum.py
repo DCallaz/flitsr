@@ -19,6 +19,12 @@ class Spectrum():
         def __repr__(self):
             return str(self)
 
+        def __eq__(self, other):
+            return self.name == other.name
+
+        def __hash__(self):
+            return hash(self.name)
+
     class Element():
         """
         An element object holds information pertaining to a single spectral
@@ -329,8 +335,8 @@ class Spectrum():
         # If no matrix already, create one
         if (not hasattr(self, '_matrix')):
             # Use all test cases and most elements
-            self._matrix_tests = list(self.spectrum.keys())
-            self._matrix_elems = list(self._curr_elements)
+            self._matrix_tests = np.array(list(self.spectrum.keys()))
+            self._matrix_elems = np.array(list(self._curr_elements))
             self._matrix = np.zeros((len(self._matrix_tests),
                                      len(self._matrix_elems)))
             self._errVector = np.zeros(len(self._matrix_tests))
@@ -339,8 +345,8 @@ class Spectrum():
                     self._matrix[i][j] = self.spectrum[test][elem]
                 self._errVector[i] = 1 if (test.outcome is False) else 0
         # Extract submatrix
-        tmask = np.in1d(self._matrix_tests, self._tests)
-        emask = np.in1d(self._matrix_elems, self._curr_elements)
+        tmask = np.isin(self._matrix_tests, self._tests)
+        emask = np.isin(self._matrix_elems, self._curr_elements)
         matrix = self._matrix[np.ix_(tmask, emask)]
         errVector = self._errVector[tmask]
         return matrix, errVector
