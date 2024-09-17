@@ -243,7 +243,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             ' (default %(default)s)', default='worst')
     cutoff_opts = cutoff_points.getNames()
     parser.add_argument('--cutoff-strategy', action='store', metavar='STRATEGY',
-            choices=cutoff_opts, help='Cuts off the ranking using the given '
+            help='Cuts off the ranking using the given '
             'strategy\'s cut-off point. This affects both the rank output '
             'method and any calculations. Allowed values are: ['+
             ', '.join(cutoff_opts)+'] (default %(default)s). '
