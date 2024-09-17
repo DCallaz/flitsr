@@ -22,7 +22,7 @@ def recall(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
 
 
 def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
-           worst_effort: bool, collapse: bool) -> Tuple[int, int]:
+           worst_effort: bool, collapse: bool) -> Tuple[float, int]:
     size = 0
     if (collapse):
         size = len(spectrum.groups)
@@ -37,43 +37,29 @@ def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
         n = n * size
     tie_iter = iter(ties)
     total = 0
-    fault_num = 0
+    fault_num = 0.0
     try:
         while (total < n):
             tie = next(tie_iter)
-            if (collapse):  # TODO: actual calculation for collapse
-                add = 0
-                if (total+tie.group_len > n and tie.fault_groups > 0):
-                    x = n - total
-                    for i in range(tie.fault_groups):
-                        expected_value = (i+1)*(tie.group_len+1)/(tie.fault_groups+1)
-                        if (expected_value <= x):
-                            add += 1
-                    total += x
-                else:
-                    add = tie.fault_groups
-                    total += tie.group_len
-                fault_num += add
+            add = 0.0
+            if (total+tie.len(collapse) > n and tie.num_faults() > 0):
+                p = int(n - total)
+                m = tie.len(collapse)
+                n_f = tie.num_fault_locs(collapse)
+                outer_top = factorial(m-p) * factorial(p)
+                outer_bot = factorial(m)
+                for x in range(1, p+1):
+                    add += x*(comb(n_f, x) * comb(m - n_f, p - x) *
+                              outer_top)/outer_bot
+                # for i in range(curr_faults):
+                #     expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
+                #     if (expected_value <= x):
+                #         add += 1
+                total += p
             else:
-                add = 0
-                if (total+len(tie.elems) > n and tie.num_faults > 0):
-                    p = int(n - total)
-                    m = len(tie.elems)
-                    n_f = tie.fault_locs
-                    outer_top = factorial(m-p) * factorial(p)
-                    outer_bot = factorial(m)
-                    for x in range(1, p+1):
-                        add += x*(comb(n_f, x) * comb(m - n_f, p - x) *
-                                  outer_top)/outer_bot
-                    # for i in range(curr_faults):
-                    #     expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
-                    #     if (expected_value <= x):
-                    #         add += 1
-                    total += p
-                else:
-                    add = tie.num_faults
-                    total += len(tie.elems)
-                fault_num += add
+                add = tie.num_faults()
+                total += tie.len(collapse)
+            fault_num += add
     except StopIteration:
         pass
     return fault_num, total

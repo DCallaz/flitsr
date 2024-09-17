@@ -140,7 +140,7 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
            csv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: score.Ties = scores.get_ties(spectrum, worst_effort=False)
+        ties: score.Ties = scores.get_ties(spectrum)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(

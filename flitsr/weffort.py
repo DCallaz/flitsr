@@ -51,28 +51,17 @@ def method(ties: Ties, target, avg=False, collapse=False,
     while (not found):
         tie = next(tie_iter)
         # print(tie)
-        actual += tie.num_faults
+        actual += tie.num_faults()
         found = (actual >= target)
         if (avg):
-            for j in range(1, tie.num_faults+1):
-                if (collapse):
-                    efforts.append(effort +
-                                   j*((tie.group_len+1)/(tie.fault_groups+1)-1))
-                else:
-                    efforts.append(effort +
-                                   j*((len(tie.elems)+1)/(tie.fault_locs+1)-1))
+            for j in range(1, tie.num_faults()+1):
+                efforts.append(effort +
+                               j*((tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)-1))
         if (not found):
-            if (collapse):
-                effort += tie.group_len - tie.fault_groups
-            else:
-                effort += len(tie.elems) - tie.fault_locs
+            effort += tie.len(collapse) - tie.num_fault_locs(collapse)
         else:
-            if (collapse):
-                k = target + tie.num_faults - actual
-                effort += k*((tie.group_len+1)/(tie.fault_groups+1)-1)
-            else:
-                k = target + tie.num_faults - actual
-                effort += k*((len(tie.elems)+1)/(tie.fault_locs+1)-1)
+            k = target + tie.num_faults() - actual
+            effort += k*((tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)-1)
     if (avg):
         return sum(efforts)/target
     else:
