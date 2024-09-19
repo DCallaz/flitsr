@@ -103,8 +103,8 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
             if (not faulty == []):
                 for x in sort:
                     if (x.elem in faulty):
-                        x.score = val
-                        val = val-1
+                        x.score = val - faulty.index(x.elem)
+                val = val-len(faulty)
             # Reset the coverage matrix and counts
             newSpectrum.reset()
             # Next iteration can be either multi-fault, or multi-explanation
