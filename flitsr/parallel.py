@@ -7,8 +7,7 @@ import os
 from typing import List
 
 
-def parallel(d: str, spectrum: Spectrum, tiebrk: int, metric: str,
-             parType: str) -> List[Spectrum]:
+def parallel(d: str, spectrum: Spectrum, parType: str) -> List[Spectrum]:
     spectrums = partition_table(d, spectrum, parType)
     return spectrums
 
@@ -30,7 +29,7 @@ def partition_table(d: str, spectrum: Spectrum,
             if (test.index not in tests):
                 toRemove.add(test)
         for test in toRemove:
-            new_spectrum.remove(test)
+            new_spectrum.remove(test, hard=True)
         trim_elements(new_spectrum)
         spectrums.append(new_spectrum)
     return spectrums

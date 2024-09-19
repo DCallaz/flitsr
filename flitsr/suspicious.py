@@ -58,7 +58,7 @@ class Suspicious():
         else:
             names = ['artemis', 'barinel', 'dstar', 'gp13', 'harmonic',
                      'hyperbolic', 'jaccard', 'naish2', 'ochiai', 'overlap',
-                     'tarantula', 'zoltar']
+                     'parallel', 'tarantula', 'zoltar']
         return names
 
     def ample(self) -> float:
@@ -225,6 +225,10 @@ class Suspicious():
         elif (denominator == 0):
             return Suspicious.inf
         return self.ef/denominator
+
+    def parallel(self) -> float:
+        """Dummy implementation to add parallel to list of available metrics"""
+        raise NotImplementedError("Parallel not implemented as a basic metric")
 
     def rogers_tanimoto(self) -> float:
         nominator = self.ef + self.np

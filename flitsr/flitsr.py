@@ -257,8 +257,8 @@ def main(argv: List[str]):
               file=sys.stderr)
         return
     # Execute techniques
-    for metric in args.metrics:
-        for advanced_type in args.types:
+    for advanced_type in args.types:
+        for metric in args.metrics:
             # Get the output channel
             if (len(args.metrics) == 1 and len(args.types) == 1 and not args.all):
                 output_file = args.output
@@ -279,10 +279,11 @@ def main(argv: List[str]):
                               file=sys.stderr)
                         output_file = open(filename, 'w')
             # Check for parallel
-            if (AdvancedType.PARALLEL in advanced_type):
+            if (AdvancedType.PARALLEL in advanced_type or metric == 'parallel'):
                 spectrums = parallel.parallel(args.input, spectrum,
-                                              args.tiebrk, metric,
-                                              args.parallel)
+                                              args.parallel or 'msp')
+                # Set default metric for parallel
+                metric = 'ochiai'
             else:
                 spectrums = [spectrum]
             sorts: List[score.Scores] = []
