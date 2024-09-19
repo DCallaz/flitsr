@@ -136,11 +136,11 @@ def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
     return sort
 
 
-def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
+def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
            csv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: score.Ties = scores.get_ties(spectrum)
+        ties: score.Ties = score.Ties(spectrum, scores)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(
@@ -219,9 +219,17 @@ def output(scores: score.Scores, spectrum: Spectrum, weff=[], top1=[],
             if ("all" in faults):
                 print("fault info: {}".format(ties.faults), file=file)
     elif (csv):
-        print_csv(spectrum, scores, file)
+        for (i, s) in enumerate(scores):
+            if (i > 0):
+                print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
+                      file=file)
+            print_csv(spectrum, s, file)
     else:
-        print_names(spectrum, scores, file)
+        for (i, s) in enumerate(scores):
+            if (i > 0):
+                print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
+                      file=file)
+            print_names(spectrum, s, file)
 
 
 def main(argv: List[str]):
@@ -231,7 +239,7 @@ def main(argv: List[str]):
         from flitsr.ranking import read_any_ranking
         scores, spectrum = read_any_ranking(args.input,
                                             method_level=args.method)
-        output(scores, spectrum, args.weff, args.top1, args.perc_at_n,
+        output([scores], spectrum, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
                decimals=args.decimals, file=args.output)
         return
@@ -277,21 +285,21 @@ def main(argv: List[str]):
                                               args.parallel)
             else:
                 spectrums = [spectrum]
-            # Run each spectrum
-            for i, spectrum in enumerate(spectrums):
-                if (i > 0):
-                    print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='')
+            sorts: List[score.Scores] = []
+            # Run each sub-spectrum
+            for subspectrum in spectrums:
                 # Run techniques
-                sort = run(spectrum, metric, advanced_type, args.tiebrk)
+                sort = run(subspectrum, metric, advanced_type, args.tiebrk)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     sort = compute_cutoff(args.cutoff_strategy, sort,
-                                          spectrum, metric,
+                                          subspectrum, metric,
                                           args.cutoff_eval)
-                # Compute and print output
-                output(sort, spectrum, args.weff, args.top1, args.perc_at_n,
-                       args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                       decimals=args.decimals, file=output_file)
+                sorts.append(sort)
+            # Compute and print output
+            output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
+                   args.prec_rec, args.faults, args.collapse, csv=args.csv,
+                   decimals=args.decimals, file=output_file)
             spectrum.reset()
 
 

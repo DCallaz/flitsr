@@ -25,8 +25,9 @@ def partition_table(d: str, spectrum: Spectrum,
         new_spectrum = copy.deepcopy(spectrum)
         tests = [int(i) for i in partition.strip().split("\n")]
         toRemove = set()
-        for (i, test) in enumerate(new_spectrum.tests()):
-            if (i not in tests):
+        # keep failing + all passing
+        for test in new_spectrum.failing():
+            if (test.index not in tests):
                 toRemove.add(test)
         for test in toRemove:
             new_spectrum.remove(test)

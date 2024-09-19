@@ -58,9 +58,6 @@ class Scores:
         for score in scores:
             self.elem_map[score.elem] = score
 
-    def get_ties(self, spectrum: Spectrum):
-        return Ties(spectrum, self)
-
     def __iter__(self):
         return iter(self._scores)
 
@@ -70,7 +67,6 @@ class Scores:
 
 class Ties:
     class Tie:
-
         def __init__(self):
             self._elems: Set[Spectrum.Element] = set()
             self._group_len = 0
@@ -132,24 +128,60 @@ class Ties:
                         self._fault_groups += 1
                         faulty_group = True
 
-    def __init__(self, spectrum, scores):
+    def __init__(self, spectrum: Spectrum, scores: List[Scores]):
         self.faults: Dict[int, List[Spectrum.Element]] = spectrum.get_faults()
         # needed to remove groups of fault locations
         faults = copy.deepcopy(self.faults)
         seen_faults: Set[int] = set()
-        s_iter = iter(scores)
+        seen_elements: Set[Spectrum.Element] = set()
         self.ties: List[Ties.Tie] = []
+        class ScoreIter:
+            def __init__(self, score):
+                self.s_iter = iter(score)
+                self.cur = next(self.s_iter, None)
+            def is_active(self):
+                return self.cur != None
+            def consume(self):
+                old_cur = self.cur
+                self.cur = next(self.s_iter, None)
+                return old_cur
+            def cur_score(self):
+                if (self.cur is not None):
+                    return self.cur.score
+                else:
+                    raise StopIteration()
+        s_iters = [ScoreIter(s) for s in scores]
         # Populate this Ties object
-        s2 = next(s_iter, None)  # get the first element
-        while (s2 is not None):
-            score = s2.score
-            tie = Ties.Tie()
+        def get_tie_elems(si: ScoreIter) -> Set[Spectrum.Element]:
+            elems: Set[Spectrum.Element] = set()
+            # sanity check
+            if (not si.is_active()):
+                return elems
             # Get all UUTs with same score
-            while (s2 is not None and s2.score == score):
-                group = spectrum.get_group(s2.elem)
+            score = si.cur_score()
+            while (si.is_active() and si.cur_score() == score):
+                s = si.consume()
+                elems.add(s.elem)
+            return elems
+        while (any(si.is_active() for si in s_iters)):
+            all_elems: Set[Spectrum.Element] = set()
+            for si in s_iters:
+                if (si.is_active()):
+                    elems = get_tie_elems(si)
+                    all_elems.update(elems)
+            tie = Ties.Tie()
+            for elem in all_elems.difference(seen_elements):
+                group = spectrum.get_group(elem)
                 tie._add_group(group, faults, seen_faults)
-                s2 = next(s_iter, None)
+            seen_elements.update(all_elems)
             self.ties.append(tie)
+        # Add elements not seen to bottom of tie
+        not_seen = [e for e in spectrum.elements() if e not in seen_elements]
+        tie = Ties.Tie()
+        for elem in not_seen:
+            group = spectrum.get_group(elem)
+            tie._add_group(group, faults, seen_faults)
+        self.ties.append(tie)
 
     def __iter__(self):
         return iter(self.ties)

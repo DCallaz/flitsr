@@ -9,8 +9,9 @@ class Spectrum():
     """An implementation for a program spectrum."""
     class Test():
         """A test object holds information pertaining to a particular test."""
-        def __init__(self, name: str, outcome: bool):
+        def __init__(self, name: str, index: int, outcome: bool):
             self.name = name
+            self.index = index
             self.outcome = outcome
 
         def __str__(self):
@@ -219,8 +220,8 @@ class Spectrum():
                         self.f[elem] += 1
         self.removed.clear()
 
-    def addTest(self, name: str, outcome: bool):
-        t = self.Test(name, outcome)
+    def addTest(self, name: str, index: int, outcome: bool):
+        t = self.Test(name, index, outcome)
         self._tests.append(t)
         if (outcome is False):
             self._failing.append(t)

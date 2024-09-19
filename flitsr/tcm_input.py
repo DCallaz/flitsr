@@ -54,10 +54,12 @@ def construct_details(f: TextIOWrapper, method_level: bool,
 
 def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
     line = f.readline()
+    i = 0
     while (not line == '\n'):
         row = line.strip().split(" ")
-        spectrum.addTest(row[0], row[1] == 'PASSED')
+        spectrum.addTest(row[0], i, row[1] == 'PASSED')
         line = f.readline()
+        i += 1
 
 
 def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
