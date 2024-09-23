@@ -173,10 +173,14 @@ while read -r dir; do
       progress $(($i - $N)) $num_inputs
     fi
   done
-  while [ $(pgrep -s $$ | wc -l) -gt 1 ]; do
+  i=0
+  while [ $(pgrep -c -P$$) -ge 1 ]; do
     wait -n
     ((i++))
-    progress $(($i - $N)) $num_inputs
+    # display only for the last N processes (not the previous num_inputs-N)
+    if [ $i -gt $(($num_inputs - $N)) ]; then
+      progress $i $num_inputs
+    fi
   done
   wait
   progress $num_inputs $num_inputs
