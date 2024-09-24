@@ -97,7 +97,7 @@ while getopts ":d:c:m:b:a:tgrh" opt; do
       args+=("$OPTARG")
       ;;
     m )
-      metrics+=("${OPTARG//,/ }")
+      metrics+=(${OPTARG//,/ })
       ;;
     r )
       recover="True"
@@ -174,7 +174,7 @@ while read -r dir; do
     fi
   done
   i=0
-  while [ $(pgrep -c -P$$) -ge 1 ]; do
+  while [ $(jobs -rp | wc -l) -ge 1 ]; do
     wait -n
     ((i++))
     # display only for the last N processes (not the previous num_inputs-N)
