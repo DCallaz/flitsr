@@ -39,6 +39,16 @@ progress () {
   printf "\r[$fill$empty] %3i%%" $perc
 }
 
+# Function to call FLITSR & cleanup
+call_flitsr() {
+  local input="$1"
+  # call FLITSR
+  flitsr --all ${recover:+ --no-override} $m_metrics \
+    ${args:+ ${args[@]}} "$input" 2> "$input.err"
+  # clean up (mark this input as done)
+  echo "$input" >> done_inputs.tmp
+}
+
 USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
 [-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>]
   where:
@@ -134,6 +144,13 @@ fi
 
 cd "$base_dir"
 
+if [ -n "$recover" ]; then
+  # Firstly delete all empty results
+  find . -type f -name "*results*" -empty -delete -printf "Deleting empty results file: %P\n"
+  # Also delete all empty runs, as this could cause problems for recover
+  find . -type f -name "*.run" -empty -delete -printf "Deleting empty run file: %P\n"
+fi
+
 if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
   inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
               -type f -name "spectra.csv" | xargs -n 1 dirname | sort -V)"
@@ -147,27 +164,29 @@ fi
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
 
 m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
-if [ -f "$base_dir/results.err" ]; then
+# replace the error file if not recover
+if [ -z "$recover" ] && [ -f "$base_dir/results.err" ]; then
   rm "$base_dir/results.err"
 fi
 while read -r dir; do
-  unset -v error_files
-  declare -A error_files  # array for error messages
   echo "Running ${dir#./}"
   cd "$dir"
   if [ -n "$recover" ] && [ -f "results" ]; then
     echo "Recovered ${dir#./}, skipping..."
     cd "$base_dir"
     continue
+  elif [ -z "$recover" ] && [ -f "done_inputs.tmp" ]; then
+    rm done_inputs.tmp
   fi
   mapfile -t proj_inp < <(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename)
   num_inputs="${#proj_inp[@]}"
   i=0
   progress 0 $num_inputs
   for input in "${proj_inp[@]}"; do
-    error_files[$input]="$(mktemp)"  # temp file for error messages
-    run_with_lock flitsr --all ${recover:+ --no-override} $m_metrics \
-                    ${args:+ ${args[@]}} "$input" 2> ${error_files[$input]}
+    # Don't run if recover and input in done_inputs, otherwise run
+    if [ -z "$recover" ] || ! grep -Fxqs "$input" "done_inputs.tmp"; then
+      run_with_lock call_flitsr "$input"
+    fi
     ((i++))
     if [ $i -gt $N ]; then
       progress $(($i - $N)) $num_inputs
@@ -185,12 +204,12 @@ while read -r dir; do
   wait
   progress $num_inputs $num_inputs
   # print out the error files
-  for i in "${!error_files[@]}"; do
-    if [ -s "${error_files[$i]}" ]; then
-      echo "Dir ${dir#./} File ${i}:"
-      cat "${error_files[$i]}"
+  for error_file in *.err; do
+    if [ -s "$error_file" ]; then
+      echo "Dir ${dir#./} File $(basename -s '.err' $error_file):"
+      cat "$error_file"
     fi
-    rm "${error_files[$i]}"
+    rm "$error_file"
   done >> "$base_dir/results.err"
   echo
   for m in "${metrics[@]}"; do
@@ -204,9 +223,10 @@ while read -r dir; do
     done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_.+\.run/\1/p" | sort -u)
   done
   merge > results
+  rm done_inputs.tmp
   echo "Done in ${dir#./}"
   cd "$base_dir"
 done < <(echo "$directories")
-if [ ! -s "$base_dir/results.err" ]; then
+if [ -e "$base_dir/results.err" ] && [ ! -s "$base_dir/results.err" ]; then
   rm "$base_dir/results.err"
 fi
