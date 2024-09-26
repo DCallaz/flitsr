@@ -123,20 +123,22 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
                                          "hspace": 0.2} if all else {})
     color = list(cm.rainbow(np.linspace(0, 1, len(split))))
     style = [(), (6, 3), (1, 3), (1, 3, 6, 3), (3, 3), (6, 3, 3, 3)]
-    marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>']
-    labels = []
+    marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>', 'P',
+              'h', 'X', 'H', 'd', '|', '_']
+    lines = []
     for (i, s) in enumerate(split):
         for (j, m) in enumerate(merged):
-            if (m == "Base metric" or flitsrs is None or s in flitsrs):
+            if (m == "Base" or flitsrs is None or s in flitsrs):
                 if (type == plot_type.mode):
                     point = points[(m, s)]
                 else:
                     point = points[(s, m)]
                 # print(point)
                 if (all):
-                    labels.append(s + " " + (m if m != "Base metric" else ""))
-                    axs.plot(point[0], point[1], dashes=style[j],
+                    ls = axs.plot(point[0], point[1], dashes=style[j],
                              color=color[i], marker=marker[i], markevery=0.1)
+                    if (m == "Base"):
+                        lines.append(ls[0])
                 else:
                     axs[i].plot(point[0], point[1])
     # plt.step(x,y)
@@ -146,7 +148,7 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
         else:
             ax = axs[i]
         if (all):
-            lines = ax.get_lines()[::len(modes)]
+            # lines = ax.get_lines()[::len(modes)]
             dummy_lines = []
             for j in range(len(merged)):
                 dummy_lines.append(ax.plot([], [], c="black",
