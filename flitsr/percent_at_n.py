@@ -35,29 +35,37 @@ def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
 
 
 def combine(results: List[Tuple[float, List[float]]]) -> List[Tuple[float, float]]:
+    def err(x):
+        return max(10**-6, (math.log((99*x/100) + 1)/math.log(100))*0.1)
     size = len(results)
     total = 0.0
     pointers = [0]*size
     final = [len(r[1]) for r in results]
     combined = []
+    def val(results, pointer, i):
+        if (pointer < len(results[i][1])):
+            return results[i][1][pointer]*100/results[i][0]
     while (pointers != final):
-        min_ = math.inf
+        # get the minimum next value
+        min_ = min([v for v in (val(results, pointers[i], i) for i in range(size))
+                        if v is not None])
         indexes = []
         for i in range(size):
-            if (pointers[i] != len(results[i][1])):
-                val = results[i][1][pointers[i]]*100/results[i][0]
-                if (abs(min_ - val) < 10e-3):
-                    indexes.append(i)
-                elif (val < min_):
-                    min_ = val
-                    indexes = [i]
+            j = 0
+            while ((v := val(results, pointers[i]+j, i)) is not None):
+                if (abs(min_ - v) < err(min_)):
+                    j += 1
+                else:
+                    break
+            if (j > 0):
+                indexes.append((i, j))
         #curr = [(math.inf if (pointers[i] == len(results[i])) else results[i][pointers[i]])
                 #for i in range(size)]
         #min_ = min(curr)
         #indexes = [i for i,x in enumerate(curr) if x - min_ < 10e-4]
-        for i in indexes:
-            pointers[i] += 1
-            total += 100/(len(results[i][1])*size)
+        for (i, j) in indexes:
+            pointers[i] += j
+            total += j * (100/(len(results[i][1])*size))
         combined.append((min_, round(total, 8)))
     return combined
 
