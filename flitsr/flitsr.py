@@ -89,7 +89,7 @@ def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
 
 
 def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
-        tiebrk=0) -> score.Scores:
+        tiebrk=0, flitsr_order='flitsr') -> score.Scores:
     if (AdvancedType.ARTEMIS in advanced_type or formula == 'artemis'):
         sort = run_artemis(spectrum, formula)
     else:
@@ -101,9 +101,16 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         while (newSpectrum.tf > 0):
             faulty = feedback_loc(newSpectrum, formula, advanced_type, tiebrk)
             if (not faulty == []):
+                i = 0
                 for x in sort:
                     if (x.elem in faulty):
-                        x.score = val - faulty.index(x.elem)
+                        if (flitsr_order == 'reverse'):
+                            x.score = val - (len(faulty)-faulty.index(x.elem))
+                        elif (flitsr_order == 'original'):
+                            x.score = val - i
+                            i += 1
+                        else:
+                            x.score = val - faulty.index(x.elem)
                 val = val-len(faulty)
             # Reset the coverage matrix and counts
             newSpectrum.reset()
@@ -290,7 +297,8 @@ def main(argv: List[str]):
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
-                sort = run(subspectrum, metric, advanced_type, args.tiebrk)
+                sort = run(subspectrum, metric, advanced_type, args.tiebrk,
+                           args.internal_ranking)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     sort = compute_cutoff(args.cutoff_strategy, sort,

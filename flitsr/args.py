@@ -56,6 +56,17 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'within the FLITSR framework')
     parser.add_argument('--multi', action='store_true',
             help='Runs the FLITSR* (i.e. multi-round) algorithm')
+    parser.add_argument('-i', '--internal-ranking', action='store',
+            choices=['flitsr', 'reverse', 'original'], default='flitsr',
+            help='Specify the order in which the elements of each FLITSR basis '
+            'are ranked. "flitsr" uses the order that FLITSR returns the basis '
+            'in (i.e. from FLITSRs lowest to highest recursion depth), which '
+            'aligns with FLITSRs confidence for each element being a fault. '
+            '"reverse" uses the reverse of "flitsr" (i.e. the order in which '
+            'FLITSR identifies the elements) which gives elements that use a '
+            'larger part of the original test suite first. "original" returns '
+            'the elements based on their original positions in the ranking '
+            'produced by the base SBFL metric used by FLITSR.')
     parser.add_argument('-r', '--ranking', action='store_true',
             help='Changes flitsr\'s expected input to be an SBFL ranking in '
             'Gzoltar or FLITSR format (determined automatically), instead of '

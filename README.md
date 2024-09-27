@@ -126,14 +126,14 @@ by running the `flitsr` command. Running the command with the `-h` or `--help`
 options will give the help message containing all the valid arguments the script
 can take. For ease of access, these are listed and described here:
 ```
-usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi] [-r] [-c]
-              [--split] [--collapse] [-a] [--no-override] [-d DECIMALS]
-              [--tiebrk] [--rndm] [--otie] [--first] [--avg] [--med] [--last]
-              [--weffort N] [--one-top1] [--all-top1] [--perc-top1] [--perc@n]
-              [--auc] [--pauc] [--lauc] [--precision-at x] [--recall-at x]
-              [--fault-num] [--fault-ids] [--fault-elems] [--fault-all]
-              [-p ALGORITHM] [--artemis] [--cutoff-eval MODE]
-              [--cutoff-strategy STRATEGY]
+usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi]
+              [-i {flitsr,reverse,original}] [-r] [-c] [--split] [--collapse]
+              [-a] [--no-override] [-d DECIMALS] [--tiebrk] [--rndm] [--otie]
+              [--first] [--avg] [--med] [--last] [--weffort N] [--one-top1]
+              [--all-top1] [--perc-top1] [--perc@n] [--auc] [--pauc] [--lauc]
+              [--precision-at x] [--recall-at x] [--fault-num] [--fault-ids]
+              [--fault-elems] [--fault-all] [-p ALGORITHM] [--artemis]
+              [--cutoff-eval MODE] [--cutoff-strategy STRATEGY]
               input
 ```
 #### Positional arguments:
@@ -161,6 +161,14 @@ usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi] [-r] [-c]
   as-is, but allows the user to run these metrics within the FLITSR
   framework
 * `--multi`: Runs the FLITSR\* (i.e. multi-round) algorithm
+* `-i METHOD`, `--internal-ranking METHOD`: Specify the order in which the
+  elements of each FLITSR basis are ranked. "flitsr" uses the order that FLITSR
+  returns the basis in (i.e. from FLITSRs lowest to highest recursion depth),
+  which aligns with FLITSRs confidence for each element being a fault. "reverse"
+  uses the reverse of "flitsr" (i.e. the order in which FLITSR identifies the
+  elements) which gives elements that use a larger part of the original test
+  suite first. "original" returns the elements based on their original positions
+  in the ranking produced by the base SBFL metric used by FLITSR.
 * `-r`, `--ranking`: Changes flitsr's expected input to be an SBFL ranking
   in Gzoltar or FLITSR format (determined automatically), instead of the usual
   coverage, and produces the specified calculations (or just the ranking if no
