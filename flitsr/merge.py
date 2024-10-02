@@ -3,8 +3,10 @@ import re
 from flitsr.percent_at_n import combine
 import os
 from os import path as osp
+from io import TextIOWrapper
+from argparse import ArgumentParser, Action, FileType
 from flitsr.file import File
-from typing import Set, Dict, List, Any
+from typing import Set, Dict, List, Any, Collection
 
 PERC_N = "percentage at n"
 
@@ -19,8 +21,31 @@ def readBlock(file: File) -> List[str]:
         line = file.readline()
     return block
 
+def find_dirs(dirs: List[str], path, depth=1, max=None, ns=[]):
+    for dir in os.scandir(path):
+        if (dir.is_dir()):
+            new_path = dir.path
+            if ((max and depth >= max) or
+                (not max and any(f.endswith('.results') for f in
+                                 os.listdir(new_path)))):
+                if (len(ns) == 0 or int(dir.name.split("-")[0]) in ns):
+                    dirs.append(new_path+"/")
+            else:
+                find_dirs(dirs, new_path, depth=depth+1, max=max, ns=ns)
 
-if __name__ == "__main__":
+def ci_eq(str1: str, str2: str):
+    """ Case insensitive equality check for strings """
+    return str1.casefold() == str2.casefold()
+
+def ci_in(str1: str, col: Collection[str]):
+    """ Case insensitive check for strings in a list """
+    return str1.casefold() in map(str.casefold, col)
+
+
+def merge(recurse: bool, max: int, rel: bool, ns: List[int],
+          output_file: TextIOWrapper, perc_file: TextIOWrapper,
+          tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
+          percs=None, incl_metrics=None, flitsrs=None):
     metrics: Set[str] = set()
     modes: Set[str] = set()
     calcs: Set[str] = set()
@@ -29,52 +54,13 @@ if __name__ == "__main__":
     #          mode      metric    calc
     avgs: Dict[str, Dict[str, Dict[str, Any]]] = {}
     total = 0
-    rel = False
-    recurse = False
-    tex = False
-    max = None
-    i = 1
-    ns = []
-    while (True):
-        if (len(sys.argv) > i):
-            if (sys.argv[i] == "rel"):
-                rel = True
-            elif (sys.argv[i].startswith("recurse")):
-                recurse = True
-                if ("=" in sys.argv[i]):
-                    max = int(sys.argv[i].split("=")[1])
-            elif (sys.argv[i].startswith("n")):
-                a = sys.argv[i].split("=")[1]
-                ns = [int(x) for x in a.split(",")]
-            elif (sys.argv[i] == "tex"):
-                tex = True
-            else:
-                print("Unknown option:", sys.argv[i])
-                quit()
-            i += 1
-        else:
-            break
-
-    # Initialize the script
-    def find_dirs(dirs: List[str], path, depth=1, max=None):
-        for dir in os.scandir(path):
-            if (dir.is_dir()):
-                new_path = dir.path
-                if ((max and depth >= max) or
-                    (not max and any(f.endswith('.results') for f in
-                                     os.listdir(new_path)))):
-                    if (len(ns) == 0 or int(dir.name.split("-")[0]) in ns):
-                        dirs.append(new_path+"/")
-                else:
-                    find_dirs(dirs, new_path, depth=depth+1, max=max)
-
     if (rel):
         if (not recurse):
             size = int(open("../size").readline())
     dirs = [""]
     if (recurse):
         dirs = []
-        find_dirs(dirs, ".", max=max)
+        find_dirs(dirs, ".", max=max, ns=ns)
 
     if (rel):
         sizes = {}
@@ -110,7 +96,10 @@ if __name__ == "__main__":
     for d in dirs:
         for mode in modes:
             for metric in metrics:
-                block = readBlock(files[d][mode][metric])
+                try:
+                    block = readBlock(files[d][mode][metric])
+                except:
+                    continue
                 while (block != []):
                     for line in block:
                         line_s = line.split(": ")
@@ -132,52 +121,165 @@ if __name__ == "__main__":
                                     float(line_s[1]))
                     block = readBlock(files[d][mode][metric])
 
-    # Set up output files
-    perc_file = open("perc_at_n"+"-".join([str(n) for n in ns])+"_results", "w")
-    i = 0
-    tex_file = None
-    if (tex):
-        tex_file = open("results"+'-'.join([str(n) for n in ns])+".tex", "w")
+    def print_heading(name, tabs):
+        name_disp = name.replace("_", " ").title()
+        print('\t'*tabs, name_disp, sep='', file=output_file)
+        if (ci_in(PERC_N, calcs) and perc_file != output_file):
+            print('\t'*tabs, name_disp, sep='', file=perc_file)
+
+    def print_tex_heading(mode, metric):
+        metric_disp = metric.replace("_", " ").title()
+        mode_disp = mode.replace("_", " ").title()
+        print('%25s' % (metric_disp + " " + mode_disp), end=" & ",
+              file=tex_file)
+
+    def print_results(mode, metric):
+        for j, calc in enumerate(sorted(calcs)):
+            if (incl_calcs is None or ci_in(calc, incl_calcs)):
+                if (ci_eq(calc, PERC_N)):
+                    comb = combine(avgs[mode][metric][calc])
+                    print("\t\t", calc+":", comb, file=perc_file)
+                elif (rel):
+                    result = round(avgs[mode][metric][calc].eval(), dec)
+                    print("\t\t", calc+":", str(result)+"%", file=output_file)
+                    if (tex_file):
+                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
+                        print('{: 10.{}f}'.format(result, dec)+"%", end=end,
+                              file=tex_file)
+                else:
+                    if (percs is not None and ci_in(calc, percs)):
+                        result = round(100*avgs[mode][metric][calc].eval(), dec)
+                    else:
+                        result = round(avgs[mode][metric][calc].eval(), dec)
+                    print("\t\t", calc+":", result, file=output_file)
+                    if (tex_file):
+                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
+                        print('{: 10.{}f}'.format(result, min(dec, 8)), end=end,
+                              file=tex_file)
+
+    # Print out merged results
+    if (ci_eq(group, 'metric')):
+        zipped = [(mo, me) for me in sorted(metrics) for mo in sorted(modes)]
+    else:
+        zipped = [(mo, me) for mo in sorted(modes) for me in sorted(metrics)]
+    cur = None
+    # Set up tex file
+    if (tex_file):
         print("\\documentclass{standalone}", file=tex_file)
         # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
         # print("\\begin{longtable}", file=tex_file)
-        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
+        if (incl_calcs is None):
+            cur_calcs = calcs
+        else:
+            cur_calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
+        print("\\begin{tabular}{"+'|'.join(['c']*(len(cur_calcs)+1))+"}",
               file=tex_file)
-        print("Metric & "+' & '.join([c for c in sorted(calcs) if c != PERC_N])+"\\\\",
+        print("Metric & "+' & '.join([c for c in sorted(cur_calcs) if not
+                                      ci_eq(c, PERC_N)])+"\\\\",
               file=tex_file)
-
-    # Print out merged results
-    for metric in sorted(metrics):
-        print(metric.capitalize())
-        if (PERC_N in calcs):
-            print(metric.capitalize(), file=perc_file)
-        for mode in sorted(modes):
-            print('\t', mode.replace("_", " ").title())
-            if (PERC_N in calcs):
-                print('\t', mode.replace("_", " ").title(), file=perc_file)
-            if (tex):
-                print('%25s' % (metric.capitalize() + " " +
-                                mode.replace("_", " ").title()), end=" & ",
-                      file=tex_file)
-            for j, calc in enumerate(sorted(calcs)):
-                if (calc == PERC_N):
-                    comb = combine(avgs[mode][metric][calc])
-                    print("\t\t", calc+":", comb, file=perc_file)
-                elif (rel):
-                    result = avgs[mode][metric][calc].eval()
-                    print("\t\t", calc+":", str(result)+"%")
-                    if (tex):
-                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('% 10.4f' % result+"%", end=end, file=tex_file)
-                else:
-                    result = avgs[mode][metric][calc].eval()
-                    print("\t\t", calc+":", result)
-                    if (tex):
-                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('% 10.4f' % result, end=end, file=tex_file)
-                i += 1
-    if (tex):
+    for (mode, metric) in zipped:
+        # check if this metric and mode should be displayed
+        if ((incl_metrics is None or ci_in(metric, incl_metrics)) and
+            (ci_eq(mode, 'base') or flitsrs is None or ci_in(metric, flitsrs)) and
+            (ci_in(mode, avgs) and ci_in(metric, avgs[mode]))):
+            if (ci_eq(group, 'metric')):
+                if (metric != cur):
+                    print_heading(metric, 0)
+                    cur = metric
+                print_heading(mode, 1)
+            else:
+                if (mode != cur):
+                    print_heading(mode, 0)
+                    cur = mode
+                print_heading(metric, 1)
+            if (tex_file):
+                print_tex_heading(mode, metric)
+            print_results(mode, metric)
+    if (tex_file):
         print("\\end{tabular}", file=tex_file)
         # print("\\end{longtable}", file=tex_file)
         print("\\end{document}", file=tex_file)
+
+
+if __name__ == "__main__":
+    class RecurseAction(Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            super().__init__(option_strings, dest, nargs, **kwargs)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            setattr(namespace, self.dest, True)
+            if (values is not None):
+                setattr(namespace, 'max', values)
+
+    parser = ArgumentParser(prog='merge', description='Merge .results files '
+                            'produced by the run_all script')
+    parser.add_argument('-R', '--relative', action='store_true', help='Compute '
+                        'relative values instead of absolute values')
+    parser.add_argument('-r', '--recurse', nargs='?', type=int, default=False,
+                        action=RecurseAction, metavar='X', help='Activates '
+                        'the scripts recursive mode. This makes the script '
+                        'recursively look in sub-directories of the current '
+                        'directory for results files. An optional maximum '
+                        'recurse limit X can be given.')
+    parser.add_argument('-t', '--tex', nargs='?', const='results.tex', metavar='FILE',
+                        type=FileType('w'), help='Specifies that an additional '
+                        'output file should be generated that contains the '
+                        'results in a LaTeX table (in .tex format). By default '
+                        'this is stored in results.tex, but an optional '
+                        'filename FILE may be given')
+    parser.add_argument('-p', '--perc@n', nargs='?', const='perc_at_n_results',
+                        type=FileType('w'), metavar='FILE', help='Specifies '
+                        'that an additional output file should be generated '
+                        'that contains the percentage-at-n results. By default '
+                        'this is stored in perc_at_n_results, but an optional '
+                        'filename FILE may be given', dest='perc_at_n',
+                        default='perc_at_n_results')
+    parser.add_argument('-i', '--inline-perc@n', action='store_const',
+                        const=None, dest='perc_at_n', help='Instead of '
+                        'producing a separate percentage-at-n file, place the '
+                        'results inline in the results file')
+    parser.add_argument('-o', '--output', action='store', type=FileType('w'),
+                        metavar='FILE', help='Store the results in the file '
+                        'with filename FILE. By default the name "results" is '
+                        'used', default='results')
+    parser.add_argument('-d', '--decimals', action='store', type=int, default=24,
+                        help='Sets the precision (number of decimal points) '
+                        'for the output of all of the calculations Does not '
+                        'impact percentage-at-n values. (default %(default)s, '
+                        'i.e. all python-stored significance).')
+    parser.add_argument('-g', '--grouping-order', choices=['metric', 'type'],
+                        default='metric', dest='group',
+                        help='Specifies the way in which the output should be '
+                        'grouped. "metric" groups first by metrics and then by '
+                        'types, "type" does the opposite (default %(default)s)')
+    parser.add_argument('-c', '--calcs', nargs='+', metavar='CALC',
+                        help='Specify the list of calculations to include when '
+                        'merging. By default all available calculations are '
+                        'included. NOTE: the names of the calculations need to '
+                        'be found in the corresponding .results files')
+    parser.add_argument('--percentage', nargs='+', metavar='CALC',
+                        help='Specify calculations that must be intepreted as '
+                        'a percentage value. NOTE: the names of the '
+                        'calculations need to be found in the corresponding '
+                        '.results files')
+    parser.add_argument('-f', '--flitsrs', nargs='*', metavar='METRIC',
+                        help='Specify the metrics for which to display FLITSR '
+                        'and FLITSR* values for. By default all metric\'s '
+                        'FLITSR and FLITSR* values are shown.')
+    parser.add_argument('-m', '--metrics', nargs='+', metavar='METRIC',
+                        help='Specify the metrics to merge results for. By '
+                        'default all metrics that appear in filenames of found '
+                        'files will be merged. Note that this option only '
+                        'restricts the output, all files available are still '
+                        'read, however files not existing are not read.')
+    parser.add_argument('-n', nargs='+', type=int, dest='ns', default=[])
+    args = parser.parse_args()
+    if ('max' not in args):
+        args.max = None
+    if (args.perc_at_n is None):
+        args.perc_at_n = args.output
+    merge(args.recurse, args.max, args.relative, args.ns, args.output,
+          args.perc_at_n, args.tex, dec=args.decimals, group=args.group,
+          incl_calcs=args.calcs, percs=args.percentage, incl_metrics=args.metrics,
+          flitsrs=args.flitsrs)

@@ -222,7 +222,7 @@ while read -r dir; do
       done > "$t${m}.results"
     done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_.+\.run/\1/p" | sort -u)
   done
-  merge > results
+  merge
   rm done_inputs.tmp
   echo "Done in ${dir#./}"
   cd "$base_dir"

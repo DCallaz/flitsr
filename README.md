@@ -299,19 +299,51 @@ be manually merged to produce averages using the `merge` script. This script
 is called from within the `run_all` script, but only for individual results. To
 do more complex merging, the `merge` script allows a number of useful arguments:
 ```
-merge [rel] [recurse[=<x>]] [n=<a>,...] [tex]
+usage: merge [-h] [-R] [-r [X]] [-t [FILE]] [-p [FILE]] [-i] [-o FILE]
+             [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
+             [--percentage CALC [CALC ...]] [-f [METRIC [METRIC ...]]]
+             [-m METRIC [METRIC ...]] [-n NS [NS ...]]
 ```
-* `rel`: Specifies that the input files denote relative figures and not
-  absolute.
-* `recurse[=<x>]`: Activates the scripts recursive mode. This makes the script
-  recursively look in sub-directories of the current directory for results
-  files. An optional maximum recurse limit `x` can be given.
-* `[n=<a>,...]`: The presence of this arguments specifies that only particular
+* `-h`, `--help`: show this help message and exit
+* `-R`, `--relative`: Compute relative values instead of absolute values
+* `-r [X]`, `--recurse [X]`: Activates the scripts recursive mode. This makes
+    the script recursively look in sub-directories of the current directory for
+    results files. An optional maximum recurse limit X can be given.
+* `-t [FILE]`, `--tex [FILE]`: Specifies that an additional output file should
+    be generated that contains the results in a LaTeX table (in .tex format). By
+    default this is stored in results.tex, but an optional filename FILE may be
+    given
+* `-p [FILE]`, `--perc@n [FILE]`: Specifies that an additional output file should
+    be generated that contains the percentage-at-n results. By default this is
+    stored in `perc_at_n_results`, but an optional filename FILE may be given
+* `-i`, `--inline-perc@n`:   Instead of producing a separate percentage-at-n
+    file, place the results inline in the results file
+* `-o FILE`, `--output FILE`: Store the results in the file with filename FILE.
+    By default the name `results` is used
+* `-d DECIMALS`, `--decimals DECIMALS`: Sets the precision (number of decimal
+    points) for the output of all of the calculations Does not impact
+    percentage-at-n values. (default 24, i.e. all python- stored significance).
+* `-g {metric,type}`, `--grouping-order {metric,type}`: Specifies the way in which
+    the output should be grouped. "metric" groups first by metrics and then by
+    types, "type" does the opposite (default metric)
+* `-c CALC [CALC ...]`, `--calcs CALC [CALC ...]`: Specify the list of
+    calculations to include when merging. By default all available calculations
+    are included. NOTE: the names of the calculations need to be found in the
+    corresponding `.results` files
+* `--percentage CALC [CALC ...]`: Specify calculations that must be intepreted as
+    a percentage value. NOTE: the names of the calculations need to be found in
+    the corresponding .results files
+* `-f [METRIC [METRIC ...]]`, `--flitsrs [METRIC [METRIC ...]]`: Specify the
+    metrics for which to display FLITSR and FLITSR* values for. By default all
+    metric's FLITSR and FLITSR* values are shown.
+* `-m METRIC [METRIC ...]`, `--metrics METRIC [METRIC ...]`: Specify the metrics
+    to merge results for. By default all metrics that appear in filenames of
+    found files will be merged. Note that this option only restricts the output,
+    all files available are still read, however files not existing are not read.
+* `-n NS [NS ...]`: The presence of this arguments specifies that only particular
   `n`-fault versions should be considered, where the parameters `a` etc. denote
   these `n`'s. When used with the `recurse` argument, only `.results` files in
   sub-directories named `<n>-fault` will be considered.
-* `tex`: Specifies that an additional output file should be generated that
-  contains the results in a LaTeX table (in `.tex` format).
 ### Percentage at n plots (`percent_at_n`)
 Once the merge script has been called, a `perc_at_n_results` file will be
 generated from which you can plot the percentage at n graphs using the
