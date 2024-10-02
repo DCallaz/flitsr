@@ -188,20 +188,22 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
                     decimals), file=file)
         if (perc_at_n):
             bumps = percent_at_n.getBumps(ties, spectrum, collapse=collapse)
-            auc = percent_at_n.auc_calc(percent_at_n.combine([(bumps[0],bumps[1:])]))
             if ('perc' in perc_at_n):
                 form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
                 print("percentage at n:", form.format(*bumps), file=file)
-            if ('auc' in perc_at_n):
-                print("auc:", auc, file=file)
-            if ('pauc' in perc_at_n):
-                optimal = percent_at_n.auc_calc([(0.0, 100.0)])
-                print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
-                      file=file)
-            if ('lauc' in perc_at_n):
-                optimal = percent_at_n.auc_calc([(0.0, 100.0)])+1
-                lauc = abs(1-log(optimal-auc, optimal))
-                print("lauc:", "{:.{}f}".format(lauc, decimals), file=file)
+            if (any([a in perc_at_n for a in ['auc', 'pauc', 'lauc']])):
+                auc = percent_at_n.auc_calc(
+                        percent_at_n.combine([(bumps[0], bumps[1:])]))
+                if ('auc' in perc_at_n):
+                    print("auc:", auc, file=file)
+                if ('pauc' in perc_at_n):
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
+                    print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
+                          file=file)
+                if ('lauc' in perc_at_n):
+                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])+1
+                    lauc = abs(1-log(optimal-auc, optimal))
+                    print("lauc:", "{:.{}f}".format(lauc, decimals), file=file)
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
