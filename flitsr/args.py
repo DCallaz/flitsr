@@ -57,7 +57,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument('--multi', action='store_true',
             help='Runs the FLITSR* (i.e. multi-round) algorithm')
     parser.add_argument('-i', '--internal-ranking', action='store',
-            choices=['flitsr', 'reverse', 'original'], default='flitsr',
+            choices=['flitsr', 'reverse', 'original', 'auto', 'conf'], default='auto',
             help='Specify the order in which the elements of each FLITSR basis '
             'are ranked. "flitsr" uses the order that FLITSR returns the basis '
             'in (i.e. from FLITSRs lowest to highest recursion depth), which '

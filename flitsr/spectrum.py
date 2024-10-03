@@ -329,6 +329,23 @@ class Spectrum():
                 self.remove(test)
         return executing
 
+    def get_executed_elements(self, test: Spectrum.Test,
+                              all_elems=False) -> Set[Spectrum.Element]:
+        """
+        Finds the elements executed in the given test, out of either
+        the elements currently in the spectrum (default) or out of all grouped
+        elements (all_elems = True).
+        """
+        executed = set()
+        if (all_elems):
+            elems = list(self._full_elements.keys())
+        else:
+            elems = self._curr_elements
+        for elem in elems:
+            if (self[test][elem]):
+                executed.add(elem)
+        return executed
+
     def to_matrix(self):
         """
         Converts the current spectrum into a numpy matrix and error vector.

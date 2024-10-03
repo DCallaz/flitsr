@@ -59,8 +59,9 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
     return multiFault
 
 
-def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
-                 tiebrk: int) -> List[Spectrum.Element]:
+def flitsr(spectrum: Spectrum, formula: str,
+           advanced_type: AdvancedType = AdvancedType.FLITSR,
+           tiebrk=3) -> List[Spectrum.Element]:
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
@@ -81,11 +82,50 @@ def feedback_loc(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         # continue trying the next element if available
         element = s2.elem
         tests_removed = spectrum.get_tests(element, only_failing=True, remove=True)
-    faulty = feedback_loc(spectrum, formula, advanced_type, tiebrk)
+    faulty = flitsr(spectrum, formula, advanced_type, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
         faulty.append(element)
     return faulty
+
+
+def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Element],
+                    sort: score.Scores,
+                    flitsr_order='auto') -> List[Spectrum.Element]:
+    confs = []
+    # check if internal ranking order needs to be determined
+    if (flitsr_order in ['auto', 'conf']):
+        for elem in basis:
+            ts = list(spectrum.get_tests(elem, only_failing=True))
+            possibles: Set[Spectrum.Element] = set()
+            possibles.update(spectrum.get_executed_elements(ts[0]))
+            for test in ts[1:]:
+                possibles.intersection_update(spectrum.get_executed_elements(test))
+            confs.append(len(possibles))
+    if (flitsr_order == 'auto'):
+        if (all(c > 3 for c in confs)):
+            flitsr_order = 'reverse'
+        elif (all(c <= 3 for c in confs)):
+            flitsr_order = 'flitsr'
+        else:
+            flitsr_order = 'conf'
+    # reorder basis
+    if (flitsr_order == 'flitsr'):
+        ordered_basis = basis
+    elif (flitsr_order == 'reverse'):
+        ordered_basis = list(reversed(basis))
+    elif (flitsr_order == 'original'):
+        ordered_basis = []
+        for x in sort:
+            if (x.elem in basis):
+                ordered_basis.append(x.elem)
+        # add any missing elements
+        if (len(ordered_basis) < len(basis)):
+            ordered_basis.extend([e for e in basis if e not in ordered_basis])
+    elif (flitsr_order == 'conf'):
+        ordered_basis = [x for _, x in sorted(zip(confs, basis), key=lambda x:
+                                              x[0])]
+    return ordered_basis
 
 
 def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
@@ -99,26 +139,21 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
-            faulty = feedback_loc(newSpectrum, formula, advanced_type, tiebrk)
-            if (not faulty == []):
-                i = 0
+            basis = flitsr(newSpectrum, formula, advanced_type, tiebrk)
+            if (not basis == []):
+                ordered_basis = flitsr_ordering(spectrum, basis, sort,
+                                                flitsr_order)
                 for x in sort:
-                    if (x.elem in faulty):
-                        if (flitsr_order == 'reverse'):
-                            x.score = val - (len(faulty)-faulty.index(x.elem))
-                        elif (flitsr_order == 'original'):
-                            x.score = val - i
-                            i += 1
-                        else:
-                            x.score = val - faulty.index(x.elem)
-                val = val-len(faulty)
+                    if (x.elem in basis):
+                        x.score = val - ordered_basis.index(x.elem)
+                val = val-len(basis)
             # Reset the coverage matrix and counts
             newSpectrum.reset()
             # Next iteration can be either multi-fault, or multi-explanation
             # multi-fault -> we assume multiple faults exist
             # multi-explanation -> we assume there are multiple explanations
             # for the same faults
-            multiRemove(newSpectrum, faulty)
+            multiRemove(newSpectrum, basis)
             if (AdvancedType.MULTI not in advanced_type):
                 break
             val = val-1
