@@ -205,11 +205,13 @@ while read -r dir; do
   progress $num_inputs $num_inputs
   # print out the error files
   for error_file in *.err; do
-    if [ -s "$error_file" ]; then
-      echo "Dir ${dir#./} File $(basename -s '.err' $error_file):"
-      cat "$error_file"
+    if [ "$error_file" != "results.err" ]; then
+      if [ -s "$error_file" ]; then
+        echo "Dir ${dir#./} File $(basename -s '.err' $error_file):"
+        cat "$error_file"
+      fi
+      rm "$error_file"
     fi
-    rm "$error_file"
   done >> "$base_dir/results.err"
   echo
   for m in "${metrics[@]}"; do
