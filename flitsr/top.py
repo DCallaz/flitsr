@@ -1,4 +1,4 @@
-from flitsr.tie import Ties
+from flitsr.tie import Ties, Tie
 
 
 def one_top1(ties: Ties) -> bool:
@@ -43,6 +43,6 @@ def size_top1(ties: Ties) -> int:
 # <------------------------- Helper functions ---------------------->
 
 
-def get_top1(ties: Ties) -> Ties.Tie:
+def get_top1(ties: Ties) -> Tie:
     tie_iter = iter(ties)
     return next(tie_iter)

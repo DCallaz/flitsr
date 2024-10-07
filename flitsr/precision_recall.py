@@ -2,7 +2,7 @@ import copy
 from typing import Any, Dict, List, Tuple
 from math import comb, factorial
 from flitsr.spectrum import Spectrum
-from flitsr.score import Ties
+from flitsr.tie import Ties
 
 
 def precision(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
