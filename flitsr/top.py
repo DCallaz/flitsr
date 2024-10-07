@@ -1,4 +1,4 @@
-from flitsr.score import Ties
+from flitsr.tie import Ties
 
 
 def one_top1(ties: Ties) -> bool:

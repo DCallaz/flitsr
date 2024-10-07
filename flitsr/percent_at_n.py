@@ -6,7 +6,7 @@ import numpy as np
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 from flitsr.spectrum import Spectrum
-from flitsr.score import Ties
+from flitsr.tie import Ties
 
 
 def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
@@ -25,9 +25,9 @@ def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
     try:
         while (True):
             tie = next(tie_iter)
-            for f in range(tie.num_faults()):
-                expect_value = (tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)  # -1
-                bumps.append((total+(f+1)*expect_value))
+            for f in range(1, tie.num_faults()+1):
+                expect_value = tie.expected_value(f, False, collapse)
+                bumps.append(total+expect_value)
             total += tie.len(collapse)
     except StopIteration:
         pass

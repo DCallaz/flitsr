@@ -15,6 +15,7 @@ from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr import score
+from flitsr.tie import Ties
 from flitsr.args import parse_args
 from flitsr.advanced_types import AdvancedType
 from flitsr.artemis_wrapper import run_artemis
@@ -182,7 +183,7 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
            csv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: score.Ties = score.Ties(spectrum, scores)
+        ties: Ties = Ties(spectrum, scores)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(

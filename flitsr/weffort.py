@@ -1,7 +1,4 @@
-import copy
-from typing import Dict, List, Set, Iterator, Tuple, Optional
-from flitsr.score import Ties
-from flitsr.spectrum import Spectrum
+from flitsr.tie import Ties
 
 
 def first(ties: Ties, c: bool):
@@ -55,13 +52,12 @@ def method(ties: Ties, target, avg=False, collapse=False,
         found = (actual >= target)
         if (avg):
             for j in range(1, tie.num_faults()+1):
-                efforts.append(effort +
-                               j*((tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)-1))
+                efforts.append(effort + tie.expected_value(j, True, collapse))
         if (not found):
             effort += tie.len(collapse) - tie.num_fault_locs(collapse)
         else:
             k = target + tie.num_faults() - actual
-            effort += k*((tie.len(collapse)+1)/(tie.num_fault_locs(collapse)+1)-1)
+            effort += tie.expected_value(k, True, collapse)
     if (avg):
         return sum(efforts)/target
     else:

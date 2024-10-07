@@ -45,7 +45,7 @@ def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
             if (total+tie.len(collapse) > n and tie.num_faults() > 0):
                 p = int(n - total)
                 m = tie.len(collapse)
-                n_f = tie.num_fault_locs(collapse)
+                n_f = tie.num_faults(collapse)
                 outer_top = factorial(m-p) * factorial(p)
                 outer_bot = factorial(m)
                 for x in range(1, p+1):
