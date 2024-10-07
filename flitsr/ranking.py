@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, List
+from typing import Tuple, List, Union
 from flitsr.spectrum import Spectrum
 from flitsr.score import Scores
 
@@ -83,7 +83,12 @@ def read_flitsr_ranking(ranking_file: str) -> Tuple[Scores, Spectrum]:
     line = f.readline()
     while (line != ""):
         line = line.strip()
-        score = float(line[line.index(": ")+2:line.index(" [")])
+        score: Union[int, float]
+        str_score = line[line.index(": ")+2:line.index(" [")]
+        if (str_score.isdigit()):
+            score = int(str_score)
+        else:
+            score = float(str_score)
         line = f.readline().strip()
         groups.append([])
         while (not line.startswith("]")):
