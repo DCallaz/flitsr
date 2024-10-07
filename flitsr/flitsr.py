@@ -93,6 +93,8 @@ def flitsr(spectrum: Spectrum, formula: str,
 def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Element],
                     sort: score.Scores,
                     flitsr_order='auto') -> List[Spectrum.Element]:
+    if (len(basis) == 0):
+        return basis
     confs = []
     # check if internal ranking order needs to be determined
     if (flitsr_order in ['auto', 'conf']):
@@ -110,6 +112,16 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Element],
             flitsr_order = 'flitsr'
         else:
             flitsr_order = 'conf'
+        # check for big groups
+        big, small = [], []
+        for elem in basis:
+            if (len(spectrum.get_group(elem)) > 5):
+                big.append(elem)
+            else:
+                small.append(elem)
+        if (len(big) != 0 and len(small) != 0):
+            return flitsr_ordering(spectrum, small, sort, flitsr_order) + \
+                flitsr_ordering(spectrum, big, sort, flitsr_order)
     # reorder basis
     if (flitsr_order == 'flitsr'):
         ordered_basis = basis
