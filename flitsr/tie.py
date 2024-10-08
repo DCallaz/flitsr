@@ -74,7 +74,7 @@ class Tie:
         else:
             expval = Fraction(m+1, l+1)
         # first fault or all 1 fault per loc
-        if (q == 1 or (l == nf and all(len(ls) == 1 for ls in fs))):
+        if (q == 1 or (l == nf and all(len(ls) == 1 for ls in fs.values()))):
             return float(q*expval)
         elif (l > 10 or len(dups) == len(set(dups))):  # approx. solution or all single loc
             fpl = Fraction(nf, l)  # faults per location
