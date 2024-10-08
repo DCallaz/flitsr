@@ -13,10 +13,10 @@ class Tie:
         self._num_faults = 0
         self._fault_locs = 0
         self._fault_groups = 0
-        self._all_fault_locs = {}
-        self._all_fault_groups = {}
+        self._all_fault_locs: Dict[Spectrum.Element, Set[int]] = {}
+        self._all_fault_groups: Dict[Spectrum.Element, Set[int]] = {}
 
-    def len(self, collapse=False):
+    def len(self, collapse=False) -> int:
         """
         Return either the number of groups (if collapsed), or number of elements
         in this tie (if not collapsed).
@@ -26,18 +26,18 @@ class Tie:
         else:
             return len(self._elems)
 
-    def elems(self):
+    def elems(self) -> Set[Spectrum.Element]:
         """Return the set of all the elements in this tie"""
         return self._elems
 
-    def num_faults(self):
+    def num_faults(self) -> int:
         """
         Return the number of unique faults found for the first time in this
         tie
         """
         return self._num_faults
 
-    def num_fault_locs(self, collapse=False):
+    def num_fault_locs(self, collapse=False) -> int:
         """
         Return the number of faulty locations (either groups or elements) in
         this tie.
@@ -47,7 +47,7 @@ class Tie:
         else:
             return self._fault_locs
 
-    def fault_groups(self, collapse=False):
+    def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[int]]:
         """
         Return all fault locations (either groups or elements) in
         this tie, with the faults they contain.
@@ -58,7 +58,7 @@ class Tie:
             return self._all_fault_locs
 
 
-    def expected_value(self, q, weffort: bool, collapse=False):
+    def expected_value(self, q, weffort: bool, collapse=False) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
         expected value can either be in terms of wasted effort (not
@@ -81,17 +81,18 @@ class Tie:
             for i in range(1, l+1):
                 if (ceil(fpl*i) >= q):
                     if (fpl*i >= q):  # exactly contained in location
-                        return expval*i
+                        return float(expval*i)
                     else:  # contained between this location and the next
                         return float(expval*(i + (fpl*i % 1)))
+            raise ValueError(f"Could not find fault {q}")
         else:
             dist = {}
             for rank in permutations(fs.keys()):
                 seen = set()
                 tot = 0
-                for i in rank:
+                for elem in rank:
                     tot += 1
-                    seen.update(fs[i])
+                    seen.update(fs[elem])
                     if (len(seen) >= q):
                         break
                 if (tot not in dist):
