@@ -1,14 +1,53 @@
-import sys
 import re
 from flitsr.percent_at_n import combine
 import os
 from os import path as osp
 from io import TextIOWrapper
+from scipy.stats import wilcoxon
 from argparse import ArgumentParser, Action, FileType
 from flitsr.file import File
-from typing import Set, Dict, List, Any, Collection
+from typing import Set, Dict, List, Collection
 
 PERC_N = "percentage at n"
+
+
+class Avg:
+    """Holds a partially constructed average"""
+    def __init__(self, size=None, percn=False):
+        self.all = []
+        self.adds = 0
+        self.percn = percn
+        self.rel = False
+        if (size is not None):
+            self.rel = True
+            self.size = size
+
+    def add(self, val):
+        self.all.append(val)
+        self.adds += 1
+
+    def eval(self):
+        if (self.percn):
+            return self.all
+        elif (self.rel):
+            return sum(s*100/self.size for s in self.all)/self.adds
+        else:
+            return sum(self.all)/self.adds
+
+    def significance(self, avg: 'Avg'):
+        diff = 1.0 if (self.all == avg.all) else \
+            wilcoxon(self.all, avg.all, "pratt", method="approx").pvalue
+        if (diff >= 0.05):
+            return ('equal', diff)
+        else:
+            greater = wilcoxon(self.all, avg.all, "pratt", method="approx",
+                               alternative="greater").pvalue
+            less = wilcoxon(self.all, avg.all, "pratt", method="approx",
+                            alternative="less").pvalue
+        if (greater < 0.05):
+            return ('greater', greater)
+        else:
+            return ('less', less)
 
 
 def readBlock(file: File) -> List[str]:
@@ -20,6 +59,7 @@ def readBlock(file: File) -> List[str]:
         block.append(line)
         line = file.readline()
     return block
+
 
 def find_dirs(dirs: List[str], path, depth=1, max=None, ns=[]):
     for dir in os.scandir(path):
@@ -33,9 +73,11 @@ def find_dirs(dirs: List[str], path, depth=1, max=None, ns=[]):
             else:
                 find_dirs(dirs, new_path, depth=depth+1, max=max, ns=ns)
 
+
 def ci_eq(str1: str, str2: str):
     """ Case insensitive equality check for strings """
     return str1.casefold() == str2.casefold()
+
 
 def ci_in(str1: str, col: Collection[str]):
     """ Case insensitive check for strings in a list """
@@ -45,15 +87,14 @@ def ci_in(str1: str, col: Collection[str]):
 def merge(recurse: bool, max: int, rel: bool, ns: List[int],
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
-          percs=None, incl_metrics=None, flitsrs=None):
+          percs=None, incl_metrics=None, flitsrs=None, sign=None):
     metrics: Set[str] = set()
     modes: Set[str] = set()
     calcs: Set[str] = set()
     #           dir       mode      metric
     files: Dict[str, Dict[str, Dict[str, File]]] = {}
     #          mode      metric    calc
-    avgs: Dict[str, Dict[str, Dict[str, Any]]] = {}
-    total = 0
+    avgs: Dict[str, Dict[str, Dict[str, Avg]]] = {}
     if (rel):
         if (not recurse):
             size = int(open("../size").readline())
@@ -80,25 +121,12 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
             sizes[d] = int(open(osp.join(d, "../size")).readline())
 
     # Collect all the results
-    class Avg:
-        """Holds a partially constructed average"""
-        def __init__(self):
-            self.sum = 0.0
-            self.adds = 0
-
-        def add(self, val):
-            self.sum += val
-            self.adds += 1
-
-        def eval(self):
-            return self.sum/self.adds
-
     for d in dirs:
         for mode in modes:
             for metric in metrics:
                 try:
                     block = readBlock(files[d][mode][metric])
-                except:
+                except Exception:
                     continue
                 while (block != []):
                     for line in block:
@@ -107,17 +135,13 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
                         calcs.add(calc)
                         if (calc == PERC_N):
                             vals = line_s[1].split(",")
-                            avgs[mode][metric].setdefault(calc, []).append(
+                            avgs[mode][metric].setdefault(calc, Avg(percn=True)).add(
                                 (float(vals[0]), [float(x) for x in vals[1:]]))
-                        elif (rel):
-                            if (recurse):
-                                avgs[mode][metric].setdefault(calc, Avg()).add(
-                                        float(line_s[1])*100/sizes[d])
-                            else:
-                                avgs[mode][metric].setdefault(calc, Avg()).add(
-                                        float(line_s[1])*100/size)
                         else:
-                            avgs[mode][metric].setdefault(calc, Avg()).add(
+                            s = None
+                            if (rel):
+                                s = sizes[d] if recurse else size
+                            avgs[mode][metric].setdefault(calc, Avg(s)).add(
                                     float(line_s[1]))
                     block = readBlock(files[d][mode][metric])
 
@@ -137,25 +161,36 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
         for j, calc in enumerate(sorted(calcs)):
             if (incl_calcs is None or ci_in(calc, incl_calcs)):
                 if (ci_eq(calc, PERC_N)):
-                    comb = combine(avgs[mode][metric][calc])
-                    print("\t\t", calc+":", comb, file=perc_file)
-                elif (rel):
-                    result = round(avgs[mode][metric][calc].eval(), dec)
-                    print("\t\t", calc+":", str(result)+"%", file=output_file)
-                    if (tex_file):
-                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('{: 10.{}f}'.format(result, dec)+"%", end=end,
-                              file=tex_file)
+                    comb = combine(avgs[mode][metric][calc].eval())
+                    print("\t\t", calc+": ", comb, sep='', file=perc_file)
                 else:
-                    if (percs is not None and ci_in(calc, percs)):
-                        result = round(100*avgs[mode][metric][calc].eval(), dec)
+                    avg = avgs[mode][metric][calc]
+                    if (not rel and percs is not None and ci_in(calc, percs)):
+                        result = round(100*avg.eval(), dec)
                     else:
-                        result = round(avgs[mode][metric][calc].eval(), dec)
-                    print("\t\t", calc+":", result, file=output_file)
+                        result = round(avg.eval(), dec)
+                    sign_disp = ""
+                    if (sign is not None):
+                        signis: Dict[str, List[str]] = {}
+                        if (sign == 'type'):
+                            for m_alt in modes:
+                                if (m_alt == mode):
+                                    continue
+                                r, p = avg.significance(avgs[m_alt][metric][calc])
+                                signis.setdefault(r, []).append((m_alt, p))
+                        else:
+                            for m_alt in metrics:
+                                if (m_alt == metric):
+                                    continue
+                                r, p = avg.significance(avgs[mode][m_alt][calc])
+                                signis.setdefault(r, []).append((m_alt, p))
+                        sign_disp = f" (significantly {signis})"
+                    print("\t\t", calc+": ", result, sign_disp, sep='',
+                          file=output_file)
                     if (tex_file):
                         end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('{: 10.{}f}'.format(result, min(dec, 8)), end=end,
-                              file=tex_file)
+                        print('{: 10.{}f}'.format(result, min(dec, 8)),
+                              end=end, file=tex_file)
 
     # Print out merged results
     if (ci_eq(group, 'metric')):
@@ -263,6 +298,13 @@ if __name__ == "__main__":
                         'a percentage value. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
                         '.results files')
+    parser.add_argument('-s', '--significance', nargs='?', const='type',
+                        choices=['metric', 'type'], dest='sign',
+                        help='Specifies that additional significance tests '
+                        'should be performed to test the differences in '
+                        'results. The significance tests will either be '
+                        'conducted between metrics of the same type or between'
+                        ' types using the same metric (default %(default)s).')
     parser.add_argument('-f', '--flitsrs', nargs='*', metavar='METRIC',
                         help='Specify the metrics for which to display FLITSR '
                         'and FLITSR* values for. By default all metric\'s '
@@ -281,5 +323,5 @@ if __name__ == "__main__":
         args.perc_at_n = args.output
     merge(args.recurse, args.max, args.relative, args.ns, args.output,
           args.perc_at_n, args.tex, dec=args.decimals, group=args.group,
-          incl_calcs=args.calcs, percs=args.percentage, incl_metrics=args.metrics,
-          flitsrs=args.flitsrs)
+          incl_calcs=args.calcs, percs=args.percentage,
+          incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign)
