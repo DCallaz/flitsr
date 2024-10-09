@@ -45,12 +45,13 @@ def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
             if (total+tie.len(collapse) > n and tie.num_faults() > 0):
                 p = int(n - total)
                 m = tie.len(collapse)
-                n_f = tie.num_fault_locs(collapse)
+                n_l = tie.num_fault_locs(collapse)
+                fpl = tie.num_faults()/n_l
                 outer_top = factorial(m-p) * factorial(p)
                 outer_bot = factorial(m)
                 for x in range(1, p+1):
-                    add += x*(comb(n_f, x) * comb(m - n_f, p - x) *
-                              outer_top)/outer_bot
+                    add += fpl*x*((comb(n_l, x) * comb(m - n_l, p - x) *
+                                   outer_top)/outer_bot)
                 # for i in range(curr_faults):
                 #     expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
                 #     if (expected_value <= x):
