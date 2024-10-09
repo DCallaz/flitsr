@@ -6,7 +6,7 @@ from io import TextIOWrapper
 from scipy.stats import wilcoxon
 from argparse import ArgumentParser, Action, FileType
 from flitsr.file import File
-from typing import Set, Dict, List, Collection
+from typing import Set, Dict, List, Tuple, Collection
 
 PERC_N = "percentage at n"
 
@@ -171,7 +171,7 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
                         result = round(avg.eval(), dec)
                     sign_disp = ""
                     if (sign is not None):
-                        signis: Dict[str, List[str]] = {}
+                        signis: Dict[str, List[Tuple[str, float]]] = {}
                         if (sign == 'type'):
                             for m_alt in modes:
                                 if (m_alt == mode):
