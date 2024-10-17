@@ -107,7 +107,8 @@ def read_spectrum(input_path: str, split_faults: bool,
         for (elem, f_list) in fault_lists.items():
             elem.faults = f_list
         if (len(faults) == 0):
-            print("No exposable faults in", input_path, file=sys.stderr)
+            print("ERROR: No exposable faults in ", input_path, ", terminating...",
+                    sep="", file=sys.stderr)
             quit()
     return spectrum
 
