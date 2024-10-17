@@ -49,12 +49,14 @@ call_flitsr() {
   echo "$input" >> done_inputs.tmp
 }
 
-USAGE="USAGE: run_all [-h] [-b <base dir>] [-m metric[,metric...]] \
+USAGE="USAGE: run_all [-h] [-i/e <dir>] [-m/-M metric[,metric...]] \
 [-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>]
   where:
     -h                    : Prints this USAGE message
     -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
-    -b <base dir>         : Set the base directory for running in to <base dir>
+    -M metric[,metric...] : Excludes the given metrics (can be specified multiple times)
+    -i <dir>              : Include directories named <dir> in run (can be specified multiple times)
+    -e <dir>              : Exclude directories names <dir> in run (can be specified multiple times)
     -d <depth>            : Specifies the depth at which to look for inputs
     -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
     -g                    : Look only for GZoltar type inputs
@@ -68,10 +70,13 @@ else
   N="1"
 fi
 metrics=()
+excl_metrics=()
 args=()
 base_dir="$PWD"
+incl_dirs=()
+excl_dirs=()
 tcm_ext="*"
-while getopts ":d:c:m:b:a:tgrh" opt; do
+while getopts ":d:c:m:M:i:e:a:tgrh" opt; do
   case ${opt} in
     d )
       depth="$OPTARG"
@@ -99,15 +104,20 @@ while getopts ":d:c:m:b:a:tgrh" opt; do
     g )
       tcm=0
       ;;
-    b )
-      base_dir="$OPTARG"
-      base_dir="$(readlink -f "$(echo ${base_dir/"~"/~})")"
+    i )
+      incl_dirs+=("-path" "*/${OPTARG/\//}/*")
+      ;;
+    e )
+      excl_dirs+=("-path" "*/${OPTARG/\//}" "-prune" "-o")
       ;;
     a )
       args+=("$OPTARG")
       ;;
     m )
       metrics+=(${OPTARG//,/ })
+      ;;
+    M )
+      excl_metrics+=(${OPTARG//,/ })
       ;;
     r )
       recover="True"
@@ -141,6 +151,10 @@ fi
 if [ "$metrics" == "" ]; then
   metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.suspicious))
 fi
+# remove all excluded metrics
+for metric in "${excl_metrics[@]}"; do
+  metrics=($(echo "${metrics[@]}" | sed -E "s/\b$metric( |$)//"))
+done
 
 cd "$base_dir"
 
@@ -152,13 +166,14 @@ if [ -n "$recover" ]; then
 fi
 
 if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
-              -type f -name "spectra.csv" | xargs -n 1 dirname | sort -V)"
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "spectra.csv" -print | xargs -n 1 dirname | sort -V)"
 elif [ "$tcm" ] && [ "$tcm" -eq 1 ]; then
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
-              -type f -name "*.$tcm_ext" | sort -V)"
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "*.$tcm_ext" -print | sort -V)"
 else
-  inputs="$(find . ${depth:+-mindepth "$depth" -maxdepth "$depth"} | sort -V)"
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -print | sort -V)"
 fi
 
 directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
