@@ -24,6 +24,20 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         else:
             raise argparse.ArgumentTypeError(f'Could not find input file: \"{filename}\"')
 
+    # check FLITSR type combinations function
+    def check_type(type_comb: str):
+        type_sep = type_comb.split('+')
+        adv_type = AdvancedType.BASE
+        for t in type_sep:
+            t = t.upper()
+            if (hasattr(AdvancedType, t)):
+                cur_type = getattr(AdvancedType, t)
+                adv_type |= cur_type
+            else:
+                raise argparse.ArgumentTypeError('Invalid type for '
+                                                 f'--all-types: \"{t}\"')
+        return adv_type
+
     # General options
     parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
             'fault finding/localization tool for multiple faults.')
@@ -68,7 +82,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'the elements based on their original positions in the ranking '
             'produced by the base SBFL metric used by FLITSR.')
     parser.add_argument('-r', '--ranking', action='store_true',
-            help='Changes flitsr\'s expected input to be an SBFL ranking in '
+            help='Changes FLITSR\'s expected input to be an SBFL ranking in '
             'Gzoltar or FLITSR format (determined automatically), instead of '
             'the usual coverage, and produces the specified calculations '
             '(or just the ranking if no calculations are given). NOTE: any '
@@ -99,6 +113,17 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'above evaluation calculations. Prints the results out to files '
             'named [<flitsr method>_]<metric>.run for each FLITSR method '
             'and metric')
+    adv_types = [x for x in dir(AdvancedType) if (not x.startswith("_"))]
+    parser.add_argument('-t', '--types', action='append', type=check_type,
+                        help='Specify the advanced type combination to use '
+                        'when running FLITSR. Note that this argument '
+                        'overrides any of the individual advanced type '
+                        'arguments given to FLITSR (such as --multi, --sblf, etc.).'
+                        'This argument may be specified multiple times to add '
+                        'multiple type combinations to run. The format for '
+                        'this argument is: "--types <type>[+<type>...]", '
+                        'where each <type> is a (case-insensitive) FLITSR '
+                        f'advanced type. Allowed types are: {adv_types}')
     parser.add_argument('--no-override', action='store_true',
                         help='By default FLITSR will override the output '
                         'file(s) if they already exist, printing a warning '
@@ -270,8 +295,9 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             args.metrics = [default_metric]
     # Set the flitsr types based on 'all' or what is set
     if (args.all is True):
-        args.types = [AdvancedType.BASE, AdvancedType.FLITSR,
-                      AdvancedType.MULTI]
+        if (args.types is None):
+            args.types = [AdvancedType.BASE, AdvancedType.FLITSR,
+                          AdvancedType.MULTI]
         if (len(args.weff) == 0 and len(args.top1) == 0 and
                 len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
             args.weff = ["first", "avg", "med", "last", 2, 3, 5]
@@ -279,7 +305,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
                              ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
             args.faults = ["num"]
-    else:
+    elif (args.types is None):
         advanced_type = AdvancedType.BASE
         # Add FLITSR
         if (not args.sbfl):
