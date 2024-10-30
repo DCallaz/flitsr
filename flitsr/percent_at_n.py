@@ -1,12 +1,13 @@
 import math
 import sys
-import copy
 import ast
 import numpy as np
+from argparse import ArgumentParser
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 from flitsr.spectrum import Spectrum
 from flitsr.tie import Ties
+from flitsr.suspicious import Suspicious
 
 
 def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
@@ -100,7 +101,6 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
 def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
          metrics=None, flitsrs=None):
     from matplotlib import pyplot as plt
-    import matplotlib.cm as cm  # type: ignore
     modes: List[str] = []
     comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
     if (metrics is None):
@@ -116,67 +116,89 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
             x.append(inc[0])
             y.append(inc[1])
         points[key] = (x, y)
-    split = metrics
-    merged = modes
-    if (type == plot_type.mode):
-        split = modes
-        merged = metrics
+    if (all):
+        num_plots = 1
+    elif (type == plot_type.metric):
+        num_plots = len(metrics)
+    else:
+        num_plots = len(modes)
     plt.rcParams.update({'font.size': 10})
-    fig, axs = plt.subplots(1, 1 if all else len(split),
+    fig, axs = plt.subplots(1, num_plots,
                             gridspec_kw={"left": 0.045,
                                          "bottom": 0.06,
                                          "right": 0.99,
                                          "top": 0.99,
                                          "wspace": 0.2,
                                          "hspace": 0.2} if all else {})
-    color = list(cm.rainbow(np.linspace(0, 1, len(split))))
+    if (all):
+        plot_all(axs, points, metrics, modes, flitsrs, log)
+    else:
+        plot_sep(axs, points, type, metrics, modes, log)
+    plt.show()
+
+
+def plot_all(axs, points, metrics, modes, flitsrs, log):
+    import matplotlib.cm as cm
+    color = list(cm.rainbow(np.linspace(0, 1, len(metrics))))
     style = [(), (6, 3), (1, 3), (1, 3, 6, 3), (3, 3), (6, 3, 3, 3)]
     marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>', 'P',
               'h', 'X', 'H', 'd', '|', '_']
     lines = []
+    for (i, me) in enumerate(metrics):
+        for (j, mo) in enumerate(modes):
+            if ((me, mo) in points and (mo == "Base" or flitsrs is None
+                                        or me in flitsrs)):
+                point = points[(me, mo)]
+                # print(point)
+                ls = axs.plot(point[0], point[1], dashes=style[j],
+                              color=color[i], marker=marker[i], markevery=0.1)
+                if (mo == "Base"):
+                    lines.append(ls[0])
+    # lines = axs.get_lines()[::len(modes)]
+    dummy_lines = []
+    for j in range(len(modes)):
+        dummy_lines.append(axs.plot([], [], c="black",
+                                    dashes=style[j])[0])
+    t_dummy, = axs.plot([], [], marker='None', ls='None')
+    labels = [r'$\mathbf{Metrics\!:}$'] + metrics + \
+             [r'$\mathbf{Types\!:}$'] + modes
+    all_lines = [t_dummy] + lines + [t_dummy] + dummy_lines
+    axs.legend(all_lines, labels)
+    # axs.set_title("")
+    plot_log(axs, log)
+    # plt.ylim(0, 100)
+    # plt.xlim(0, 100)
+    axs.grid()
+
+
+def plot_sep(axs, points, type, metrics, modes, log):
+    if (type == plot_type.metric):
+        split, merged = metrics, modes
+    else:
+        split, merged = modes, metrics
     for (i, s) in enumerate(split):
         for (j, m) in enumerate(merged):
-            if (m == "Base" or flitsrs is None or s in flitsrs):
-                if (type == plot_type.mode):
-                    point = points[(m, s)]
-                else:
-                    point = points[(s, m)]
-                # print(point)
-                if (all):
-                    ls = axs.plot(point[0], point[1], dashes=style[j],
-                             color=color[i], marker=marker[i], markevery=0.1)
-                    if (m == "Base"):
-                        lines.append(ls[0])
-                else:
-                    axs[i].plot(point[0], point[1])
+            if (type == plot_type.mode and (m, s) in points):
+                point = points[(m, s)]
+            elif ((s, m) in points):
+                point = points[(s, m)]
+            # print(point)
+            axs[i].plot(point[0], point[1])
     # plt.step(x,y)
-    for i in range(1 if (all) else len(axs)):
-        if (all):
-            ax = axs
-        else:
-            ax = axs[i]
-        if (all):
-            # lines = ax.get_lines()[::len(modes)]
-            dummy_lines = []
-            for j in range(len(merged)):
-                dummy_lines.append(ax.plot([], [], c="black",
-                                           dashes=style[j])[0])
-            t_dummy, = ax.plot([], [], marker='None', ls='None')
-            labels = [r'$\mathbf{Metrics\!:}$'] + metrics + \
-                     [r'$\mathbf{Types\!:}$'] + modes
-            all_lines = [t_dummy] + lines + [t_dummy] + dummy_lines
-            ax.legend(all_lines, labels)
-            # ax.set_title("")
-        else:
-            ax.legend(merged)
-            ax.set_title(split[i])
-        if (log):
-            ax.set_xscale("log")
-            ax.set_xticks([0.01, 0.1, 1, 10, 100], [0.01, 0.1, 1, 10, 100])
+    for i in range(len(axs)):
+        ax = axs[i]
+        ax.legend(merged)
+        ax.set_title(split[i])
+        plot_log(ax, log)
         # plt.ylim(0, 100)
         # plt.xlim(0, 100)
         ax.grid()
-    plt.show()
+
+
+def plot_log(ax, log):
+    if (log):
+        ax.set_xscale("log")
+        ax.set_xticks([0.01, 0.1, 1, 10, 100], [0.01, 0.1, 1, 10, 100])
 
 
 def auc_calc(points: List[Tuple[float, float]],
@@ -193,64 +215,73 @@ def auc_calc(points: List[Tuple[float, float]],
 
 
 if __name__ == "__main__":
-    if (len(sys.argv) > 1):
-        mode = sys.argv[1]
-        if (mode == "combine"):
-            infile = sys.argv[2]
-            lines = open(infile).readlines()
-        elif (mode == "plot"):
-            plot_file = sys.argv[2]
-            split = plot_type.metric
-            metrics: Optional[List[str]] = None
-            flitsrs = None
-            log = True
-            all = False
-            i = 3
-            while (True):
-                if (len(sys.argv) > i):
-                    if (sys.argv[i] == "mode"):
-                        split = plot_type.mode
-                    elif (sys.argv[i].startswith("metrics=[")):
-                        metrics = [x.strip() for x in
-                                   sys.argv[i][9:-1].split(",")]
-                    elif (sys.argv[i].startswith("flitsrs=[")):
-                        flitsrs = [x.strip() for x in
-                                   sys.argv[i][9:-1].split(",")]
-                    elif (sys.argv[i] == "linear"):
-                        log = False
-                    elif (sys.argv[i] == "log"):
-                        log = True
-                    elif (sys.argv[i] == "all"):
-                        all = True
-                    else:
-                        print("Unknown option:", sys.argv[i])
-                        exit(1)
-                    i += 1
-                else:
-                    break
-            plot(plot_file, log=log, all=all, type=split, metrics=metrics,
-                 flitsrs=flitsrs)
-        elif (mode == "auc"):
-            comb_file = sys.argv[2]
-            metrics, modes, points = read_comb_file(comb_file)
-            cutoff = 101.0
-            i = 3
-            while (True):
-                if (len(sys.argv) > i):
-                    if (sys.argv[i].startswith("[")):
-                        metrics = [x.strip() for x in
-                                   sys.argv[i][1:-1].split(",")]
-                    elif (sys.argv[i].startswith("cutoff=")):
-                        cutoff = float(sys.argv[i].split("=")[1])
-                    else:
-                        print("Unknown option:", sys.argv[i])
-                        exit(1)
-                    i += 1
-                else:
-                    break
-            for metric in metrics:
-                base = auc_calc(points[(metric, "Base metric")], cutoff)
-                flitsr = auc_calc(points[(metric, "FLITSR")], cutoff)
-                flitsr_m = auc_calc(points[(metric, "FLITSR*")], cutoff)
-                print("{} FLITSR imprv: {:.6%}".format(metric, flitsr/base))
-                print("{} FLITSR* imprv: {:.6%}".format(metric, flitsr_m/base))
+    parser = ArgumentParser(prog="percent_at_n")
+    subparsers = parser.add_subparsers(title='Modes', description='The '
+                                       'following modes are available '
+                                       'for the percent_at_n command:',
+                                       required=True, dest='mode')
+    combine_parser = subparsers.add_parser('combine')
+    combine_parser.add_argument('input_file')
+
+    met_names = list(map(str.capitalize, Suspicious.getNames(True)))
+    plot_parser = subparsers.add_parser('plot', help='Plots the percentage at '
+                                        'n graph for the given input file '
+                                        'produced by the merge script')
+    plot_parser.add_argument('plot_file', help='The input file generated by '
+                             'the FLITSR merge script')
+    plot_parser.add_argument('-a', '--all', action='store_true',
+                             help='Plots one graph containing all metrics and '
+                             'advanced types. You may optionally filter the '
+                             'metrics that are plotted and for which metrics '
+                             'advanced types are plotted for by the --metrics '
+                             'and --types options')
+    plot_parser.add_argument('-m', '--metrics', nargs='+', choices=met_names,
+                             help='Specifies the metrics to plot for the --all '
+                             'plotting style. Allowed values are: '
+                             f'[{", ".join(met_names)}]', metavar='METRIC')
+    plot_parser.add_argument('-t', '--types', nargs='+', choices=met_names,
+                             help='Specifies the metrics for which to plot '
+                             'advanced types for using the --all plotting '
+                             'style. See --metrics for allowed values',
+                             metavar='METRIC')
+    plot_parser.add_argument('-s', '--split-type', choices=['metric', 'type'],
+                             help='Determines whether to plot separate graphs '
+                             'for each metric, or for each type',
+                             default='metric')
+    plot_parser.add_argument('-l', '--log', action='store_true',
+                             help='By default graphs are plot with both axes '
+                             'in linear scale. This option enables plotting '
+                             'the x-axis in log scale instead')
+
+    auc_parser = subparsers.add_parser('auc', help='Calculates the Area Under '
+                                       'Curve (AUC) for each metric and '
+                                       'advanced type in the given input file '
+                                       'generated by the merge script')
+    auc_parser.add_argument('comb_file', help='The input file generated by '
+                            'the FLITSR merge script')
+    auc_parser.add_argument('-m', '--metrics', nargs='+', choices=met_names,
+                            help='Specifies the subset of metrics to '
+                            'calculate AUC values for. Allowed values are: '
+                            f'[{", ".join(met_names)}]', metavar='METRIC')
+    auc_parser.add_argument('-c', '--cutoff', action='store', type=float,
+                            help='Specifies the percentage cut-off point to '
+                            'use for the AUC calculations', default='101.0')
+    args = parser.parse_args()
+    if (args.mode == "combine"):
+        infile = args.input_file
+        lines = open(infile).readlines()
+    elif (args.mode == "plot"):
+        plot(args.plot_file, log=args.log, all=args.all, type=args.split_type,
+             metrics=args.metrics, flitsrs=args.types)
+    elif (args.mode == "auc"):
+        comb_file = args.comb_file
+        metrics, modes, points = read_comb_file(comb_file)
+        cutoff = args.cutoff
+        if (args.metrics):
+            metrics = args.metrics
+        for metric in metrics:
+            base = auc_calc(points[(metric, "Base metric")], cutoff)
+            flitsr = auc_calc(points[(metric, "FLITSR")], cutoff)
+            flitsr_m = auc_calc(points[(metric, "FLITSR*")], cutoff)
+            print("{} FLITSR imprv: {:.6%}".format(metric, flitsr/base))
+            print("{} FLITSR* imprv: {:.6%}".format(metric, flitsr_m/base))
