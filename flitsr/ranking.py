@@ -28,7 +28,7 @@ def read_ranking(ranking_file: str,
         score = float(line[line.index(";")+1:])
         name = line[:line.index(";")]
         l = name.strip().split(':')
-        r = re.search("(.*)\$(.*)#([^:]*)", l[0])
+        r = re.search("(.*)\\$(.*)#([^:]*)", l[0])
         if (r is None):
             raise ValueError("Incorrectly formatted line \"" + line +
                              "\" when reading input ranking file")

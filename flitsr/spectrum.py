@@ -123,7 +123,7 @@ class Spectrum():
             except KeyError:
                 pass
 
-        def get(self, elem: Spectrum.Element, default=False) -> bool:
+        def get(self, elem: Spectrum.Element, default: bool = False) -> bool:
             try:
                 return bool(self.exec[self.elems[elem]])
             except KeyError:
@@ -363,8 +363,8 @@ class Spectrum():
                     self._matrix[i][j] = self.spectrum[test][elem]
                 self._errVector[i] = 1 if (test.outcome is False) else 0
         # Extract submatrix
-        tmask = np.isin(self._matrix_tests, self._tests)  # type: ignore
-        emask = np.isin(self._matrix_elems, self._curr_elements)  # type: ignore
+        tmask = np.isin(self._matrix_tests, self._tests)
+        emask = np.isin(self._matrix_elems, self._curr_elements)
         matrix = self._matrix[np.ix_(tmask, emask)]
         errVector = self._errVector[tmask]
         return matrix, errVector

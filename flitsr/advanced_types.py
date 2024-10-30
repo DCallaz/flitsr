@@ -12,5 +12,6 @@ class AdvancedType(Flag):
         if (self is AdvancedType.BASE):
             return self.name.lower()  # type: ignore # (BASE always has a name)
         else:
-            return "_".join([t.name.lower() for t in list(AdvancedType)[1:]
+            return "_".join([t.name.lower() for t in
+                             list(AdvancedType.__members__.values())[1:]
                              if t in self and t.name])  # type: ignore
