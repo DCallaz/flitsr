@@ -61,17 +61,19 @@ def readBlock(file: File) -> List[str]:
     return block
 
 
-def find_dirs(dirs: List[str], path, depth=1, max=None, ns=[]):
+def find_dirs(dirs: List[str], path, depth=1, max=None, incl=[], excl=[]):
     for dir in os.scandir(path):
         if (dir.is_dir()):
             new_path = dir.path
             if ((max and depth >= max) or
                 (not max and any(f.endswith('.results') for f in
                                  os.listdir(new_path)))):
-                if (len(ns) == 0 or int(dir.name.split("-")[0]) in ns):
+                if (dir.name not in excl and (len(incl) == 0 or
+                                              dir.name in incl)):
                     dirs.append(new_path+"/")
             else:
-                find_dirs(dirs, new_path, depth=depth+1, max=max, ns=ns)
+                find_dirs(dirs, new_path, depth=depth+1, max=max, incl=incl,
+                          excl=excl)
 
 
 def ci_eq(str1: str, str2: str):
@@ -84,10 +86,11 @@ def ci_in(str1: str, col: Collection[str]):
     return str1.casefold() in map(str.casefold, col)
 
 
-def merge(recurse: bool, max: int, rel: bool, ns: List[int],
+def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
-          percs=None, incl_metrics=None, flitsrs=None, sign=None):
+          percs=None, incl_metrics=None, flitsrs=None, sign=None,
+          sign_less=[]):
     metrics: Set[str] = set()
     modes: Set[str] = set()
     calcs: Set[str] = set()
@@ -101,7 +104,7 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
     dirs = [""]
     if (recurse):
         dirs = []
-        find_dirs(dirs, ".", max=max, ns=ns)
+        find_dirs(dirs, ".", max=max, incl=incl, excl=excl)
 
     if (rel):
         sizes = {}
@@ -174,13 +177,17 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
                         signis: Dict[str, List[Tuple[str, float]]] = {}
                         if (sign == 'type'):
                             for m_alt in modes:
-                                if (m_alt == mode):
+                                if (m_alt == mode or not
+                                    (ci_in(m_alt, avgs) and
+                                     ci_in(metric, avgs[m_alt]))):
                                     continue
                                 r, p = avg.significance(avgs[m_alt][metric][calc])
                                 signis.setdefault(r, []).append((m_alt, p))
                         else:
                             for m_alt in metrics:
-                                if (m_alt == metric):
+                                if (m_alt == metric or not
+                                    (ci_in(mode, avgs) and
+                                     ci_in(m_alt, avgs[mode]))):
                                     continue
                                 r, p = avg.significance(avgs[mode][m_alt][calc])
                                 signis.setdefault(r, []).append((m_alt, p))
@@ -188,8 +195,20 @@ def merge(recurse: bool, max: int, rel: bool, ns: List[int],
                     print("\t\t", calc+": ", result, sign_disp, sep='',
                           file=output_file)
                     if (tex_file):
+                        # process TeX significance only for advanced types
+                        sign_disp = ''
+                        if (sign == 'type' and not ci_eq(mode, 'base')):
+                            try:
+                                r, p = avg.significance(
+                                        avgs['base'][metric][calc])
+                                if ((calc in sign_less and r == 'less') or
+                                    (calc not in sign_less and r == 'greater')):
+                                    sign_disp = '\\tp'
+                            except KeyError:
+                                pass
                         end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('{: 10.{}f}'.format(result, min(dec, 8)),
+                        print('{: <3}'.format(sign_disp),
+                              '{: 6.{}f}'.format(result, min(dec, 8)),
                               end=end, file=tex_file)
 
     # Print out merged results
@@ -257,6 +276,14 @@ if __name__ == "__main__":
                         'recursively look in sub-directories of the current '
                         'directory for results files. An optional maximum '
                         'recurse limit X can be given.')
+    parser.add_argument('-i', '--incl', nargs='+', metavar='DIR_NAME',
+                        action='extend', default=[],
+                        help='Specifies particular directories to include for '
+                        'the recursive option. May be specified multiple times')
+    parser.add_argument('-e', '--excl', nargs='+', metavar='DIR_NAME',
+                        action='extend', default=[],
+                        help='Specifies particular directories to exclude for '
+                        'the recursive option. May be specified multiple times')
     parser.add_argument('-t', '--tex', nargs='?', const='results.tex', metavar='FILE',
                         type=FileType('w'), help='Specifies that an additional '
                         'output file should be generated that contains the '
@@ -270,7 +297,7 @@ if __name__ == "__main__":
                         'this is stored in perc_at_n_results, but an optional '
                         'filename FILE may be given', dest='perc_at_n',
                         default='perc_at_n_results')
-    parser.add_argument('-i', '--inline-perc@n', action='store_const',
+    parser.add_argument('-1', '--inline-perc@n', action='store_const',
                         const=None, dest='perc_at_n', help='Instead of '
                         'producing a separate percentage-at-n file, place the '
                         'results inline in the results file')
@@ -303,8 +330,13 @@ if __name__ == "__main__":
                         help='Specifies that additional significance tests '
                         'should be performed to test the differences in '
                         'results. The significance tests will either be '
-                        'conducted between metrics of the same type or between'
-                        ' types using the same metric (default %(default)s).')
+                        'conducted between metrics of the same type [metric] '
+                        'or between types using the same metric [type] '
+                        '(default %(const)s). If type is given, and the '
+                        '--tex option is also used, significance indicators '
+                        'will be added to the TeX output indicating advanced '
+                        'types significantly greater than their baselines '
+                        '(see --less-significance for significantly less)')
     parser.add_argument('-f', '--flitsrs', nargs='*', metavar='METRIC',
                         help='Specify the metrics for which to display FLITSR '
                         'and FLITSR* values for. By default all metric\'s '
@@ -315,13 +347,25 @@ if __name__ == "__main__":
                         'files will be merged. Note that this option only '
                         'restricts the output, all files available are still '
                         'read, however files not existing are not read.')
-    parser.add_argument('-n', nargs='+', type=int, dest='ns', default=[])
+    parser.add_argument('-l', '--less-significance', nargs='+', metavar='CALC',
+                        help='Intended for use with the --significance and '
+                        '--tex options. Specify the calculations whose result '
+                        'is to be tested for significantly less than the '
+                        'baseline instead of significantly greater, which is '
+                        'the default. Affects the significance indicators '
+                        'for the TeX output. NOTE: the names of the '
+                        'calculations need to be found in the corresponding '
+                        '.results files', dest='sign_less', default=[])
     args = parser.parse_args()
     if ('max' not in args):
         args.max = None
     if (args.perc_at_n is None):
         args.perc_at_n = args.output
-    merge(args.recurse, args.max, args.relative, args.ns, args.output,
-          args.perc_at_n, args.tex, dec=args.decimals, group=args.group,
-          incl_calcs=args.calcs, percs=args.percentage,
-          incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign)
+    # Remove trailing '/' for included and excluded dirs
+    args.incl = list(map(lambda s: str.rstrip(s, '/'), args.incl))
+    args.excl = list(map(lambda s: str.rstrip(s, '/'), args.excl))
+    merge(args.recurse, args.max, args.incl, args.excl, args.relative,
+          args.output, args.perc_at_n, args.tex, dec=args.decimals,
+          group=args.group, incl_calcs=args.calcs, percs=args.percentage,
+          incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
+          sign_less=args.sign_less)

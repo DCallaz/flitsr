@@ -299,16 +299,23 @@ be manually merged to produce averages using the `merge` script. This script
 is called from within the `run_all` script, but only for individual results. To
 do more complex merging, the `merge` script allows a number of useful arguments:
 ```
-usage: merge [-h] [-R] [-r [X]] [-t [FILE]] [-p [FILE]] [-i] [-o FILE]
-             [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
-             [--percentage CALC [CALC ...]] [-f [METRIC [METRIC ...]]]
-             [-m METRIC [METRIC ...]] [-n NS [NS ...]]
+usage: merge [-h] [-R] [-r [X]] [-i DIR_NAME [DIR_NAME ...]]
+             [-e DIR_NAME [DIR_NAME ...]] [-t [FILE]] [-p [FILE]] [-1]
+             [-o FILE] [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
+             [--percentage CALC [CALC ...]] [-s [{metric,type}]]
+             [-f [METRIC ...]] [-m METRIC [METRIC ...]] [-l CALC [CALC ...]]
 ```
 * `-h`, `--help`: show this help message and exit
 * `-R`, `--relative`: Compute relative values instead of absolute values
 * `-r [X]`, `--recurse [X]`: Activates the scripts recursive mode. This makes
     the script recursively look in sub-directories of the current directory for
     results files. An optional maximum recurse limit X can be given.
+* `-i DIR_NAME [DIR_NAME ...]`, `--incl DIR_NAME [DIR_NAME ...]`: Specifies
+    particular directories to include for the recursive option. May be specified
+    multiple times
+* `-e DIR_NAME [DIR_NAME ...]`, `--excl DIR_NAME [DIR_NAME ...]`: Specifies
+    particular directories to exclude for the recursive option. May be specified
+    multiple times
 * `-t [FILE]`, `--tex [FILE]`: Specifies that an additional output file should
     be generated that contains the results in a LaTeX table (in .tex format). By
     default this is stored in results.tex, but an optional filename FILE may be
@@ -316,7 +323,7 @@ usage: merge [-h] [-R] [-r [X]] [-t [FILE]] [-p [FILE]] [-i] [-o FILE]
 * `-p [FILE]`, `--perc@n [FILE]`: Specifies that an additional output file should
     be generated that contains the percentage-at-n results. By default this is
     stored in `perc_at_n_results`, but an optional filename FILE may be given
-* `-i`, `--inline-perc@n`:   Instead of producing a separate percentage-at-n
+* `-1`, `--inline-perc@n`:   Instead of producing a separate percentage-at-n
     file, place the results inline in the results file
 * `-o FILE`, `--output FILE`: Store the results in the file with filename FILE.
     By default the name `results` is used
@@ -340,10 +347,12 @@ usage: merge [-h] [-R] [-r [X]] [-t [FILE]] [-p [FILE]] [-i] [-o FILE]
     to merge results for. By default all metrics that appear in filenames of
     found files will be merged. Note that this option only restricts the output,
     all files available are still read, however files not existing are not read.
-* `-n NS [NS ...]`: The presence of this arguments specifies that only particular
-  `n`-fault versions should be considered, where the parameters `a` etc. denote
-  these `n`'s. When used with the `recurse` argument, only `.results` files in
-  sub-directories named `<n>-fault` will be considered.
+* `-l CALC [CALC ...]`, `--less-significance CALC [CALC ...]`: Intended for use
+    with the `--significance` and `--tex` options. Specify the calculations
+    whose result is to be tested for significantly less than the baseline
+    instead of significantly greater, which is the default. Affects the
+    significance indicators for the TeX output. NOTE: the names of the
+    calculations need to be found in the corresponding `.results` files
 ### Percentage at n plots (`percent_at_n`)
 Once the merge script has been called, a `perc_at_n_results` file will be
 generated from which you can plot the percentage at n graphs using the
