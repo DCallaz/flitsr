@@ -28,6 +28,7 @@ if [ "$(grep "FLITSR_HOME" "$rcfile")" != "" ]; then
 fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export FLITSR_HOME="$SCRIPT_DIR"
+sed -i "${line_num}a eval \"\$(\$FLITSR_HOME/.venv/bin/register-python-argcomplete flitsr)\"" "$rcfile"
 sed -i "${line_num}a export PATH=\"\${PATH:+\$PATH:}\$FLITSR_HOME/bin\"" "$rcfile"
 sed -i "${line_num}a export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\$FLITSR_HOME\"" "$rcfile"
 sed -i "${line_num}a export FLITSR_HOME=\"$SCRIPT_DIR\"" "$rcfile"

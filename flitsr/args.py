@@ -5,6 +5,7 @@ from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.advanced_types import AdvancedType
+import argcomplete
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -285,6 +286,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             ', '.join(cutoff_opts)+'] (default %(default)s). '
             'For basis, an optional value n may be given (e.g. basis=n) '
             'that determines the number of bases included before the cutoff')
+
+    argcomplete.autocomplete(parser)
 
     args = parser.parse_args(argv)
     # Set the metrics based on 'all' or the default metric
