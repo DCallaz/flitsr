@@ -1,11 +1,11 @@
 import argparse
+import argcomplete
 import sys
 from os import path as osp
 from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.advanced_types import AdvancedType
-import argcomplete
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:

@@ -3,6 +3,7 @@ import sys
 import ast
 import numpy as np
 from argparse import ArgumentParser
+import argcomplete
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 from flitsr.spectrum import Spectrum
@@ -266,6 +267,7 @@ if __name__ == "__main__":
     auc_parser.add_argument('-c', '--cutoff', action='store', type=float,
                             help='Specifies the percentage cut-off point to '
                             'use for the AUC calculations', default='101.0')
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     if (args.mode == "combine"):
         infile = args.input_file

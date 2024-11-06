@@ -5,7 +5,9 @@ from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
 from argparse import ArgumentParser, Action, FileType
+import argcomplete
 from flitsr.file import File
+from flitsr.suspicious import Suspicious
 from typing import Set, Dict, List, Tuple, Collection
 
 PERC_N = "percentage at n"
@@ -263,6 +265,8 @@ if __name__ == "__main__":
             if (values is not None):
                 setattr(namespace, 'max', values)
 
+    met_names = Suspicious.getNames(True)
+
     parser = ArgumentParser(prog='merge', description='Merge .results files '
                             'produced by the run_all script')
     parser.add_argument('-R', '--relative', action='store_true', help='Compute '
@@ -334,16 +338,18 @@ if __name__ == "__main__":
                         'will be added to the TeX output indicating advanced '
                         'types significantly greater than their baselines '
                         '(see --less-significance for significantly less)')
-    parser.add_argument('-f', '--flitsrs', nargs='*', metavar='METRIC',
+    parser.add_argument('-f', '--flitsrs', nargs='+', metavar='METRIC',
                         help='Specify the metrics for which to display FLITSR '
                         'and FLITSR* values for. By default all metric\'s '
-                        'FLITSR and FLITSR* values are shown.')
+                        'FLITSR and FLITSR* values are shown.',
+                        choices=met_names)
     parser.add_argument('-m', '--metrics', nargs='+', metavar='METRIC',
                         help='Specify the metrics to merge results for. By '
                         'default all metrics that appear in filenames of found '
                         'files will be merged. Note that this option only '
                         'restricts the output, all files available are still '
-                        'read, however files not existing are not read.')
+                        'read, however files not existing are not read.',
+                        choices=met_names)
     parser.add_argument('-l', '--less-significance', nargs='+', metavar='CALC',
                         help='Intended for use with the --significance and '
                         '--tex options. Specify the calculations whose result '
@@ -353,6 +359,7 @@ if __name__ == "__main__":
                         'for the TeX output. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
                         '.results files', dest='sign_less', default=[])
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     if ('max' not in args):
         args.max = None
