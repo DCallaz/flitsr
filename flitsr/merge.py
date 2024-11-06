@@ -162,54 +162,53 @@ def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
 
     def print_results(mode, metric):
         for j, calc in enumerate(sorted(calcs)):
-            if (incl_calcs is None or ci_in(calc, incl_calcs)):
-                if (ci_eq(calc, PERC_N)):
-                    comb = combine(avgs[mode][metric][calc].eval())
-                    print("\t\t", calc+": ", comb, sep='', file=perc_file)
+            if (ci_eq(calc, PERC_N)):
+                comb = combine(avgs[mode][metric][calc].eval())
+                print("\t\t", calc+": ", comb, sep='', file=perc_file)
+            else:
+                avg = avgs[mode][metric][calc]
+                if (not rel and percs is not None and ci_in(calc, percs)):
+                    result = round(100*avg.eval(), dec)
                 else:
-                    avg = avgs[mode][metric][calc]
-                    if (not rel and percs is not None and ci_in(calc, percs)):
-                        result = round(100*avg.eval(), dec)
+                    result = round(avg.eval(), dec)
+                sign_disp = ""
+                if (sign is not None):
+                    signis: Dict[str, List[Tuple[str, float]]] = {}
+                    if (sign == 'type'):
+                        for m_alt in modes:
+                            if (m_alt == mode or not
+                                (ci_in(m_alt, avgs) and
+                                 ci_in(metric, avgs[m_alt]))):
+                                continue
+                            r, p = avg.significance(avgs[m_alt][metric][calc])
+                            signis.setdefault(r, []).append((m_alt, p))
                     else:
-                        result = round(avg.eval(), dec)
-                    sign_disp = ""
-                    if (sign is not None):
-                        signis: Dict[str, List[Tuple[str, float]]] = {}
-                        if (sign == 'type'):
-                            for m_alt in modes:
-                                if (m_alt == mode or not
-                                    (ci_in(m_alt, avgs) and
-                                     ci_in(metric, avgs[m_alt]))):
-                                    continue
-                                r, p = avg.significance(avgs[m_alt][metric][calc])
-                                signis.setdefault(r, []).append((m_alt, p))
-                        else:
-                            for m_alt in metrics:
-                                if (m_alt == metric or not
-                                    (ci_in(mode, avgs) and
-                                     ci_in(m_alt, avgs[mode]))):
-                                    continue
-                                r, p = avg.significance(avgs[mode][m_alt][calc])
-                                signis.setdefault(r, []).append((m_alt, p))
-                        sign_disp = f" (significantly {signis})"
-                    print("\t\t", calc+": ", result, sign_disp, sep='',
-                          file=output_file)
-                    if (tex_file):
-                        # process TeX significance only for advanced types
-                        sign_disp = ''
-                        if (sign == 'type' and not ci_eq(mode, 'base')):
-                            try:
-                                r, p = avg.significance(
-                                        avgs['base'][metric][calc])
-                                if ((calc in sign_less and r == 'less') or
-                                    (calc not in sign_less and r == 'greater')):
-                                    sign_disp = '\\tp'
-                            except KeyError:
-                                pass
-                        end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                        print('{: <3}'.format(sign_disp),
-                              '{: 6.{}f}'.format(result, min(dec, 8)),
-                              end=end, file=tex_file)
+                        for m_alt in metrics:
+                            if (m_alt == metric or not
+                                (ci_in(mode, avgs) and
+                                 ci_in(m_alt, avgs[mode]))):
+                                continue
+                            r, p = avg.significance(avgs[mode][m_alt][calc])
+                            signis.setdefault(r, []).append((m_alt, p))
+                    sign_disp = f" (significantly {signis})"
+                print("\t\t", calc+": ", result, sign_disp, sep='',
+                      file=output_file)
+                if (tex_file):
+                    # process TeX significance only for advanced types
+                    sign_disp = ''
+                    if (sign == 'type' and not ci_eq(mode, 'base')):
+                        try:
+                            r, p = avg.significance(
+                                    avgs['base'][metric][calc])
+                            if ((calc in sign_less and r == 'less') or
+                                (calc not in sign_less and r == 'greater')):
+                                sign_disp = '\\tp'
+                        except KeyError:
+                            pass
+                    end = (" & " if j+1 != len(calcs) else " \\\\\n")
+                    print('{: <3}'.format(sign_disp),
+                          '{: >10.{}f}'.format(result, min(dec, 8)),
+                          end=end, file=tex_file)
 
     # Print out merged results
     if (ci_eq(group, 'metric')):
@@ -223,13 +222,11 @@ def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
         # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
         # print("\\begin{longtable}", file=tex_file)
-        if (incl_calcs is None):
-            cur_calcs = calcs
-        else:
-            cur_calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
-        print("\\begin{tabular}{"+'|'.join(['c']*(len(cur_calcs)+1))+"}",
+        if (incl_calcs is not None): # select only included calcs
+            calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
+        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
               file=tex_file)
-        print("Metric & "+' & '.join([c for c in sorted(cur_calcs) if not
+        print("Metric & "+' & '.join([c for c in sorted(calcs) if not
                                       ci_eq(c, PERC_N)])+"\\\\",
               file=tex_file)
     for (mode, metric) in zipped:
