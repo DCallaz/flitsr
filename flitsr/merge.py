@@ -317,24 +317,24 @@ if __name__ == "__main__":
                         'recursively look in sub-directories of the current '
                         'directory for results files. An optional maximum '
                         'recurse limit X can be given.')
-    parser.add_argument('-i', '--incl', nargs='+', metavar='DIR_NAME',
+    parser.add_argument('-i', '--incl', nargs='+', metavar='DIR_ARG',
                         action='extend', default=[], type=parse_dir_arg,
                         help='Specifies particular directories to include for '
                         'the recursive option. You may optionally give a '
                         'depth with each directory in the format '
-                        '\"[<depth>:]<dir name>\", where the depth is an '
+                        'DIR_ARG=\"[<depth>:]<dir name>\", where the depth is an '
                         'integer starting with 1 (the current directory). '
                         'By default a depth of \"*\" is used, indicating any '
                         'depth is valid. NOTE: the colon character (\":\") '
                         'should not appear in the directory name, but if it '
                         'must, then the depth must also be given. This option '
-                        'May be specified multiple times')
-    parser.add_argument('-e', '--excl', nargs='+', metavar='DIR_NAME',
+                        'may be specified multiple times')
+    parser.add_argument('-e', '--excl', nargs='+', metavar='DIR_ARG',
                         action='extend', default=[], type=parse_dir_arg,
                         help='Specifies particular directories to exclude for '
                         'the recursive option. You may optionally give a '
                         'depth with each directory (see --incl for format).'
-                        'This option May be specified multiple times')
+                        'This option may be specified multiple times')
     parser.add_argument('-t', '--tex', nargs='?', const='results.tex', metavar='FILE',
                         type=FileType('w'), help='Specifies that an additional '
                         'output file should be generated that contains the '

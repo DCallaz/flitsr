@@ -299,9 +299,9 @@ be manually merged to produce averages using the `merge` script. This script
 is called from within the `run_all` script, but only for individual results. To
 do more complex merging, the `merge` script allows a number of useful arguments:
 ```
-usage: merge [-h] [-R] [-r [X]] [-i DIR_NAME [DIR_NAME ...]]
-             [-e DIR_NAME [DIR_NAME ...]] [-t [FILE]] [-p [FILE]] [-1]
-             [-o FILE] [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
+usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
+             [-e DIR_ARG [DIR_ARG ...]] [-t [FILE]] [-p [FILE]] [-1] [-o FILE]
+             [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
              [--percentage CALC [CALC ...]] [-s [{metric,type}]]
              [-f [METRIC ...]] [-m METRIC [METRIC ...]] [-l CALC [CALC ...]]
 ```
@@ -310,12 +310,18 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_NAME [DIR_NAME ...]]
 * `-r [X]`, `--recurse [X]`: Activates the scripts recursive mode. This makes
     the script recursively look in sub-directories of the current directory for
     results files. An optional maximum recurse limit X can be given.
-* `-i DIR_NAME [DIR_NAME ...]`, `--incl DIR_NAME [DIR_NAME ...]`: Specifies
-    particular directories to include for the recursive option. May be specified
-    multiple times
-* `-e DIR_NAME [DIR_NAME ...]`, `--excl DIR_NAME [DIR_NAME ...]`: Specifies
-    particular directories to exclude for the recursive option. May be specified
-    multiple times
+* `-i DIR_ARG [DIR_ARG ...]`, `--incl DIR_ARG [DIR_ARG ...]`: Specifies particular
+    directories to include for the recursive option. You may optionally give a
+    depth with each directory in the format `DIR_ARG="[<depth>:]<dir name>"`,
+    where the depth is an integer starting with 1 (the current directory). By
+    default a depth of "\*" is used, indicating any depth is valid. NOTE: the
+    colon character (":") should not appear in the directory name, but if it must,
+    then the depth must also be given. This option may be specified multiple
+    times
+* `-e DIR_ARG [DIR_ARG ...]`, `--excl DIR_ARG [DIR_ARG ...]`: Specifies
+    particular directories to exclude for the recursive option. You may
+    optionally give a depth with each directory (see --incl for format).This
+    option may be specified multiple times
 * `-t [FILE]`, `--tex [FILE]`: Specifies that an additional output file should
     be generated that contains the results in a LaTeX table (in .tex format). By
     default this is stored in results.tex, but an optional filename FILE may be
