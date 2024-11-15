@@ -1,6 +1,7 @@
 import re
 from flitsr.percent_at_n import combine
 import os
+import sys
 from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
@@ -74,7 +75,6 @@ def find_dirs(dirs: List[str], path, depth=1, max=None,
     # Get the names to include and exclude at this depth level
     incl_lvl = incl.get(str(depth), []) + incl.get("*", [])
     excl_lvl = excl.get(str(depth), []) + excl.get("*", [])
-    print(path, depth, incl_lvl, excl_lvl)
     for dir in os.scandir(path):
         if (dir.is_dir() and (dir.name not in excl_lvl) and
             (len(incl_lvl) == 0 or dir.name in incl_lvl)):
@@ -82,7 +82,6 @@ def find_dirs(dirs: List[str], path, depth=1, max=None,
             if ((max and depth >= max) or
                 (not max and any(f.endswith('.results') for f in
                                  os.listdir(new_path)))):
-                print("adding", new_path)
                 dirs.append(new_path+"/")
             else:
                 find_dirs(dirs, new_path, depth=depth+1, max=max, incl=incl,
@@ -153,6 +152,10 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 try:
                     block = readBlock(files[d][mode][metric])
                 except Exception:
+                    print('WARNING: Could not find results for '
+                          f'{mode.replace("_", " ").title()} '
+                          f'{metric.replace("_", " ").title()} in dir {d}',
+                          file=sys.stderr)
                     continue
                 while (block != []):
                     for line in block:
