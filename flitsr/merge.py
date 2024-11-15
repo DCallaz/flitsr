@@ -4,7 +4,7 @@ import os
 from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
-from argparse import ArgumentParser, Action, FileType
+from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
 import argcomplete
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
@@ -63,16 +63,27 @@ def readBlock(file: File) -> List[str]:
     return block
 
 
-def find_dirs(dirs: List[str], path, depth=1, max=None, incl=[], excl=[]):
+def find_dirs(dirs: List[str], path, depth=1, max=None,
+              incl=Dict[str, List[str]], excl=Dict[str, List[str]]):
+    """
+    Recursively traverse a directory structure at the given `path` and find
+    directories containing results files, adding them to `dirs`. An optional
+    maximum depth may be given, along with names to include and exclude at
+    various depth levels ("*" indicates any level).
+    """
+    # Get the names to include and exclude at this depth level
+    incl_lvl = incl.get(str(depth), []) + incl.get("*", [])
+    excl_lvl = excl.get(str(depth), []) + excl.get("*", [])
+    print(path, depth, incl_lvl, excl_lvl)
     for dir in os.scandir(path):
-        if (dir.is_dir()):
+        if (dir.is_dir() and (dir.name not in excl_lvl) and
+            (len(incl_lvl) == 0 or dir.name in incl_lvl)):
             new_path = dir.path
             if ((max and depth >= max) or
                 (not max and any(f.endswith('.results') for f in
                                  os.listdir(new_path)))):
-                if (dir.name not in excl and (len(incl) == 0 or
-                                              dir.name in incl)):
-                    dirs.append(new_path+"/")
+                print("adding", new_path)
+                dirs.append(new_path+"/")
             else:
                 find_dirs(dirs, new_path, depth=depth+1, max=max, incl=incl,
                           excl=excl)
@@ -88,11 +99,20 @@ def ci_in(str1: str, col: Collection[str]):
     return str1.casefold() in map(str.casefold, col)
 
 
-def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
+def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
+          excl: List[Tuple[str, str]], rel: bool,
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
           percs=None, incl_metrics=None, flitsrs=None, sign=None,
           sign_less=[]):
+    # Set up the include and exclude dir names dicts
+    incl_dict: Dict[str, List[str]] = {}
+    excl_dict: Dict[str, List[str]] = {}
+    for d, n in incl:
+        incl_dict.setdefault(d, []).append(n)
+    for d, n in excl:
+        excl_dict.setdefault(d, []).append(n)
+    # set up other variables
     metrics: Set[str] = set()
     modes: Set[str] = set()
     calcs: Set[str] = set()
@@ -103,11 +123,12 @@ def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
     if (rel):
         if (not recurse):
             size = int(open("../size").readline())
+    # Find the directories and results files
     dirs = [""]
     if (recurse):
         dirs = []
-        find_dirs(dirs, ".", max=max, incl=incl, excl=excl)
-
+        find_dirs(dirs, ".", max=max, incl=incl_dict, excl=excl_dict)
+    # Read in all results
     if (rel):
         sizes = {}
     results_check = re.compile("^(?:([\\w_]*)_)?(\\w+)\\.results$")
@@ -255,6 +276,25 @@ def merge(recurse: bool, max: int, incl: List[str], excl: List[str], rel: bool,
         print("\\end{document}", file=tex_file)
 
 
+def parse_dir_arg(dir_arg: str) -> Tuple[str, str]:
+    """
+    Parses a given directory argument of the form '[<depth>:]<dir name>',
+    where the depth is optional. NOTE: the directory name must not include the
+    colon character (':') as this is used to separate the depth.
+
+    Returns a tuple with the depth at which the argument applies, and the
+    directory name.
+    """
+    if (":" in dir_arg):
+        depth, _, dir_name = dir_arg.partition(":")
+        if (depth != "*" and not depth.isdigit()):
+            raise ArgumentTypeError(f'Depth \"{depth}\" not an integer')
+    else:
+        depth = "*"
+        dir_name = dir_arg
+    return (depth, dir_name.rstrip('/'))
+
+
 if __name__ == "__main__":
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -278,13 +318,23 @@ if __name__ == "__main__":
                         'directory for results files. An optional maximum '
                         'recurse limit X can be given.')
     parser.add_argument('-i', '--incl', nargs='+', metavar='DIR_NAME',
-                        action='extend', default=[],
+                        action='extend', default=[], type=parse_dir_arg,
                         help='Specifies particular directories to include for '
-                        'the recursive option. May be specified multiple times')
+                        'the recursive option. You may optionally give a '
+                        'depth with each directory in the format '
+                        '\"[<depth>:]<dir name>\", where the depth is an '
+                        'integer starting with 1 (the current directory). '
+                        'By default a depth of \"*\" is used, indicating any '
+                        'depth is valid. NOTE: the colon character (\":\") '
+                        'should not appear in the directory name, but if it '
+                        'must, then the depth must also be given. This option '
+                        'May be specified multiple times')
     parser.add_argument('-e', '--excl', nargs='+', metavar='DIR_NAME',
-                        action='extend', default=[],
+                        action='extend', default=[], type=parse_dir_arg,
                         help='Specifies particular directories to exclude for '
-                        'the recursive option. May be specified multiple times')
+                        'the recursive option. You may optionally give a '
+                        'depth with each directory (see --incl for format).'
+                        'This option May be specified multiple times')
     parser.add_argument('-t', '--tex', nargs='?', const='results.tex', metavar='FILE',
                         type=FileType('w'), help='Specifies that an additional '
                         'output file should be generated that contains the '
@@ -366,8 +416,6 @@ if __name__ == "__main__":
     if (args.perc_at_n is None):
         args.perc_at_n = args.output
     # Remove trailing '/' for included and excluded dirs
-    args.incl = list(map(lambda s: str.rstrip(s, '/'), args.incl))
-    args.excl = list(map(lambda s: str.rstrip(s, '/'), args.excl))
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
