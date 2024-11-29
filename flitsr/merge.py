@@ -38,6 +38,9 @@ class Avg:
             return sum(self.all)/self.adds
 
     def significance(self, avg: 'Avg'):
+        # if number of observations differ, no significance
+        if (len(self.all) != len(avg.all)):
+            return ('equal', 1.0)
         diff = 1.0 if (self.all == avg.all) else \
             wilcoxon(self.all, avg.all, "pratt", method="approx").pvalue
         if (diff >= 0.05):
