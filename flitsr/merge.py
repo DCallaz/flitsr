@@ -177,7 +177,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     def print_heading(name, tabs):
         name_disp = name.replace("_", " ").title()
         print('\t'*tabs, name_disp, sep='', file=output_file)
-        if (ci_in(PERC_N, calcs) and perc_file != output_file):
+        if (ci_in(PERC_N, calcs) and perc_file is not None and
+                perc_file != output_file):
             print('\t'*tabs, name_disp, sep='', file=perc_file)
 
     def print_tex_heading(mode, metric):
@@ -188,7 +189,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
 
     def print_results(mode, metric):
         for j, calc in enumerate(sorted(calcs)):
-            if (ci_eq(calc, PERC_N)):
+            if (ci_eq(calc, PERC_N) and perc_file is not None):
                 comb = combine(avgs[mode][metric][calc].eval())
                 print("\t\t", calc+": ", comb, sep='', file=perc_file)
             else:
@@ -349,8 +350,7 @@ if __name__ == "__main__":
                         'that an additional output file should be generated '
                         'that contains the percentage-at-n results. By default '
                         'this is stored in perc_at_n_results, but an optional '
-                        'filename FILE may be given', dest='perc_at_n',
-                        default='perc_at_n_results')
+                        'filename FILE may be given', dest='perc_at_n')
     parser.add_argument('-1', '--inline-perc@n', action='store_const',
                         const=None, dest='perc_at_n', help='Instead of '
                         'producing a separate percentage-at-n file, place the '
