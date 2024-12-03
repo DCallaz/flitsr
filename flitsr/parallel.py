@@ -2,13 +2,29 @@ import subprocess
 import re
 from flitsr.suspicious import Suspicious
 from flitsr.spectrum import Spectrum
+from flitsr.output import print_tcm
 import copy
 import os
 from typing import List
+import tempfile
 
 
-def parallel(d: str, spectrum: Spectrum, parType: str) -> List[Spectrum]:
-    spectrums = partition_table(d, spectrum, parType)
+def parallel(inp_file: str, spectrum: Spectrum,
+             parType: str, method_lvl=False) -> List[Spectrum]:
+    # Check if Gzoltar or converted method level and if so, convert
+    tmp_name = None
+    if (method_lvl or (os.path.isdir(inp_file) and
+                       os.path.isfile(os.path.join(inp_file, "matrix.txt")))):
+        tmp_fd, tmp_name = tempfile.mkstemp(text=True)
+        inp_file = tmp_name
+        tmp = os.fdopen(tmp_fd, 'w')
+        print_tcm(spectrum, tmp)
+        tmp.close()
+    # Run the parallel algorithm
+    spectrums = partition_table(inp_file, spectrum, parType)
+    # remove temporary file if available
+    if (tmp_name):
+        os.remove(tmp_name)
     return spectrums
 
 

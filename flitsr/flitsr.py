@@ -338,7 +338,8 @@ def main(argv: List[str]):
             # Check for parallel
             if (AdvancedType.PARALLEL in advanced_type or metric == 'parallel'):
                 spectrums = parallel.parallel(args.input, spectrum,
-                                              args.parallel or 'msp')
+                                              args.parallel or 'msp',
+                                              method_lvl=args.method)
                 # Set default metric for parallel
                 metric = 'ochiai'
             else:
