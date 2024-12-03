@@ -60,7 +60,7 @@ class Spectrum():
                    ("(FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
-        def gzoltar_str(self) -> str:
+        def gzoltar_str(self, incl_faults=True) -> str:
             gstring = ''
             path_part = self.path.rpartition('.')
             if (path_part[0] != '' and path_part[2] != ''):
@@ -71,7 +71,7 @@ class Spectrum():
                 gstring += ('#' if (gstring != '') else '') + self.method
             if (self.line):
                 gstring += (':' if (gstring != '') else '') + str(self.line)
-            if (self.isFaulty()):
+            if (incl_faults and self.isFaulty()):
                 gstring += ':' + ':'.join(str(x) for x in self.faults)
             return gstring
 
@@ -368,3 +368,20 @@ class Spectrum():
         matrix = self._matrix[np.ix_(tmask, emask)]
         errVector = self._errVector[tmask]
         return matrix, errVector
+
+    def search_tests(self, name_part):
+        """
+        Searches for any test that matches the partial test name `name_part`.
+        Returns a list of all the matches.
+        """
+        results = [t for t in self.tests() if t.name.find(name_part) != -1]
+        return results
+
+    def search_elements(self, name_part, groups=False):
+        """
+        Searches for any element that matches the partial element name
+        `name_part`. Returns a list of all the matches.
+        """
+        elems = self.elements() if groups else self._full_elements
+        results = [e for e in elems if str(e).find(name_part) != -1]
+        return results
