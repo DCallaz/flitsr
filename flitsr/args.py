@@ -46,6 +46,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help='The coverage file (TCM) or '
                         'directory (GZoltar) containing the coverage collected'
                         ' for the system over the test suite')
+    parser.add_argument('-g', '--gui', action='store_true', help='Starts the '
+                        'FLITSR GUI mode')
     parser.add_argument('-o', '--output', action='store', default=sys.stdout,
             type=argparse.FileType('w'), help='Specify the output file to use '
             'for all output (default: STDOUT).')

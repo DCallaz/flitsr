@@ -19,6 +19,7 @@ from flitsr.tie import Ties
 from flitsr.args import parse_args
 from flitsr.advanced_types import AdvancedType
 from flitsr.artemis_wrapper import run_artemis
+from flitsr.gui import Gui
 
 
 def remove_faulty_elements(spectrum: Spectrum,
@@ -314,6 +315,7 @@ def main(argv: List[str]):
               file=sys.stderr)
         return
     # Execute techniques
+    all_sorts: List[List[score.Scores]] = []
     for advanced_type in args.types:
         for metric in args.metrics:
             # Get the output channel
@@ -357,10 +359,15 @@ def main(argv: List[str]):
                                           args.cutoff_eval)
                 sorts.append(sort)
             # Compute and print output
-            output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
-                   args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                   decimals=args.decimals, file=output_file)
+            if (args.gui):
+                all_sorts.append(sorts)
+            else:
+                output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
+                       args.prec_rec, args.faults, args.collapse, csv=args.csv,
+                       decimals=args.decimals, file=output_file)
             spectrum.reset()
+    if (args.gui):
+        Gui(spectrum, all_sorts)
 
 
 if __name__ == "__main__":
