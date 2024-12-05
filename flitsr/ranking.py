@@ -56,7 +56,7 @@ def read_ranking(ranking_file: str,
                         elem.faults.append(fault)
             # Add/Update the method's score
             elem = method_map[i]
-            score_elem = scores[elem]
+            score_elem = scores.get_score(elem)
             if (score_elem is None):
                 scores.append(elem, score, 0)
             else:

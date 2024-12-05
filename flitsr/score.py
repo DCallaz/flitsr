@@ -26,7 +26,10 @@ class Scores:
         self.elem_map: Dict[Spectrum.Element, Scores.Score] = {}
         self.place = 0
 
-    def __getitem__(self, elem):
+    def __getitem__(self, index: int):
+        return self._scores[index]
+
+    def get_score(self, elem):
         return self.elem_map[elem]
 
     def sort(self, reverse: bool, tiebrk: int):
@@ -38,9 +41,9 @@ class Scores:
             self._scores.sort(key=lambda x: x.score, reverse=reverse)
         elif (tiebrk == 3):  # original ranking tie break
             if (orig is not None):  # sort by original rank then exec count
-                self._scores.sort(key=lambda x: orig[x.elem].exec,
+                self._scores.sort(key=lambda x: orig.get_score(x.elem).exec,
                                   reverse=reverse)
-                self._scores.sort(key=lambda x: orig[x.elem].score,
+                self._scores.sort(key=lambda x: orig.get_score(x.elem).score,
                                   reverse=reverse)
             else:  # if no orig, still sort by current execution count
                 self._scores.sort(key=lambda x: x.exec, reverse=reverse)
