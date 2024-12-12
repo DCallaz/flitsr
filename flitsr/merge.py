@@ -106,7 +106,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
           percs=None, incl_metrics=None, flitsrs=None, sign=None,
-          sign_less=[]):
+          sign_less=[], thrs=[]):
     # Set up the include and exclude dir names dicts
     incl_dict: Dict[str, List[str]] = {}
     excl_dict: Dict[str, List[str]] = {}
@@ -176,6 +176,22 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                             avgs[mode][metric].setdefault(calc, Avg(s)).add(
                                     float(line_s[1]))
                     block = readBlock(files[d][mode][metric])
+    if (incl_calcs is not None):  # select only included calcs
+        calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
+    # calculate thresholds
+    for thr in thrs:
+        thr_key = str(thr).lower()
+        calcs.add(thr_key)
+        for mode in modes:
+            for metric in metrics:
+                vals = avgs[mode][metric][thr.calc].all
+                count = 0.0
+                for val in vals:
+                    if (thr.comp(val, thr.threshold)):
+                        count += 1
+                avgs[mode][metric][thr_key] = Avg()
+                avgs[mode][metric][thr_key].adds = len(vals)
+                avgs[mode][metric][thr_key].all = [count]
 
     def print_heading(name, tabs):
         name_disp = name.replace("_", " ").title()
@@ -252,8 +268,6 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
         # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
         # print("\\begin{longtable}", file=tex_file)
-        if (incl_calcs is not None): # select only included calcs
-            calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
         print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
               file=tex_file)
         print("Metric & "+' & '.join([c for c in sorted(calcs) if not
@@ -302,6 +316,34 @@ def parse_dir_arg(dir_arg: str) -> Tuple[str, str]:
     return (depth, dir_name.rstrip('/'))
 
 
+def above(val, threshold):
+    return val >= threshold
+
+
+def below(val, threshold):
+    return val <= threshold
+
+
+class Threshold:
+    def __init__(self, calc, comp, threshold):
+        self.calc = calc
+        self.comp = comp
+        self.threshold = threshold
+
+    def __getitem__(self, i):
+        if (i == 0):
+            return self.calc
+        elif (i == 1):
+            return self.comp
+        elif (i == 2):
+            return self.threshold
+        else:
+            IndexError("tuple index out of range")
+
+    def __str__(self):
+        return f'threshold ({self.calc}, {self.comp.__name__}, {self.threshold})'
+
+
 if __name__ == "__main__":
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -311,6 +353,21 @@ if __name__ == "__main__":
             setattr(namespace, self.dest, True)
             if (values is not None):
                 setattr(namespace, 'max', values)
+
+    class ThresholdAction(Action):
+        def __call__(self, parser, args, values, option_string=None):
+            # print '{n} {v} {o}'.format(n=args, v=values, o=option_string)
+            calc, comp, threshold = values
+            if not ci_in(comp, ('above', 'below')):
+                raise ValueError('invalid Comparison {s!r}'.format(s=comp))
+            else:
+                comp = eval(comp)
+            threshold = float(threshold)
+            if (not hasattr(args, self.dest) or
+                    getattr(args, self.dest) is None):
+                setattr(args, self.dest, list())
+            d = getattr(args, self.dest)
+            d.append(Threshold(calc, comp, threshold))
 
     met_names = Suspicious.getNames(True)
 
@@ -377,6 +434,13 @@ if __name__ == "__main__":
                         'merging. By default all available calculations are '
                         'included. NOTE: the names of the calculations need to '
                         'be found in the corresponding .results files')
+    parser.add_argument('--threshold', nargs=3, action=ThresholdAction, default=[],
+                        help='Format: --threshold <calculation> {above, below} '
+                        '<float>. Specifies that an additional calculation '
+                        'should be added that counts the number of versions '
+                        'where the given calculation is above or below the '
+                        'given float threshold. The calculations are the same '
+                        'as for the --calcs argument.')
     parser.add_argument('--percentage', nargs='+', metavar='CALC',
                         help='Specify calculations that must be intepreted as '
                         'a percentage value. NOTE: the names of the '
@@ -426,4 +490,4 @@ if __name__ == "__main__":
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
           incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
-          sign_less=args.sign_less)
+          sign_less=args.sign_less, thrs=args.threshold)

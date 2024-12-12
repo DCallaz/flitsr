@@ -302,6 +302,7 @@ do more complex merging, the `merge` script allows a number of useful arguments:
 usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
              [-e DIR_ARG [DIR_ARG ...]] [-t [FILE]] [-p [FILE]] [-1] [-o FILE]
              [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
+             [--threshold THRESHOLD THRESHOLD THRESHOLD]
              [--percentage CALC [CALC ...]] [-s [{metric,type}]]
              [-f [METRIC ...]] [-m METRIC [METRIC ...]] [-l CALC [CALC ...]]
 ```
@@ -343,6 +344,11 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
     calculations to include when merging. By default all available calculations
     are included. NOTE: the names of the calculations need to be found in the
     corresponding `.results` files
+* `--threshold THRESHOLD THRESHOLD THRESHOLD`: Format: `--threshold <calculation>
+    {above, below} <float>`. Specifies that an additional calculation should be
+    added that counts the number of versions where the given calculation is above
+    or below the given float threshold. The calculations are the same as for the
+    `--calcs` argument.
 * `--percentage CALC [CALC ...]`: Specify calculations that must be intepreted as
     a percentage value. NOTE: the names of the calculations need to be found in
     the corresponding .results files
