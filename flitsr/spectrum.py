@@ -2,14 +2,23 @@ from __future__ import annotations
 from typing import List, Dict, Any, Set
 from bitarray import bitarray
 import numpy as np
+from enum import Enum
 from flitsr.const_iter import ConstIter
+
+
+class Outcome(Enum):
+    PASSED = 0
+    PASS = 0
+    FAILED = 1
+    FAIL = 1
+    ERROR = 2
 
 
 class Spectrum():
     """An implementation for a program spectrum."""
     class Test():
         """A test object holds information pertaining to a particular test."""
-        def __init__(self, name: str, index: int, outcome: bool):
+        def __init__(self, name: str, index: int, outcome: Outcome):
             self.name = name
             self.index = index
             self.outcome = outcome
@@ -31,9 +40,10 @@ class Spectrum():
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        def __init__(self, details: List[str], faults: List[Any]):
+        def __init__(self, details: List[str], index: int, faults: List[Any]):
             if (len(details) < 1):
                 raise ValueError("Unnamed element: ", *details)
+            self.index = index
             self.path = details[0]
             self.method = None
             self.line = None
@@ -50,7 +60,7 @@ class Spectrum():
                     self.line = int(details[1])
             self.faults = faults
             self.tup = (self.path, self.method, self.line)
-            self.hash = hash(self.tup)
+            # self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:
             return len(self.faults) > 0
@@ -79,10 +89,10 @@ class Spectrum():
             return str(self)
 
         def __eq__(self, other):
-            return self.tup == other.tup
+            return self.index == other.index
 
         def __hash__(self):
-            return self.hash
+            return self.index
 
     class Execution():
         """
@@ -126,7 +136,7 @@ class Spectrum():
         def get(self, elem: Spectrum.Element, default: bool = False) -> bool:
             try:
                 return bool(self.exec[self.elems[elem]])
-            except KeyError:
+            except (KeyError, IndexError):
                 return default
 
     def __init__(self):
@@ -170,7 +180,7 @@ class Spectrum():
 
     def remove(self, test: Spectrum.Test, hard=False):
         self._tests.remove(test)
-        if (test.outcome is True):
+        if (test.outcome is Outcome.PASSED):
             self.tp -= 1
         else:
             self._failing.remove(test)
@@ -185,7 +195,7 @@ class Spectrum():
         if (self.spectrum[test][elem]):
             if (hard):
                 self.spectrum[test][elem] = False
-            if (test.outcome is True):
+            if (test.outcome is Outcome.PASSED):
                 self.p[elem] -= 1
             else:
                 self.f[elem] -= 1
@@ -207,34 +217,34 @@ class Spectrum():
         """Re-activates all the tests and recomputes counts"""
         for test in self.removed:
             self._tests.append(test)
-            if (test.outcome is True):
+            if (test.outcome is Outcome.PASSED):
                 self.tp += 1
             else:
                 self._failing.append(test)
                 self.tf += 1
             for elem in self.elements():
                 if (self.spectrum[test][elem]):
-                    if (test.outcome is True):
+                    if (test.outcome is Outcome.PASSED):
                         self.p[elem] += 1
                     else:
                         self.f[elem] += 1
         self.removed.clear()
 
-    def addTest(self, name: str, index: int, outcome: bool):
+    def addTest(self, name: str, index: int, outcome: Outcome):
         t = self.Test(name, index, outcome)
         self._tests.append(t)
-        if (outcome is False):
+        if (outcome is not Outcome.PASSED):
             self._failing.append(t)
         self.spectrum[t] = self.Execution(t, self._full_elements,
                                           self._curr_elements)
         # Increment total counts
-        if (outcome):
+        if (outcome is Outcome.PASSED):
             self.tp += 1
         else:
             self.tf += 1
 
     def addElement(self, details: List[str], faults: List[Any]) -> Element:
-        e = self.Element(details, faults)
+        e = self.Element(details, len(self._full_elements), faults)
         self._full_elements[e] = len(self._full_elements)
         self._curr_elements.append(e)
         self.groups[0].append(e)
@@ -245,7 +255,7 @@ class Spectrum():
     def addExecution(self, test: Test, elem: Element, executed: bool):
         self.spectrum[test].addElement(elem, executed)
         if (executed):
-            if (test.outcome):
+            if (test.outcome is Outcome.PASSED):
                 self.p[elem] += 1
             else:
                 self.f[elem] += 1
@@ -361,7 +371,7 @@ class Spectrum():
             for (i, test) in enumerate(self._matrix_tests):
                 for (j, elem) in enumerate(self._matrix_elems):
                     self._matrix[i][j] = self.spectrum[test][elem]
-                self._errVector[i] = 1 if (test.outcome is False) else 0
+                self._errVector[i] = 0 if (test.outcome is Outcome.PASSED) else 1
         # Extract submatrix
         tmask = np.isin(self._matrix_tests, self._tests)
         emask = np.isin(self._matrix_elems, self._curr_elements)

@@ -1,6 +1,6 @@
 import sys
 from typing import Dict, List, Set
-from flitsr.spectrum import Spectrum
+from flitsr.spectrum import Spectrum, Outcome
 from flitsr.score import Scores
 
 
@@ -30,7 +30,7 @@ def print_spectrum(spectrum: Spectrum):
         for elem in row:
             if (row[elem]):
                 print(elem, end=" ")
-        if (test.outcome):
+        if (test.outcome is Outcome.PASSED):
             print('+')
         else:
             print('-')
@@ -45,8 +45,8 @@ def print_csv(spectrum: Spectrum, scores: Scores, file=sys.stdout):
 
 
 def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):
-    ts = [str(t.name)+' ('+('PASS' if t.outcome else 'FAIL')+')' for t in
-          spectrum.tests()]
+    ts = [str(t.name)+' ('+('PASS' if t.outcome is Outcome.PASSED else
+                            'FAIL')+')' for t in spectrum.tests()]
     print('Element', *ts, sep=',', file=file)
     for elem in spectrum._full_elements:
         print(elem, end=',', file=file)
@@ -57,7 +57,8 @@ def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):
 def print_tcm(spectrum: Spectrum, file=sys.stdout):
     print("#tests", file=file)
     for test in spectrum.tests():
-        print(test.name, "PASSED" if test.outcome else "FAILED", file=file)
+        print(test.name, "PASSED" if test.outcome is Outcome.PASSED else
+              "FAILED", file=file)
     print(file=file)
     print("#uuts", file=file)
     for elem in spectrum._full_elements:
