@@ -10,7 +10,7 @@ from flitsr import top
 from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
-from flitsr.output import print_csv, print_names
+from flitsr.output import print_csv, print_spectrum_csv, print_names
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
@@ -193,7 +193,7 @@ def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
 
 def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
-           csv=False, decimals=2, file=sys.stdout):
+           csv=False, specCsv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
         ties: Ties = Ties(spectrum, scores)
         if (weff):
@@ -281,6 +281,8 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
                 print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
                       file=file)
             print_csv(spectrum, s, file)
+    elif (specCsv):
+        print_spectrum_csv(spectrum, file)
     else:
         for (i, s) in enumerate(scores):
             if (i > 0):
@@ -298,6 +300,7 @@ def main(argv: List[str]):
                                             method_level=args.method)
         output([scores], spectrum, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
+               specCsv=args.spectrum_csv,
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
@@ -359,7 +362,7 @@ def main(argv: List[str]):
             # Compute and print output
             output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
                    args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                   decimals=args.decimals, file=output_file)
+                   specCsv=args.spectrum_csv, decimals=args.decimals, file=output_file)
             spectrum.reset()
 
 

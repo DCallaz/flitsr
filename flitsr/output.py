@@ -44,6 +44,16 @@ def print_csv(spectrum: Spectrum, scores: Scores, file=sys.stdout):
             print(elem.gzoltar_str(), ';', score.score, sep='', file=file)
 
 
+def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):
+    ts = [str(t.name)+' ('+('PASS' if t.outcome else 'FAIL')+')' for t in
+          spectrum.tests()]
+    print('Element', *ts, sep=',', file=file)
+    for elem in spectrum._full_elements:
+        print(elem, end=',', file=file)
+        tests = ['X' if spectrum[t][elem] else '' for t in spectrum.tests()]
+        print(elem, *tests, sep=',', file=file)
+
+
 def print_tcm(spectrum: Spectrum, file=sys.stdout):
     print("#tests", file=file)
     for test in spectrum.tests():

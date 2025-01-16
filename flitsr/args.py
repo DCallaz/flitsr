@@ -54,6 +54,9 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'FLITSR ranking format. Enabling this option will allow FLITSR to '
             'output the ranking in CSV format compatible with GZoltar\'s CSV '
             'ranking format instead.')
+    parser.add_argument('--spectrum-csv', action='store_true',
+            help='Enabling this option will cause FLITSR to '
+            'output the spectrum in CSV format.')
     default_metric = 'ochiai'
     parser.add_argument('-m', '--metric', dest='metrics', action='append',
             choices=Suspicious.getNames(True), metavar='METRIC',
