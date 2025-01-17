@@ -235,7 +235,8 @@ class Spectrum:
         self.p: Dict[Spectrum.Group, int] = dict()
         self.f: Dict[Spectrum.Group, int] = dict()
         # Initialize element related properties
-        self._groups = sorted(groups, key=lambda g: g.get_elements()[0].tup)
+        edict = {e: i for i, e in enumerate(elements)}
+        self._groups = sorted(groups, key=lambda g: edict[g.get_elements()[0]])
         for i, group in enumerate(self._groups):
             group.set_index(i)
             self.p[group] = 0
