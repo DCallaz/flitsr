@@ -405,9 +405,9 @@ class Spectrum:
         executed = set()
         entities: Sequence[Spectrum.Entity]
         if (groups):
-            entities = self._elements
-        else:
             entities = self._groups
+        else:
+            entities = self._elements
         for ent in entities:
             if (self[test][ent]):
                 executed.add(ent)
