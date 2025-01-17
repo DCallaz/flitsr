@@ -1,6 +1,7 @@
 import re
 from typing import Tuple, List, Union
 from flitsr.spectrum import Spectrum
+from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr.score import Scores
 
 
@@ -16,7 +17,7 @@ def read_any_ranking(ranking_file: str,
 def read_ranking(ranking_file: str,
                  method_level=False) -> Tuple[Scores, Spectrum]:
     f = open(ranking_file)
-    spectrum = Spectrum()
+    spectrumBuilder = SpectrumBuilder()
     scores = Scores()
     i = 0  # number of actual lines
     bugs = 0
@@ -46,7 +47,7 @@ def read_ranking(ranking_file: str,
             details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
             if ((details[0], details[1]) not in methods):
                 # add with first line number
-                elem = spectrum.addElement(details, faults)
+                elem = spectrumBuilder.addElement(details, faults)
                 methods[(details[0], details[1])] = elem
                 method_map[i] = elem
             else:

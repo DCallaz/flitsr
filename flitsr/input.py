@@ -6,11 +6,12 @@ from typing import Dict, Tuple, List
 from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
+from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
 
 
 def construct_details(f: TextIOWrapper, method_level: bool,
-                      spectrum: Spectrum) -> Dict[int, Spectrum.Element]:
+                      sb: SpectrumBuilder) -> Dict[int, Spectrum.Element]:
     """
     Fills the spectrum object with elements read in from the open file 'f'.
     """
@@ -40,7 +41,7 @@ def construct_details(f: TextIOWrapper, method_level: bool,
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
                 if ((details[0], details[1]) not in methods):
                     # add with first line number
-                    elem = spectrum.addElement(details, faults)
+                    elem = sb.addElement(details, faults)
                     methods[(details[0], details[1])] = elem
                     method_map[i] = elem
                 else:
@@ -51,13 +52,13 @@ def construct_details(f: TextIOWrapper, method_level: bool,
                             elem.faults.append(fault)
             else:
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
-                elem = spectrum.addElement(details, faults)
+                elem = sb.addElement(details, faults)
                 method_map[i] = elem
             i += 1
     return method_map
 
 
-def construct_tests(tests_reader: TextIOWrapper, spectrum: Spectrum):
+def construct_tests(tests_reader: TextIOWrapper, sb: SpectrumBuilder):
     tests_reader.readline()
     i = 0
     for line in tests_reader:
@@ -66,13 +67,14 @@ def construct_tests(tests_reader: TextIOWrapper, spectrum: Spectrum):
             errors.error("incorrectly formatted test line in input file:",
                          line, "terminating...")
         else:
-            spectrum.addTest(m.group(1), i, Outcome[m.group(2)])
+            sb.addTest(m.group(1), i, Outcome[m.group(2)])
         i += 1
 
 
-def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
-                  spectrum: Spectrum):
-    for t, test in enumerate(spectrum.tests()):
+def fill_spectrum(bin_file: TextIOWrapper,
+                  method_map: Dict[int, Spectrum.Element],
+                  sb: SpectrumBuilder):
+    for t, test in enumerate(sb.get_tests()):
         line = bin_file.readline()
         if (line == ''):
             errors.error('Incorrect number of matrix lines', f'({t})',
@@ -87,25 +89,27 @@ def fill_spectrum(bin_file: TextIOWrapper, method_map: Dict[int, Spectrum.Elemen
                 errors.error('Incorrect number of matrix columns', f'({i})',
                              'in input file, terminating...')
             if (arr[i] != "0" and elem not in seen):
-                spectrum.addExecution(test, elem, arr[i] != "0")
+                sb.addExecution(test, elem, arr[i] != "0")
                 seen.add(elem)
         # Use row to merge equivalences
-        spectrum.split_groups_on_test(test)
+        sb.split_groups_on_test(test)
     # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from spectrum
-    spectrum.remove_unnecessary()
+    # spectrum.remove_unnecessary()
 
 
 def read_spectrum(input_path: str, split_faults: bool,
                   method_level=False) -> Spectrum:
-    spectrum = Spectrum()
+    sb = SpectrumBuilder()
     # Getting the details of the elements
     method_map = construct_details(open(input_path+"/spectra.csv"),
-                                   method_level, spectrum)
+                                   method_level, sb)
     # Getting the details of the tests
-    construct_tests(open(input_path+"/tests.csv"), spectrum)
+    construct_tests(open(input_path+"/tests.csv"), sb)
     # Constructing the spectrum
-    fill_spectrum(open(input_path+"/matrix.txt"), method_map, spectrum)
+    fill_spectrum(open(input_path+"/matrix.txt"), method_map, sb)
+    spectrum = sb.get_spectrum()
+    del sb
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(spectrum.get_faults(), spectrum)

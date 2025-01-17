@@ -16,8 +16,8 @@ def print_names(spectrum, scores=None, file=sys.stdout):
             print("Faulty grouping: ", "[", file=file)
         else:
             print("Faulty grouping:", score.score, "[", file=file)
-        group = spectrum.get_group(score.elem)
-        for elem in group:
+        group = score.group
+        for elem in group.get_elements():
             print(" ", elem, file=file)
         print("]", file=file)
 
@@ -39,8 +39,8 @@ def print_spectrum(spectrum: Spectrum):
 def print_csv(spectrum: Spectrum, scores: Scores, file=sys.stdout):
     print("name;suspiciousness_value", file=file)
     for score in scores:
-        group = spectrum.get_group(score.elem)
-        for elem in group:
+        group = score.group
+        for elem in group.get_elements():
             print(elem.gzoltar_str(), ';', score.score, sep='', file=file)
 
 
@@ -48,8 +48,9 @@ def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):
     ts = [str(t.name)+' ('+('PASS' if t.outcome is Outcome.PASSED else
                             'FAIL')+')' for t in spectrum.tests()]
     print('Element', *ts, sep=',', file=file)
-    for elem in spectrum._full_elements:
-        print(elem, end=',', file=file)
+    # TODO: change _elements below to elements()
+    for elem in spectrum._elements:
+        # print(elem, end=',', file=file)
         tests = ['X' if spectrum[t][elem] else '' for t in spectrum.tests()]
         print(elem, *tests, sep=',', file=file)
 
@@ -61,7 +62,8 @@ def print_tcm(spectrum: Spectrum, file=sys.stdout):
               "FAILED", file=file)
     print(file=file)
     print("#uuts", file=file)
-    for elem in spectrum._full_elements:
+    # TODO: change _elements below to elements()
+    for elem in spectrum._elements:
         print(elem.gzoltar_str(incl_faults=False),
               f" | {' | '.join([str(e) for e in elem.faults])}"
               if elem.isFaulty() else "",
@@ -70,7 +72,7 @@ def print_tcm(spectrum: Spectrum, file=sys.stdout):
     print("#matrix", file=file)
     for test in spectrum.tests():
         first = True
-        for elem_id, elem in enumerate(spectrum._full_elements):
+        for elem_id, elem in enumerate(spectrum._elements):
             if (spectrum[test][elem]):
                 print(("" if first else " ")+str(elem_id), "1", end="",
                       file=file)
