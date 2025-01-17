@@ -20,7 +20,7 @@ def construct_details(f: TextIOWrapper, method_level: bool,
     bugs = 0
     line = f.readline()
     while (not line == '\n'):
-        m = re.fullmatch('(.+)(?: \\| (.+))?', line.strip())
+        m = re.fullmatch('((?:[^ ]| [^|])+)(?: \\| (.+))?', line.rstrip())
         if (m is None):
             errors.error("incorrectly formatted element line in input file:",
                          line, "terminating...")
@@ -66,7 +66,7 @@ def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
     line = f.readline()
     i = 0
     while (not line == '\n'):
-        m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?', line.strip())
+        m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?', line.rstrip())
         if (m is None):
             errors.error("incorrectly formatted test line in input file:",
                          line, "terminating...")
@@ -83,7 +83,7 @@ def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
         if (line == ''):
             errors.error('Incorrect number of matrix lines', f'({t})',
                          'in input file, terminating...')
-        arr = line.strip().split(' ')
+        arr = line.rstrip().split(' ')
         seen = set()
         for i in range(0, int(len(arr)/2)):
             try:
