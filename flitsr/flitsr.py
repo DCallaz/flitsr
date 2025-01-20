@@ -98,8 +98,8 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
     confs = []
     # check if internal ranking order needs to be determined
     if (flitsr_order in ['auto', 'conf']):
-        for elem in basis:
-            ts = list(spectrum.get_tests(elem, only_failing=True))
+        for group in basis:
+            ts = list(spectrum.get_tests(group, only_failing=True))
             possibles: Set[Spectrum.Group] = set()
             possibles.update(spectrum.get_executed_groups(ts[0]))
             for test in ts[1:]:
@@ -116,9 +116,9 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
         big, small = [], []
         for group in basis:
             if (len(group.get_elements()) > 5):
-                big.append(elem)
+                big.append(group)
             else:
-                small.append(elem)
+                small.append(group)
         if (len(big) != 0 and len(small) != 0):
             return flitsr_ordering(spectrum, small, sort, flitsr_order) + \
                 flitsr_ordering(spectrum, big, sort, flitsr_order)
