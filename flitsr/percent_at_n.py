@@ -19,10 +19,10 @@ def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
     total = 0
     size = 0
     if (collapse):
-        size = len(spectrum.groups)
+        size = len(spectrum.groups())
     else:
-        for group in spectrum.groups:
-            size += len(group)
+        for group in spectrum.groups():
+            size += len(group.get_elements())
     bumps = [float(size)]
     try:
         while (True):

@@ -56,24 +56,24 @@ def mba_zombie(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
 def mba_5_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                scores: Scores, formula: str, effort: str):
     size = 0
-    for group in spectrum.groups:
-        size += len(group)
+    for group in spectrum.groups():
+        size += len(group.get_elements())
     return method(int(size*0.05), spectrum, faults, scores, effort, True)
 
 
 def mba_10_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                 scores: Scores, formula: str, effort: str):
     size = 0
-    for group in spectrum.groups:
-        size += len(group)
+    for group in spectrum.groups():
+        size += len(group.get_elements())
     return method(int(size*0.1), spectrum, faults, scores, effort, True)
 
 
 def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                   scores: Scores, formula: str, effort: str):
     tot_size = 0
-    for group in spectrum.groups:
-        tot_size += len(group)
+    for group in spectrum.groups():
+        tot_size += len(group.get_elements())
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     zero = sus.execute(formula)
     new_scores = Scores()
@@ -91,7 +91,7 @@ def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                     faults.values())):
                 fault_num += 1
             new_scores.extend([next_score])
-            size += len(spectrum.get_group(next_score.elem))
+            size += len(next_score.group.get_elements())
             next_score = next(s_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
@@ -120,7 +120,7 @@ def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                     faults.values())):
                 fault_num += 1
             new_scores.extend([next_score])
-            size += len(spectrum.get_group(next_score.elem))
+            size += len(next_score.group.get_elements())
             next_score = next(s_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
@@ -170,7 +170,7 @@ def method(stop_score: float, spectrum: Spectrum,
                                           fault_locs in faults.values())):
                 first_fault = len(temp_scores)
             temp_scores.append(next_score)
-            size += len(spectrum.get_group(next_score.elem))
+            size += len(next_score.group.get_elements())
             next_score = next(s_iter, None)
         if (effort == 'worst' or score.score > stop_score or first_fault == -1):
             new_scores.extend(temp_scores)

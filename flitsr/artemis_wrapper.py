@@ -9,7 +9,7 @@ def run_artemis(spectrum: Spectrum, metric: str, numUniverse=17,
     # Set default metric
     if (metric == 'artemis'):
         metric = 'ochiai'
-    elements = spectrum.elements()
+    elements = spectrum.groups()
     matrix, errVector = spectrum.to_matrix()
     rankingList = artemis.explorer(matrix, errVector, spectrum.locs(),
                                    metric, numUniverse, maxUniverse, p)

@@ -6,11 +6,12 @@ from typing import Dict, Tuple, List
 from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
+from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
 
 
 def construct_details(f: TextIOWrapper, method_level: bool,
-                      spectrum: Spectrum) -> Dict[int, Spectrum.Element]:
+                      sb: SpectrumBuilder) -> Dict[int, Spectrum.Element]:
     """
     Fills the spectrum object with elements read in from the open file 'f'.
     """
@@ -44,7 +45,7 @@ def construct_details(f: TextIOWrapper, method_level: bool,
                     details = list(details_m.groups())
                 if ((details[0], details[1]) not in methods):
                     # append with first line number
-                    elem = spectrum.addElement(details, faults)
+                    elem = sb.addElement(details, faults)
                     methods[(details[0], details[1])] = elem
                     method_map[i] = elem
                 else:
@@ -55,14 +56,14 @@ def construct_details(f: TextIOWrapper, method_level: bool,
                             elem.faults.append(fault)
             else:
                 details = m.group(1).split(":")
-                elem = spectrum.addElement(details, faults)
+                elem = sb.addElement(details, faults)
                 method_map[i] = elem
             i += 1
             line = f.readline()
     return method_map
 
 
-def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
+def construct_tests(f: TextIOWrapper, sb: SpectrumBuilder):
     line = f.readline()
     i = 0
     while (not line == '\n'):
@@ -71,14 +72,14 @@ def construct_tests(f: TextIOWrapper, spectrum: Spectrum):
             errors.error("incorrectly formatted test line in input file:",
                          line, "terminating...")
         else:
-            spectrum.addTest(m.group(1), i, Outcome[m.group(2)])
+            sb.addTest(m.group(1), i, Outcome[m.group(2)])
         line = f.readline()
         i += 1
 
 
 def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
-                  spectrum: Spectrum):
-    for t, test in enumerate(spectrum.tests()):
+                  sb: SpectrumBuilder):
+    for t, test in enumerate(sb.get_tests()):
         line = f.readline()
         if (line == ''):
             errors.error('Incorrect number of matrix lines', f'({t})',
@@ -93,18 +94,18 @@ def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
                              f'at column {i*4+1} on line {t} of the matrix',
                              'component in the input file, terminating...')
             if (elem not in seen):
-                spectrum.addExecution(test, elem, True)
+                sb.addExecution(test, elem, True)
                 seen.add(elem)
         # Use row to merge equivalences
-        spectrum.split_groups_on_test(test)
+        sb.split_groups_on_test(test)
     # ??? groups.sort(key=lambda group: group[0])
     # Remove groupings from spectrum
-    spectrum.remove_unnecessary()
+    # sb.remove_unnecessary()
 
 
 def read_spectrum(input_path: str, split_faults: bool,
                   method_level=False) -> Spectrum:
-    spectrum = Spectrum()
+    sb = SpectrumBuilder()
     method_map: Dict[int, Spectrum.Element]
     file = open(input_path)
     exec_checks = {'#tests': False, '#uuts': False, '#matrix': False}
@@ -120,21 +121,21 @@ def read_spectrum(input_path: str, split_faults: bool,
                 print("WARNING: duplicate #tests component in input file",
                       file=sys.stderr)
             # Constructing the spectrum
-            construct_tests(file, spectrum)
+            construct_tests(file, sb)
             exec_checks['#tests'] = True
         elif (line.startswith("#uuts")):
             if (exec_checks['#uuts'] is True):
                 print("WARNING: duplicate #uuts component in input file",
                       file=sys.stderr)
             # Getting the details of the project
-            method_map = construct_details(file, method_level, spectrum)
+            method_map = construct_details(file, method_level, sb)
             exec_checks['#uuts'] = True
         elif (line.startswith("#matrix")):
             if (exec_checks['#matrix'] is True):
                 print("WARNING: duplicate #matrix component in input file",
                       file=sys.stderr)
             # Filling the spectrum
-            fill_spectrum(file, method_map, spectrum)
+            fill_spectrum(file, method_map, sb)
             exec_checks['#matrix'] = True
         else:
             print("ERROR: Incorrectly formatted input file at line:", line,
@@ -146,13 +147,14 @@ def read_spectrum(input_path: str, split_faults: bool,
         print("ERROR: Input file missing components:", missing,
               " terminating...", file=sys.stderr)
         quit()
+    spectrum = sb.get_spectrum()
+    del sb
     # Split fault groups if necessary
     if (split_faults):
         faults, unexposed = split(spectrum.get_faults(), spectrum)
         for elem in unexposed:
             elem.faults.clear()
-            print("WARNING: Dropped faulty UUT:", elem, "due to unexposure",
-                  file=sys.stderr)
+            errors.warning(f"Dropped faulty UUT: {elem} due to unexposure")
         # Get element's fault lists
         fault_lists: Dict[Spectrum.Element, List[float]] = {}
         for (f_num, f_locs) in faults.items():
@@ -162,9 +164,8 @@ def read_spectrum(input_path: str, split_faults: bool,
         for (elem, f_list) in fault_lists.items():
             elem.faults = f_list
         if (len(faults) == 0):
-            print("ERROR: No exposable faults in ", input_path, ", terminating...",
-                    sep="", file=sys.stderr)
-            quit()
+            errors.error(f"No exposable faults in {input_path},",
+                         " terminating...")
     return spectrum
 
 
