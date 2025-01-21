@@ -61,6 +61,9 @@ class Scores:
         for score in scores:
             self.group_map[score.group] = score
 
+    def has_group(self, group: Spectrum.Group) -> bool:
+        return group in self.group_map
+
     def __iter__(self):
         return iter(self._scores)
 
