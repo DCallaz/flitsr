@@ -208,9 +208,10 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
 
     def print_results(mode, metric):
         for j, calc in enumerate(sorted(calcs)):
-            if (ci_eq(calc, PERC_N) and perc_file is not None):
-                comb = combine(avgs[mode][metric][calc].eval())
-                print("\t\t", calc+": ", comb, sep='', file=perc_file)
+            if (ci_eq(calc, PERC_N)):
+                if (perc_file is not None):
+                    comb = combine(avgs[mode][metric][calc].eval())
+                    print("\t\t", calc+": ", comb, sep='', file=perc_file)
             else:
                 avg = avgs[mode][metric][calc]
                 if (not rel and percs is not None and ci_in(calc, percs)):
@@ -483,9 +484,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if ('max' not in args):
         args.max = None
-    if (args.perc_at_n is None):
-        args.perc_at_n = args.output
-    # Remove trailing '/' for included and excluded dirs
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
