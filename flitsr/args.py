@@ -117,7 +117,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             'above evaluation calculations. Prints the results out to files '
             'named [<flitsr method>_]<metric>.run for each FLITSR method '
             'and metric')
-    adv_types = [x for x in dir(AdvancedType) if (not x.startswith("_"))]
+    adv_types = list(AdvancedType.__members__)
     parser.add_argument('-t', '--types', action='append', type=check_type,
                         help='Specify the advanced type combination to use '
                         'when running FLITSR. Note that this argument '

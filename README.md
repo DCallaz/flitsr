@@ -194,6 +194,13 @@ usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi]
   over each metric. Also enables all of the above evaluation calculations. Prints
   the results out to files named `[<flitsr method>_]<metric>.run` for each
   FLITSR method and metric
+* `-t TYPES`, `--types TYPES`: Specify the advanced type combination to use
+  when running FLITSR. Note that this argument overrides any of the individual
+  advanced type arguments given to FLITSR (such as --multi, --sblf, etc.). This
+  argument may be specified multiple times to add multiple type combinations to
+  run. The format for this argument is: "--types <type>[+<type>...]", where each
+  <type> is a (case-insensitive) FLITSR advanced type. Allowed types are:
+  ['BASE', 'FLITSR', 'MULTI', 'ARTEMIS', 'PARALLEL']
 * `--no-override`: By default FLITSR will override the output file(s) if they
   already exist, printing a warning message. This option instead allows FLITSR
   to leave output files that already exist, skipping that output and continuing
