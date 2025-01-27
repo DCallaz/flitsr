@@ -16,7 +16,8 @@ class Gui:
         index = int(w.curselection()[0])
         value = w.get(index)
         elem = self.vals[index]
-        print('You selected item %d: "%s" "%s"' % (index, value, elem))
+        ts = self.spectrum.get_tests(elem.group, only_failing=True)
+        print('You selected item %d: "%s" with failing tests: %s' % (index, elem, ts))
 
     def __init__(self, spectrum: Spectrum, all_sorts=List[List[Scores]]):
         # initialise root
@@ -48,7 +49,7 @@ class Gui:
         scores = [s.score for s in self.vals]
         rng = [min(scores), max(scores)]
         for score in self.vals:
-            self.lb.insert('end', score.elem)
+            self.lb.insert('end', score.group)
             # calculate colour based on score
             perc = (score.score - rng[0])/(rng[1] - rng[0])
             clr_num = (int(255*perc))*256**2 + (int(255*(1-perc)))*256
