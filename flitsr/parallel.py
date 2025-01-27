@@ -46,16 +46,16 @@ def partition_table(d: str, spectrum: Spectrum,
                 toRemove.add(test)
         for test in toRemove:
             new_spectrum.remove(test, hard=True)
-        trim_elements(new_spectrum)
+        trim_groups(new_spectrum)
         spectrums.append(new_spectrum)
     return spectrums
 
 
-def trim_elements(spectrum):
-    """Remove elements that are not in this block (i.e. ef = 0)"""
+def trim_groups(spectrum):
+    """Remove groups that are not in this block (i.e. ef = 0)"""
     toRemove = set()
-    for elem in spectrum.elements():
-        if (spectrum.f[elem] == 0):
-            toRemove.add(elem)
-    for elem in toRemove:
-        spectrum.remove_element(elem)
+    for group in spectrum.groups():
+        if (spectrum.f[group] == 0):
+            toRemove.add(group)
+    for group in toRemove:
+        spectrum.remove_group(group)

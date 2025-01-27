@@ -136,15 +136,17 @@ class Ties:
         # needed to remove groups of fault locations
         faults = copy.deepcopy(self.faults)
         seen_faults: Set[int] = set()
-        seen_elements: Set[Spectrum.Element] = set()
+        seen_groups: Set[Spectrum.Group] = set()
         self.ties: List[Tie] = []
         class ScoreIter:
-            def __init__(self, score):
+            def __init__(self, score: Scores):
                 self.s_iter = iter(score)
-                self.cur = next(self.s_iter, None)
-            def is_active(self):
-                return self.cur != None
-            def consume(self):
+                self.cur: Optional[Scores.Score] = next(self.s_iter, None)
+            def is_active(self) -> bool:
+                return self.cur is not None
+            def consume(self) -> Scores.Score:
+                if (self.cur is None):
+                    raise StopIteration("No more elements in ScoreIter")
                 old_cur = self.cur
                 self.cur = next(self.s_iter, None)
                 return old_cur
@@ -155,35 +157,33 @@ class Ties:
                     raise StopIteration()
         s_iters = [ScoreIter(s) for s in scores]
         # Populate this Ties object
-        def get_tie_elems(si: ScoreIter) -> Set[Spectrum.Element]:
-            elems: Set[Spectrum.Element] = set()
+        def get_tie_groups(si: ScoreIter) -> Set[Spectrum.Group]:
+            groups: Set[Spectrum.Group] = set()
             # sanity check
             if (not si.is_active()):
-                return elems
+                return groups
             # Get all UUTs with same score
             score = si.cur_score()
             while (si.is_active() and si.cur_score() == score):
                 s = si.consume()
-                elems.add(s.elem)
-            return elems
+                groups.add(s.group)
+            return groups
         while (any(si.is_active() for si in s_iters)):
-            all_elems: Set[Spectrum.Element] = set()
+            all_groups: Set[Spectrum.Group] = set()
             for si in s_iters:
                 if (si.is_active()):
-                    elems = get_tie_elems(si)
-                    all_elems.update(elems)
+                    groups = get_tie_groups(si)
+                    all_groups.update(groups)
             tie = Tie()
-            for elem in all_elems.difference(seen_elements):
-                group = spectrum.get_group(elem)
-                tie._add_group(group, faults, seen_faults)
-            seen_elements.update(all_elems)
+            for group in all_groups.difference(seen_groups):
+                tie._add_group(group.get_elements(), faults, seen_faults)
+            seen_groups.update(all_groups)
             self.ties.append(tie)
-        # Add elements not seen to bottom of tie
-        not_seen = [e for e in spectrum.elements() if e not in seen_elements]
+        # Add groups not seen to bottom of tie
+        not_seen = [g for g in spectrum.groups() if g not in seen_groups]
         tie = Tie()
-        for elem in not_seen:
-            group = spectrum.get_group(elem)
-            tie._add_group(group, faults, seen_faults)
+        for group in not_seen:
+            tie._add_group(group.get_elements(), faults, seen_faults)
         self.ties.append(tie)
 
     def __iter__(self):

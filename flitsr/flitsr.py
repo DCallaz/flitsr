@@ -10,7 +10,7 @@ from flitsr import top
 from flitsr import percent_at_n
 from flitsr import parallel
 from flitsr import precision_recall
-from flitsr.output import print_csv, print_names
+from flitsr.output import print_csv, print_spectrum_csv, print_names
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
@@ -24,7 +24,7 @@ from flitsr.gui import Gui
 
 def remove_faulty_elements(spectrum: Spectrum,
                            tests_removed: Set[Spectrum.Test],
-                           faulty: List[Spectrum.Element]):
+                           faulty: List[Spectrum.Group]):
     """Removes all tests that execute an 'actually' faulty element"""
     toRemove = []
     for test in tests_removed:
@@ -35,7 +35,7 @@ def remove_faulty_elements(spectrum: Spectrum,
     tests_removed.difference_update(toRemove)
 
 
-def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
+def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Group]) -> bool:
     """
     Remove the elements given by faulty from the spectrum, and remove any test
     cases executing these elements only.
@@ -47,13 +47,13 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
         executing.update(exe)
 
     # Remove all elements in faulty set
-    for elem in faulty:
-        spectrum.remove_element(elem)
+    for group in faulty:
+        spectrum.remove_group(group)
 
     multiFault = False
     for test in executing:
-        for elem in spectrum.elements():  # remaining elements not in faulty
-            if (spectrum[test][elem]):
+        for group in spectrum.groups():  # remaining groups not in faulty
+            if (spectrum[test][group]):
                 break
         else:
             multiFault = True
@@ -63,7 +63,7 @@ def multiRemove(spectrum: Spectrum, faulty: List[Spectrum.Element]) -> bool:
 
 def flitsr(spectrum: Spectrum, formula: str,
            advanced_type: AdvancedType = AdvancedType.FLITSR,
-           tiebrk=3) -> List[Spectrum.Element]:
+           tiebrk=3) -> List[Spectrum.Group]:
     """Executes the recursive flitsr algorithm to identify faulty elements"""
     if (spectrum.tf == 0):
         return []
@@ -72,8 +72,8 @@ def flitsr(spectrum: Spectrum, formula: str,
     else:
         sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     s_iter = iter(sort)
-    element = next(s_iter).elem
-    tests_removed = spectrum.get_tests(element, only_failing=True, remove=True)
+    group = next(s_iter).group
+    tests_removed = spectrum.get_tests(group, only_failing=True, remove=True)
     while (len(tests_removed) == 0):  # sanity check
         if ((s2 := next(s_iter, None)) is None):
             count_non_removed = len(spectrum.failing())
@@ -82,29 +82,29 @@ def flitsr(spectrum: Spectrum, formula: str,
                   file=sys.stderr)
             return []
         # continue trying the next element if available
-        element = s2.elem
-        tests_removed = spectrum.get_tests(element, only_failing=True, remove=True)
+        group = s2.group
+        tests_removed = spectrum.get_tests(group, only_failing=True, remove=True)
     faulty = flitsr(spectrum, formula, advanced_type, tiebrk)
     remove_faulty_elements(spectrum, tests_removed, faulty)
     if (len(tests_removed) > 0):
-        faulty.append(element)
+        faulty.append(group)
     return faulty
 
 
-def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Element],
+def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
                     sort: score.Scores,
-                    flitsr_order='auto') -> List[Spectrum.Element]:
+                    flitsr_order='auto') -> List[Spectrum.Group]:
     if (len(basis) == 0):
         return basis
     confs = []
     # check if internal ranking order needs to be determined
     if (flitsr_order in ['auto', 'conf']):
-        for elem in basis:
-            ts = list(spectrum.get_tests(elem, only_failing=True))
-            possibles: Set[Spectrum.Element] = set()
-            possibles.update(spectrum.get_executed_elements(ts[0]))
+        for group in basis:
+            ts = list(spectrum.get_tests(group, only_failing=True))
+            possibles: Set[Spectrum.Group] = set()
+            possibles.update(spectrum.get_executed_groups(ts[0]))
             for test in ts[1:]:
-                possibles.intersection_update(spectrum.get_executed_elements(test))
+                possibles.intersection_update(spectrum.get_executed_groups(test))
             confs.append(len(possibles))
     if (flitsr_order == 'auto'):
         if (all(c > 3 for c in confs)):
@@ -115,11 +115,11 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Element],
             flitsr_order = 'conf'
         # check for big groups
         big, small = [], []
-        for elem in basis:
-            if (len(spectrum.get_group(elem)) > 5):
-                big.append(elem)
+        for group in basis:
+            if (len(group.get_elements()) > 5):
+                big.append(group)
             else:
-                small.append(elem)
+                small.append(group)
         if (len(big) != 0 and len(small) != 0):
             return flitsr_ordering(spectrum, small, sort, flitsr_order) + \
                 flitsr_ordering(spectrum, big, sort, flitsr_order)
@@ -158,8 +158,8 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
                 ordered_basis = flitsr_ordering(spectrum, basis, sort,
                                                 flitsr_order)
                 for x in sort:
-                    if (x.elem in basis):
-                        x.score = val - ordered_basis.index(x.elem)
+                    if (x.group in basis):
+                        x.score = val - ordered_basis.index(x.group)
                 val = val-len(basis)
             # Reset the coverage matrix and counts
             newSpectrum.reset()
@@ -194,7 +194,7 @@ def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
 
 def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
-           csv=False, decimals=2, file=sys.stdout):
+           csv=False, specCsv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
         ties: Ties = Ties(spectrum, scores)
         if (weff):
@@ -282,6 +282,8 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
                 print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
                       file=file)
             print_csv(spectrum, s, file)
+    elif (specCsv):
+        print_spectrum_csv(spectrum, file)
     else:
         for (i, s) in enumerate(scores):
             if (i > 0):
@@ -299,6 +301,7 @@ def main(argv: List[str]):
                                             method_level=args.method)
         output([scores], spectrum, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
+               specCsv=args.spectrum_csv,
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
@@ -364,7 +367,8 @@ def main(argv: List[str]):
             else:
                 output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
                        args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                       decimals=args.decimals, file=output_file)
+                       specCsv=args.spectrum_csv, decimals=args.decimals,
+                       file=output_file)
             spectrum.reset()
     if (args.gui):
         Gui(spectrum, all_sorts)

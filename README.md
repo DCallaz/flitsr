@@ -194,6 +194,13 @@ usage: flitsr [-h] [-o OUTPUT] [--csv] [-m METRIC] [-s] [--multi]
   over each metric. Also enables all of the above evaluation calculations. Prints
   the results out to files named `[<flitsr method>_]<metric>.run` for each
   FLITSR method and metric
+* `-t TYPES`, `--types TYPES`: Specify the advanced type combination to use
+  when running FLITSR. Note that this argument overrides any of the individual
+  advanced type arguments given to FLITSR (such as --multi, --sblf, etc.). This
+  argument may be specified multiple times to add multiple type combinations to
+  run. The format for this argument is: "--types <type>[+<type>...]", where each
+  <type> is a (case-insensitive) FLITSR advanced type. Allowed types are:
+  ['BASE', 'FLITSR', 'MULTI', 'ARTEMIS', 'PARALLEL']
 * `--no-override`: By default FLITSR will override the output file(s) if they
   already exist, printing a warning message. This option instead allows FLITSR
   to leave output files that already exist, skipping that output and continuing
@@ -302,6 +309,7 @@ do more complex merging, the `merge` script allows a number of useful arguments:
 usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
              [-e DIR_ARG [DIR_ARG ...]] [-t [FILE]] [-p [FILE]] [-1] [-o FILE]
              [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
+             [--threshold THRESHOLD THRESHOLD THRESHOLD]
              [--percentage CALC [CALC ...]] [-s [{metric,type}]]
              [-f [METRIC ...]] [-m METRIC [METRIC ...]] [-l CALC [CALC ...]]
 ```
@@ -343,6 +351,11 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
     calculations to include when merging. By default all available calculations
     are included. NOTE: the names of the calculations need to be found in the
     corresponding `.results` files
+* `--threshold THRESHOLD THRESHOLD THRESHOLD`: Format: `--threshold <calculation>
+    {above, below} <float>`. Specifies that an additional calculation should be
+    added that counts the number of versions where the given calculation is above
+    or below the given float threshold. The calculations are the same as for the
+    `--calcs` argument.
 * `--percentage CALC [CALC ...]`: Specify calculations that must be intepreted as
     a percentage value. NOTE: the names of the calculations need to be found in
     the corresponding .results files

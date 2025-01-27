@@ -25,10 +25,10 @@ def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
            worst_effort: bool, collapse: bool) -> Tuple[float, int]:
     size = 0
     if (collapse):
-        size = len(spectrum.groups)
+        size = len(spectrum.groups())
     else:
-        for group in spectrum.groups:
-            size += len(group)
+        for group in spectrum.groups():
+            size += len(group.get_elements())
     if (n == "b"):
         n = -1
     elif (n == "f"):
