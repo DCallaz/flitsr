@@ -153,7 +153,7 @@ class Spectrum:
             return element in self._elems
 
         def __str__(self) -> str:
-            return f"Group {self._index}"
+            return f"G{self._index} ({self._elems})"
 
         def __repr__(self) -> str:
             return str(self)
