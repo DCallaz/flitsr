@@ -436,12 +436,15 @@ class Spectrum:
         errVector = self._errVector[tmask]
         return matrix, errVector
 
-    def search_tests(self, name_part):
+    def search_tests(self, name_part, incl_removed=False):
         """
         Searches for any test that matches the partial test name `name_part`.
         Returns a list of all the matches.
         """
         results = [t for t in self.tests() if t.name.find(name_part) != -1]
+        if (incl_removed):
+            results.extend([t for t in self._removed
+                            if t.name.find(name_part) != -1])
         return results
 
     def search_elements(self, name_part, groups=False):
