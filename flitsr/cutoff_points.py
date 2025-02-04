@@ -1,185 +1,185 @@
 from flitsr.suspicious import Suspicious
-from flitsr.score import Scores
+from flitsr.ranking import Ranking, Rank
 from flitsr.spectrum import Spectrum
 from typing import List, Dict, Any
 
 
 def basis(basis_num: int, spectrum: Spectrum,
-          faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-          formula: str, effort: str) -> Scores:
-    new_scores: Scores = Scores()
-    s_iter = iter(scores)
-    score = next(s_iter, None)
+          faults: Dict[int, List[Spectrum.Element]], ranking: Ranking,
+          formula: str, effort: str) -> Ranking:
+    new_ranking: Ranking = Ranking()
+    r_iter = iter(ranking)
+    rank = next(r_iter, None)
     first_fault = -1
     seen_basis = 0
-    while (score is not None and (seen_basis < basis_num or
-                                  first_fault == -1)):
-        temp_items: List[Scores.Score] = []
-        next_score = score
-        while (next_score is not None and next_score.score == score.score):
-            if (first_fault == -1 and any(next_score.elem in fault_locs for
+    while (rank is not None and (seen_basis < basis_num or
+                                 first_fault == -1)):
+        temp_items: List[Rank] = []
+        next_rank = rank
+        while (next_rank is not None and next_rank.score == rank.score):
+            if (first_fault == -1 and any(next_rank.elem in fault_locs for
                                           fault_locs in faults.values())):
                 first_fault = len(temp_items)
-            temp_items.append(next_score)
-            next_score = next(s_iter, None)
+            temp_items.append(next_rank)
+            next_rank = next(r_iter, None)
         if (effort == 'worst' or first_fault == -1):
-            new_scores.extend(temp_items)
+            new_ranking.extend(temp_items)
         elif (effort == 'best'):
-            new_scores.extend(temp_items[:first_fault+1])
+            new_ranking.extend(temp_items[:first_fault+1])
         elif (effort == 'resolve'):
-            new_scores.extend([temp_items[first_fault]])
-        if (next_score is not None and score.score-1 != next_score.score):
+            new_ranking.extend([temp_items[first_fault]])
+        if (next_rank is not None and rank.score-1 != next_rank.score):
             seen_basis += 1
-        score = next_score
-    return new_scores
+        rank = next_rank
+    return new_ranking
 
 
 def oba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-        scores: Scores, formula: str, effort: str):
-    return method(float('inf'), spectrum, faults, scores, effort)
+        ranking: Ranking, formula: str, effort: str):
+    return method(float('inf'), spectrum, faults, ranking, effort)
 
 
 def mba_dominator(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-                  scores: Scores, formula: str, effort: str):
+                  ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(spectrum.tf, spectrum.tf, spectrum.tp, spectrum.tp)
     score = sus.execute(formula)
-    return method(score, spectrum, faults, scores, effort)
+    return method(score, spectrum, faults, ranking, effort)
 
 
 def mba_zombie(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-               scores: Scores, formula: str, effort: str):
+               ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     score = sus.execute(formula)
-    return method(score, spectrum, faults, scores, effort)
+    return method(score, spectrum, faults, ranking, effort)
 
 
 def mba_5_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-               scores: Scores, formula: str, effort: str):
+               ranking: Ranking, formula: str, effort: str):
     size = 0
     for group in spectrum.groups():
         size += len(group.get_elements())
-    return method(int(size*0.05), spectrum, faults, scores, effort, True)
+    return method(int(size*0.05), spectrum, faults, ranking, effort, True)
 
 
 def mba_10_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-                scores: Scores, formula: str, effort: str):
+                ranking: Ranking, formula: str, effort: str):
     size = 0
     for group in spectrum.groups():
         size += len(group.get_elements())
-    return method(int(size*0.1), spectrum, faults, scores, effort, True)
+    return method(int(size*0.1), spectrum, faults, ranking, effort, True)
 
 
 def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-                  scores: Scores, formula: str, effort: str):
+                  ranking: Ranking, formula: str, effort: str):
     tot_size = 0
     for group in spectrum.groups():
         tot_size += len(group.get_elements())
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     zero = sus.execute(formula)
-    new_scores = Scores()
-    s_iter = iter(scores)
-    score = next(s_iter, None)
+    new_ranking = Ranking()
+    r_iter = iter(ranking)
+    rank = next(r_iter, None)
     stop_i = float('inf')
     f_num = 0
     size = 0
-    while (score is not None and size+1 <= stop_i and (score.score > zero or
-                                                       f_num == 0)):
-        next_score = score
+    while (rank is not None and size+1 <= stop_i and (rank.score > zero or
+                                                      f_num == 0)):
+        next_rank = rank
         fault_num = 0
-        while (next_score is not None and (next_score.score == score.score)):
-            if (any(next_score.elem in fault_locs for fault_locs in
+        while (next_rank is not None and (next_rank.score == rank.score)):
+            if (any(next_rank.elem in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
-            new_scores.extend([next_score])
-            size += len(next_score.group.get_elements())
-            next_score = next(s_iter, None)
+            new_ranking.extend([next_rank])
+            size += len(next_rank.group.get_elements())
+            next_rank = next(r_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
             f_num += fault_num
             stop_i = size + tot_size*0.01
-        score = next_score
-    return new_scores
+        rank = next_rank
+    return new_ranking
 
 
 def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-                scores: Scores, formula: str, effort: str):
+                ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     zero = sus.execute(formula)
-    new_scores = Scores()
-    s_iter = iter(scores)
-    score = next(s_iter, None)
+    new_ranking = Ranking()
+    r_iter = iter(ranking)
+    rank = next(r_iter, None)
     stop_i = float('inf')
     f_num = 0
     size = 0
-    while (score is not None and size+1 <= stop_i and (score.score > zero or
-                                                       f_num == 0)):
-        next_score = score
+    while (rank is not None and size+1 <= stop_i and (rank.score > zero or
+                                                      f_num == 0)):
+        next_rank = rank
         fault_num = 0
-        while (next_score is not None and (next_score.score == score.score)):
-            if (any(next_score.elem in fault_locs for fault_locs in
+        while (next_rank is not None and (next_rank.score == rank.score)):
+            if (any(next_rank.elem in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
-            new_scores.extend([next_score])
-            size += len(next_score.group.get_elements())
-            next_score = next(s_iter, None)
+            new_ranking.extend([next_rank])
+            size += len(next_rank.group.get_elements())
+            next_rank = next(r_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
             f_num += fault_num
             stop_i = size + size/(f_num+1)
-        score = next_score
-    return new_scores
+        rank = next_rank
+    return new_ranking
 
 
 def aba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
-        scores: Scores, formula: str, effort: str):
-    new_scores = Scores()
-    s_iter = iter(scores)
-    score = next(s_iter, None)
-    temp_scores: List[Scores.Score] = []
-    while (score is not None and score.score > 0.0):
+        ranking: Ranking, formula: str, effort: str):
+    new_ranking = Ranking()
+    r_iter = iter(ranking)
+    rank = next(r_iter, None)
+    temp_ranking: List[Rank] = []
+    while (rank is not None and rank.score > 0.0):
         fault = False
-        next_score = score
-        while (next_score is not None and next_score.score == score.score):
-            if (any(next_score.elem in fault_locs for fault_locs in
+        next_rank = rank
+        while (next_rank is not None and next_rank.score == rank.score):
+            if (any(next_rank.elem in fault_locs for fault_locs in
                     faults.values())):
                 fault = True
-            temp_scores.append(next_score)
-            next_score = next(s_iter, None)
+            temp_ranking.append(next_rank)
+            next_rank = next(r_iter, None)
         if (fault):
-            new_scores.extend(temp_scores)
-            temp_scores.clear()
-        score = next_score
-    return new_scores
+            new_ranking.extend(temp_ranking)
+            temp_ranking.clear()
+        rank = next_rank
+    return new_ranking
 
 
 def method(stop_score: float, spectrum: Spectrum,
-           faults: Dict[int, List[Spectrum.Element]], scores: Scores,
-           effort: str, rank=False):
-    new_scores = Scores()
-    s_iter = iter(scores)
-    score = next(s_iter, None)
+           faults: Dict[int, List[Spectrum.Element]], ranking: Ranking,
+           effort: str, by_rank=False):
+    new_ranking = Ranking()
+    r_iter = iter(ranking)
+    rank = next(r_iter, None)
     first_fault = -1
     size = 0
-    while (score is not None and
-           ((not rank and score.score > stop_score)
-            or (rank and size < stop_score) or first_fault == -1)):
-        temp_scores: List[Scores.Score] = []
-        next_score = score
-        while (score is not None and next_score.score == score.score):
-            if (first_fault == -1 and any(next_score.elem in fault_locs for
+    while (rank is not None and
+           ((not by_rank and rank.score > stop_score)
+            or (by_rank and size < stop_score) or first_fault == -1)):
+        temp_ranking: List[Rank] = []
+        next_rank = rank
+        while (rank is not None and next_rank.score == rank.score):
+            if (first_fault == -1 and any(next_rank.elem in fault_locs for
                                           fault_locs in faults.values())):
-                first_fault = len(temp_scores)
-            temp_scores.append(next_score)
-            size += len(next_score.group.get_elements())
-            next_score = next(s_iter, None)
-        if (effort == 'worst' or score.score > stop_score or first_fault == -1):
-            new_scores.extend(temp_scores)
+                first_fault = len(temp_ranking)
+            temp_ranking.append(next_rank)
+            size += len(next_rank.group.get_elements())
+            next_rank = next(r_iter, None)
+        if (effort == 'worst' or rank.score > stop_score or first_fault == -1):
+            new_ranking.extend(temp_ranking)
         elif (effort == 2):
-            new_scores.extend(temp_scores[:first_fault+1])
+            new_ranking.extend(temp_ranking[:first_fault+1])
         else:
-            new_scores.extend([temp_scores[first_fault]])
-        score = next_score
-    return new_scores
+            new_ranking.extend([temp_ranking[first_fault]])
+        rank = next_rank
+    return new_ranking
 
 
 # Populate the function names
@@ -196,7 +196,7 @@ def getNames():
 
 
 def cut(cutoff, spectrum, faults: Dict[int, List[Spectrum.Element]],
-        scores: Scores, formula: str, effort: str):
+        ranking: Ranking, formula: str, effort: str):
     # get the function
     func = funcs[cutoff]
-    return func(spectrum, faults, scores, formula, effort)
+    return func(spectrum, faults, ranking, formula, effort)

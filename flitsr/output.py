@@ -1,22 +1,22 @@
 import sys
 from typing import Dict, List, Set
 from flitsr.spectrum import Spectrum, Outcome
-from flitsr.score import Scores
+from flitsr.ranking import Ranking
 
 
-def print_names(spectrum, scores=None, file=sys.stdout):
-    no_scores = False
-    if (scores is None):  # make a tempoorary Scores object
-        scores = Scores()
+def print_names(spectrum, ranking=None, file=sys.stdout):
+    no_ranking = False
+    if (ranking is None):  # make a tempoorary Scores object
+        ranking = Ranking()
         for elem in spectrum.elements():
-            scores.append(elem, 0, 0)
-        no_scores = True
-    for score in scores:
-        if (no_scores):
+            ranking.append(elem, 0, 0)
+        no_ranking = True
+    for rank in ranking:
+        if (no_ranking):
             print("Faulty grouping: ", "[", file=file)
         else:
-            print("Faulty grouping:", score.score, "[", file=file)
-        group = score.group
+            print("Faulty grouping:", rank.score, "[", file=file)
+        group = rank.group
         for elem in group.get_elements():
             print(" ", elem, file=file)
         print("]", file=file)
@@ -36,12 +36,12 @@ def print_spectrum(spectrum: Spectrum):
             print('-')
 
 
-def print_csv(spectrum: Spectrum, scores: Scores, file=sys.stdout):
+def print_csv(spectrum: Spectrum, ranking: Ranking, file=sys.stdout):
     print("name;suspiciousness_value", file=file)
-    for score in scores:
-        group = score.group
+    for rank in ranking:
+        group = rank.group
         for elem in group.get_elements():
-            print(elem.gzoltar_str(), ';', score.score, sep='', file=file)
+            print(elem.gzoltar_str(), ';', rank.score, sep='', file=file)
 
 
 def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):

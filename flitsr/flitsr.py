@@ -14,7 +14,7 @@ from flitsr.output import print_csv, print_spectrum_csv, print_names
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
-from flitsr import score
+from flitsr.ranking import Ranking, set_orig, unset_orig
 from flitsr.tie import Ties
 from flitsr.args import parse_args
 from flitsr.advanced_types import AdvancedType
@@ -67,14 +67,14 @@ def flitsr(spectrum: Spectrum, formula: str,
     if (spectrum.tf == 0):
         return []
     if (AdvancedType.ARTEMIS in advanced_type or formula == 'artemis'):
-        sort = run_artemis(spectrum, formula)
+        ranking = run_artemis(spectrum, formula)
     else:
-        sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
-    s_iter = iter(sort)
-    group = next(s_iter).group
+        ranking = Suspicious.apply_formula(spectrum, formula, tiebrk)
+    r_iter = iter(ranking)
+    group = next(r_iter).group
     tests_removed = spectrum.get_tests(group, only_failing=True, remove=True)
     while (len(tests_removed) == 0):  # sanity check
-        if ((s2 := next(s_iter, None)) is None):
+        if ((s2 := next(r_iter, None)) is None):
             count_non_removed = len(spectrum.failing())
             print("WARNING: flitsr found", count_non_removed,
                   "failing test(s) that it could not explain",
@@ -91,7 +91,7 @@ def flitsr(spectrum: Spectrum, formula: str,
 
 
 def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
-                    sort: score.Scores,
+                    ranking: Ranking,
                     flitsr_order='auto') -> List[Spectrum.Group]:
     if (len(basis) == 0):
         return basis
@@ -120,8 +120,8 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
             else:
                 small.append(group)
         if (len(big) != 0 and len(small) != 0):
-            return flitsr_ordering(spectrum, small, sort, flitsr_order) + \
-                flitsr_ordering(spectrum, big, sort, flitsr_order)
+            return flitsr_ordering(spectrum, small, ranking, flitsr_order) + \
+                flitsr_ordering(spectrum, big, ranking, flitsr_order)
     # reorder basis
     if (flitsr_order == 'flitsr'):
         ordered_basis = basis
@@ -129,7 +129,7 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
         ordered_basis = list(reversed(basis))
     elif (flitsr_order == 'original'):
         ordered_basis = []
-        for x in sort:
+        for x in ranking:
             if (x.elem in basis):
                 ordered_basis.append(x.elem)
         # add any missing elements
@@ -142,21 +142,21 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
 
 
 def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
-        tiebrk=0, flitsr_order='flitsr') -> score.Scores:
+        tiebrk=0, flitsr_order='flitsr') -> Ranking:
     if (AdvancedType.ARTEMIS in advanced_type or formula == 'artemis'):
-        sort = run_artemis(spectrum, formula)
+        ranking = run_artemis(spectrum, formula)
     else:
-        sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
-    score.set_orig(sort)
+        ranking = Suspicious.apply_formula(spectrum, formula, tiebrk)
+    set_orig(ranking)
     if (AdvancedType.FLITSR in advanced_type):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
         while (newSpectrum.tf > 0):
             basis = flitsr(newSpectrum, formula, advanced_type, tiebrk)
             if (not basis == []):
-                ordered_basis = flitsr_ordering(spectrum, basis, sort,
+                ordered_basis = flitsr_ordering(spectrum, basis, ranking,
                                                 flitsr_order)
-                for x in sort:
+                for x in ranking:
                     if (x.group in basis):
                         x.score = val - ordered_basis.index(x.group)
                 val = val-len(basis)
@@ -170,32 +170,32 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
             if (AdvancedType.MULTI not in advanced_type):
                 break
             val = val-1
-        sort.sort(True, tiebrk)
-    score.unset_orig()
-    return sort
+        ranking.sort(True)
+    unset_orig()
+    return ranking
 
 
-def compute_cutoff(cutoff: str, sort: score.Scores, spectrum: Spectrum,
-                   mode: str, effort: str) -> score.Scores:
+def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
+                   mode: str, effort: str) -> Ranking:
     faults = spectrum.get_faults()
     if (cutoff.startswith("basis")):
         if ('=' in cutoff):
             num_bases = int(cutoff.split('=')[1])
         else:
             num_bases = 1
-        sort = cutoff_points.basis(num_bases, spectrum, faults, sort, mode,
-                                   effort=effort)
+        ranking = cutoff_points.basis(num_bases, spectrum, faults, ranking,
+                                      mode, effort=effort)
     else:
-        sort = cutoff_points.cut(cutoff, spectrum, faults, sort, mode,
-                                 effort=effort)
-    return sort
+        ranking = cutoff_points.cut(cutoff, spectrum, faults, ranking, mode,
+                                    effort=effort)
+    return ranking
 
 
-def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
+def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
            csv=False, specCsv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: Ties = Ties(spectrum, scores)
+        ties: Ties = Ties(spectrum, rankings)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(
@@ -276,7 +276,7 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
             if ("all" in faults):
                 print("fault info: {}".format(ties.faults), file=file)
     elif (csv):
-        for (i, s) in enumerate(scores):
+        for (i, s) in enumerate(rankings):
             if (i > 0):
                 print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
                       file=file)
@@ -284,7 +284,7 @@ def output(scores: List[score.Scores], spectrum: Spectrum, weff=[], top1=[],
     elif (specCsv):
         print_spectrum_csv(spectrum, file)
     else:
-        for (i, s) in enumerate(scores):
+        for (i, s) in enumerate(rankings):
             if (i > 0):
                 print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
                       file=file)
@@ -295,10 +295,10 @@ def main(argv: List[str]):
     args: Namespace = parse_args(argv[1:])
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
-        from flitsr.ranking import read_any_ranking
-        scores, spectrum = read_any_ranking(args.input,
-                                            method_level=args.method)
-        output([scores], spectrum, args.weff, args.top1, args.perc_at_n,
+        from flitsr.read_ranking import read_any_ranking
+        ranking, spectrum = read_any_ranking(args.input,
+                                             method_level=args.method)
+        output([ranking], spectrum, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
                specCsv=args.spectrum_csv,
                decimals=args.decimals, file=args.output)
@@ -347,20 +347,20 @@ def main(argv: List[str]):
                 metric = 'ochiai'
             else:
                 spectrums = [spectrum]
-            sorts: List[score.Scores] = []
+            rankings: List[Ranking] = []
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
-                sort = run(subspectrum, metric, advanced_type, args.tiebrk,
-                           args.internal_ranking)
+                ranking = run(subspectrum, metric, advanced_type, args.tiebrk,
+                              args.internal_ranking)
                 # Compute cut-off
                 if (args.cutoff_strategy):
-                    sort = compute_cutoff(args.cutoff_strategy, sort,
-                                          subspectrum, metric,
-                                          args.cutoff_eval)
-                sorts.append(sort)
+                    ranking = compute_cutoff(args.cutoff_strategy, ranking,
+                                             subspectrum, metric,
+                                             args.cutoff_eval)
+                rankings.append(ranking)
             # Compute and print output
-            output(sorts, spectrum, args.weff, args.top1, args.perc_at_n,
+            output(rankings, spectrum, args.weff, args.top1, args.perc_at_n,
                    args.prec_rec, args.faults, args.collapse, csv=args.csv,
                    specCsv=args.spectrum_csv, decimals=args.decimals, file=output_file)
             spectrum.reset()
