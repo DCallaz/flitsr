@@ -4,7 +4,7 @@ from itertools import permutations, chain
 from math import factorial, ceil
 from typing import List, Any, Optional, Set, Dict
 from flitsr.spectrum import Spectrum
-from flitsr.score import Scores
+from flitsr.ranking import Ranking, Rank
 
 class Tie:
     def __init__(self):
@@ -131,48 +131,48 @@ class Tie:
 
 
 class Ties:
-    def __init__(self, spectrum: Spectrum, scores: List[Scores]):
+    def __init__(self, spectrum: Spectrum, rankings: List[Ranking]):
         self.faults: Dict[int, List[Spectrum.Element]] = spectrum.get_faults()
         # needed to remove groups of fault locations
         faults = copy.deepcopy(self.faults)
         seen_faults: Set[int] = set()
         seen_groups: Set[Spectrum.Group] = set()
         self.ties: List[Tie] = []
-        class ScoreIter:
-            def __init__(self, score: Scores):
-                self.s_iter = iter(score)
-                self.cur: Optional[Scores.Score] = next(self.s_iter, None)
+        class RankingIter:
+            def __init__(self, ranking: Ranking):
+                self.r_iter = iter(ranking)
+                self.cur: Optional[Rank] = next(self.r_iter, None)
             def is_active(self) -> bool:
                 return self.cur is not None
-            def consume(self) -> Scores.Score:
+            def consume(self) -> Rank:
                 if (self.cur is None):
                     raise StopIteration("No more elements in ScoreIter")
                 old_cur = self.cur
-                self.cur = next(self.s_iter, None)
+                self.cur = next(self.r_iter, None)
                 return old_cur
             def cur_score(self):
                 if (self.cur is not None):
                     return self.cur.score
                 else:
                     raise StopIteration()
-        s_iters = [ScoreIter(s) for s in scores]
+        r_iters = [RankingIter(r) for r in rankings]
         # Populate this Ties object
-        def get_tie_groups(si: ScoreIter) -> Set[Spectrum.Group]:
+        def get_tie_groups(ri: RankingIter) -> Set[Spectrum.Group]:
             groups: Set[Spectrum.Group] = set()
             # sanity check
-            if (not si.is_active()):
+            if (not ri.is_active()):
                 return groups
             # Get all UUTs with same score
-            score = si.cur_score()
-            while (si.is_active() and si.cur_score() == score):
-                s = si.consume()
-                groups.add(s.group)
+            score = ri.cur_score()
+            while (ri.is_active() and ri.cur_score() == score):
+                r = ri.consume()
+                groups.add(r.group)
             return groups
-        while (any(si.is_active() for si in s_iters)):
+        while (any(ri.is_active() for ri in r_iters)):
             all_groups: Set[Spectrum.Group] = set()
-            for si in s_iters:
-                if (si.is_active()):
-                    groups = get_tie_groups(si)
+            for ri in r_iters:
+                if (ri.is_active()):
+                    groups = get_tie_groups(ri)
                     all_groups.update(groups)
             tie = Tie()
             for group in all_groups.difference(seen_groups):

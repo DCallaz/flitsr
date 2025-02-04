@@ -3,7 +3,7 @@ import argparse
 import sys
 from typing import List
 from flitsr.spectrum import Spectrum
-from flitsr.score import Scores
+from flitsr.ranking import Ranking
 
 
 class Suspicious():
@@ -35,18 +35,18 @@ class Suspicious():
 
     @staticmethod
     def apply_formula(spec: Spectrum, formula: str,
-                      tiebrk: int, reverse=True) -> Scores:
+                      tiebrk: int, reverse=True) -> Ranking:
         """
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.
         """
-        scores: Scores = Scores()
+        ranking: Ranking = Ranking(tiebrk)
         for elem in spec.groups():
             sus = Suspicious(spec.f[elem], spec.tf, spec.p[elem], spec.tp)
             exect = spec.p[elem]+spec.f[elem]
-            scores.append(elem, sus.execute(formula), exect)
-        scores.sort(reverse, tiebrk)
-        return scores
+            ranking.append(elem, sus.execute(formula), exect)
+        ranking.sort(reverse)
+        return ranking
 
     @staticmethod
     def getNames(all_names=False) -> List[str]:
