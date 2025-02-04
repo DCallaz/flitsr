@@ -19,6 +19,7 @@ from flitsr.tie import Ties
 from flitsr.args import parse_args
 from flitsr.advanced_types import AdvancedType
 from flitsr.artemis_wrapper import run_artemis
+from flitsr.mutate_wrapper import Mutation
 
 
 def remove_faulty_elements(spectrum: Spectrum,
@@ -148,6 +149,12 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
     else:
         sort = Suspicious.apply_formula(spectrum, formula, tiebrk)
     score.set_orig(sort)
+    # mutor = Mutation('defects4j test', spectrum, 'defects4j compile',
+                     # 'src/main/java')
+    # elem = next(iter(sort)).group.get_elements()[0]
+    # print("Mutate:")
+    # print(mutor.mutate_element(elem))
+    # quit()
     if (AdvancedType.FLITSR in advanced_type):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)

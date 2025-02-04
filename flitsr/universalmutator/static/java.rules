@@ -1,0 +1,20 @@
+(^\s*import) ==> DO_NOT_MUTATE
+(^\s*(@.+)) ==> DO_NOT_MUTATE
+(^\s*(\/\*.+)) ==> DO_NOT_MUTATE
+(^\s*(\/\/.+)) ==> DO_NOT_MUTATE
+(^\s*(\*.+)) ==> DO_NOT_MUTATE
+
+synchronized ==>
+
+&& .* ==> && true
+\|\| .* ==> || false
+.* && ==> true &&
+.* \|\| ==> false ||
+
+\b(?<!\.)\w[\w.]+\w\( ==> (
+return\s+.+; ==> return null;
+return\s+.+; ==> return "";
+return\s+.+; ==> return 0;
+
+(\W)\d+(\W) ==> \1Integer.MIN_VALUE\2
+(\W)\d+(\W) ==> \1Integer.MAX_VALUE\2

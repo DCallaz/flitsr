@@ -7,6 +7,7 @@ class AdvancedType(Flag):
     MULTI = 3  # includes FLITSR (1 + 2)
     ARTEMIS = 4
     PARALLEL = 8
+    MUTATION = 16
 
     def get_file_name(self):
         if (self is AdvancedType.BASE):
