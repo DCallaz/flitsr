@@ -2,13 +2,13 @@ from flitsr.universalmutator import genmutants, analyze
 from flitsr.spectrum import Spectrum
 from flitsr import errors
 from flitsr.ranking import Ranking
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Dict
 from os import path as osp
 from io import StringIO
 from contextlib import redirect_stdout
 import subprocess as sp
+from tempfile import NamedTemporaryFile
 import os
-import shutil
 import sys
 import re
 import glob
@@ -28,8 +28,10 @@ class Mutation:
         initial_ts = sp.run(test_cmd, text=True, shell=True,
                             capture_output=True)
         self._failing_tests = self._parse_mutant(initial_ts.stdout)
+        self._mutant_logs = osp.join(osp.curdir, 'mutant_logs')
+        os.makedirs(self._mutant_logs, exist_ok=True)
 
-    def filter_ranking(self, ranking: Ranking, cutoff=10):
+    def filter_ranking(self, ranking: Ranking, cutoff=5):
         """
         Filter the given ranking based on mutation results to push up
         suspicious elements and push down unsuspicious elements according to
@@ -37,17 +39,32 @@ class Mutation:
         filtered, however this can be altered by setting `cutoff`. Setting
         `cutoff` to -1 will enable filtering of the entire ranking.
         """
+        new_ranking = Ranking(ranking._tiebrk)
         r_iter = iter(ranking)
+        group_index = len(self.spectrum.groups())+1
         try:
-            for i in range(cutoff):
+            for _ in range(cutoff):
                 rank = next(r_iter)
+                new_groups: Dict[float, Spectrum.Group] = {}
+                exe = self.spectrum.p[rank.group] + self.spectrum.f[rank.group]
                 for elem in rank.group.get_elements():
-                    results = self.mutate_element(elem)
+                    score = self.mutate_element(elem)
+                    if (score not in new_groups):
+                        new_groups[score] = Spectrum.Group()
+                    new_groups[score].append(elem)
+                for score, group in new_groups.items():
+                    group.set_index(group_index)
+                    group_index += 1
+                    new_ranking.append(group, rank.score+score, exe)
+            os.rmdir(self._mutant_dir)
         except StopIteration:
             pass
+        except FileNotFoundError:
+            errors.warning("Could not remove mutant directory")
+        return ranking
 
-    def mutate_element(self, elem: Spectrum.Element) -> List[Tuple[int, int]]:
-        """ Mutate a single element from the spectrum, and return results """
+    def mutate_element(self, elem: Spectrum.Element) -> float:
+        """ Mutate a single element from the spectrum, and return score """
         # Get the source file
         if (osp.isfile(elem.path)):
             srcfile = elem.path
@@ -90,27 +107,34 @@ class Mutation:
                 analyze.main()
         except SystemExit:
             pass
-        # Parse the results
-        results = self._parse_results(stdout_results)
-        self._clean_up(srcfile)
-        return results
-
-    def _parse_results(self,
-                       stdout_results: StringIO) -> List[Tuple[int, int]]:
         stdout_results_str = stdout_results.getvalue()
-        print(stdout_results_str)
+        with NamedTemporaryFile('w', dir=self._mutant_logs,
+                                delete=False) as tmp:
+            print("Element:", elem, file=tmp)
+            print(stdout_results_str, file=tmp)
+        # Parse the results
+        fpm, pfm, nm = self._parse_results(stdout_results_str)
+        self._clean_up(srcfile)
+        return (0 if nm == 0 else fpm/nm if fpm > 0 else -pfm/nm)
+
+    def _parse_results(self, stdout_results_str: str) -> Tuple[int, int, int]:
         mutants = re.split('=+\n', stdout_results_str)
-        # print("num mutants:", len(mutants))
-        results = []
+        num_mutants = 0
+        fail_pass_mutants = 0  # num mutants where at least one failing -> pass
+        pass_fail_mutants = 0  # num mutants where at least one pass -> failing
         for mutant in mutants:
             try:
                 failing_tests = self._parse_mutant(mutant)
                 fail_pass = len(self._failing_tests.difference(failing_tests))
                 pass_fail = len(failing_tests.difference(self._failing_tests))
-                results.append((fail_pass, pass_fail))
+                if (fail_pass > 0):
+                    fail_pass_mutants += 1
+                if (pass_fail > 0):
+                    pass_fail_mutants += 1
+                num_mutants += 1
             except StopIteration:
                 continue
-        return results
+        return fail_pass_mutants, pass_fail_mutants, num_mutants
 
     def _parse_mutant(self, mutant: str) -> Set[Spectrum.Test]:
         mutant_lines = mutant.splitlines()
@@ -121,13 +145,14 @@ class Mutation:
         while (start+i < len(mutant_lines) and
                (m := re.match('\\s*-\\s+(.+)', mutant_lines[start+i]))):
             tests = self.spectrum.search_tests(m.group(1).replace('::', '#'))
-            if (len(tests) != 1):
+            if (len(tests) == 0):
                 raise ValueError(f'Could not find unique test "{m.group(1)}"')
-            failing_tests.add(tests[0])
+            failing_tests.add(sorted(tests, key=lambda x: len(str(x)))[0])
             i += 1
         return failing_tests
 
     def _clean_up(self, srcfile):
-        shutil.rmtree('mutants')
+        for file in glob.glob(osp.join(self._mutant_dir, "*")):
+            os.remove(file)
         for umbackup in glob.glob(srcfile+'*um.backup*'):
             os.remove(umbackup)

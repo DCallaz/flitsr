@@ -21,7 +21,7 @@ def construct_details(f: TextIOWrapper, method_level: bool,
     bugs = 0
     assert f.readline() == 'name\n'  # remove header
     for line in f:
-        m = re.fullmatch('([^$]+)\\$([^#]+)#([^:]+):([0-9]+)(?::(.+))?',
+        m = re.fullmatch('([^$]+)\\$([^#$]+)(?:#|\\$)([^:]+):([0-9]+)(?::(.+))?',
                          line.rstrip())
         if (m is None):
             errors.error("Incorrectly formatted line \"" + line +

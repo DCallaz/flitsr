@@ -149,12 +149,6 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
     else:
         ranking = Suspicious.apply_formula(spectrum, formula, tiebrk)
     set_orig(ranking)
-    # mutor = Mutation('defects4j test', spectrum, 'defects4j compile',
-                     # 'src/main/java')
-    # elem = next(iter(sort)).group.get_elements()[0]
-    # print("Mutate:")
-    # print(mutor.mutate_element(elem))
-    # quit()
     if (AdvancedType.FLITSR in advanced_type):
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
@@ -178,6 +172,11 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
                 break
             val = val-1
         ranking.sort(True)
+    # Check for mutation filtering
+    if (AdvancedType.MUTATION in advanced_type):
+        mutor = Mutation('defects4j test', spectrum, 'defects4j compile',
+                         'src/main/java')
+        mutor.filter_ranking(ranking)
     unset_orig()
     return ranking
 
