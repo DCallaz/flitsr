@@ -2,7 +2,7 @@ from flitsr.universalmutator import genmutants, analyze
 from flitsr.spectrum import Spectrum
 from flitsr import errors
 from flitsr.ranking import Ranking
-from typing import List, Tuple, Set, Dict
+from typing import List, Tuple, Set, Dict, Optional
 from os import path as osp
 from io import StringIO
 from contextlib import redirect_stdout
@@ -16,7 +16,7 @@ import glob
 
 class Mutation:
     def __init__(self, test_cmd: str, spectrum: Spectrum,
-                 compile_cmd: str = None, srcdir: str = '**/',
+                 compile_cmd: Optional[str] = None, srcdir: str = '**/',
                  method_lvl: bool = False):
         self.spectrum = spectrum
         self._mutant_dir = osp.join(osp.curdir, 'mutants')
@@ -95,6 +95,17 @@ class Mutation:
                 genmutants.main()
         except SystemExit:
             pass
+        # Build testing command
+        if ("<<TEST>>" in self._test_cmd):
+            test_cmds = []
+            exe_tests = self.spectrum.get_tests(elem)
+            for test in exe_tests:
+                test_name = test.name.replace("#", "::")
+                next_test_cmd = self._test_cmd.replace("<<TEST>>", test_name)
+                test_cmds.append(next_test_cmd)
+            test_cmd = ';'.join(test_cmds)
+        else:
+            test_cmd = self._test_cmd
         # Analyze mutants
         try:
             sys.argv = ['analyze_mutants', srcfile, self._test_cmd,
@@ -142,13 +153,16 @@ class Mutation:
                      if mutant_lines[i].startswith("Failing tests"))+1
         i = 0
         failing_tests = set()
-        while (start+i < len(mutant_lines) and
-               (m := re.match('\\s*-\\s+(.+)', mutant_lines[start+i]))):
-            tests = self.spectrum.search_tests(m.group(1).replace('::', '#'))
-            if (len(tests) == 0):
-                raise ValueError(f'Could not find unique test "{m.group(1)}"')
-            failing_tests.add(sorted(tests, key=lambda x: len(str(x)))[0])
-            i += 1
+        while (start > 0):
+            while (start+i < len(mutant_lines) and
+                   (m := re.match('\\s*-\\s+(.+)', mutant_lines[start+i]))):
+                tests = self.spectrum.search_tests(m.group(1).replace('::', '#'))
+                if (len(tests) == 0):
+                    raise ValueError(f'Could not find unique test "{m.group(1)}"')
+                failing_tests.add(sorted(tests, key=lambda x: len(str(x)))[0])
+                i += 1
+            start = next((i for i in range(len(mutant_lines))
+                        if mutant_lines[i].startswith("Failing tests")), -2)+1
         return failing_tests
 
     def _clean_up(self, srcfile):
