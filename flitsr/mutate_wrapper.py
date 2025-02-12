@@ -25,13 +25,14 @@ class Mutation:
         self._srcdir = srcdir
         self._method_lvl = method_lvl
         self._compile_cmd = compile_cmd
-        initial_ts = sp.run(test_cmd, text=True, shell=True,
+        all_test_cmd = re.sub("\\[.*<<TEST>>.*\\]", "", test_cmd)
+        initial_ts = sp.run(all_test_cmd, text=True, shell=True,
                             capture_output=True)
         self._failing_tests = self._parse_mutant(initial_ts.stdout)
         self._mutant_logs = osp.join(osp.curdir, 'mutant_logs')
         os.makedirs(self._mutant_logs, exist_ok=True)
 
-    def filter_ranking(self, ranking: Ranking, cutoff=5):
+    def filter_ranking(self, ranking: Ranking, cutoff=10):
         """
         Filter the given ranking based on mutation results to push up
         suspicious elements and push down unsuspicious elements according to
@@ -39,7 +40,7 @@ class Mutation:
         filtered, however this can be altered by setting `cutoff`. Setting
         `cutoff` to -1 will enable filtering of the entire ranking.
         """
-        new_ranking = Ranking(ranking._tiebrk)
+        new_ranking = Ranking(1)
         r_iter = iter(ranking)
         group_index = len(self.spectrum.groups())+1
         try:
@@ -52,16 +53,20 @@ class Mutation:
                     if (score not in new_groups):
                         new_groups[score] = Spectrum.Group()
                     new_groups[score].append(elem)
-                for score, group in new_groups.items():
+                # Add groups in order of mutation scores
+                for score, group in sorted(new_groups.items(),
+                                           key=lambda x: x[0]):
                     group.set_index(group_index)
                     group_index += 1
-                    new_ranking.append(group, rank.score+score, exe)
-            os.rmdir(self._mutant_dir)
+                    new_ranking.append(group, rank.score, exe)
         except StopIteration:
             pass
-        except FileNotFoundError:
-            errors.warning("Could not remove mutant directory")
-        return ranking
+        try:
+            os.rmdir(self._mutant_dir)
+        except FileNotFoundError as e:
+            errors.warning("Could not remove mutant directory:", e)
+        new_ranking.sort(True)
+        return new_ranking
 
     def mutate_element(self, elem: Spectrum.Element) -> float:
         """ Mutate a single element from the spectrum, and return score """
@@ -101,14 +106,15 @@ class Mutation:
             exe_tests = self.spectrum.get_tests(elem)
             for test in exe_tests:
                 test_name = test.name.replace("#", "::")
-                next_test_cmd = self._test_cmd.replace("<<TEST>>", test_name)
+                next_test_cmd = re.sub('\\[(.*)<<TEST>>(.*)\\]',
+                                       f'\\1{test_name}\\2', self._test_cmd)
                 test_cmds.append(next_test_cmd)
             test_cmd = ';'.join(test_cmds)
         else:
             test_cmd = self._test_cmd
         # Analyze mutants
         try:
-            sys.argv = ['analyze_mutants', srcfile, self._test_cmd,
+            sys.argv = ['analyze_mutants', srcfile, test_cmd,
                         '--verbose', '--mutantDir', self._mutant_dir]
             # Add compile command if available
             if (self._compile_cmd is not None):
@@ -119,16 +125,19 @@ class Mutation:
         except SystemExit:
             pass
         stdout_results_str = stdout_results.getvalue()
+        # Parse the results
+        fpm, pfm, nm = self._parse_results(stdout_results_str, elem=elem)
+        self._clean_up(srcfile)
+        score = (0 if nm == 0 else fpm/nm if fpm > 0 else -pfm/nm)
+        # Store log file
         with NamedTemporaryFile('w', dir=self._mutant_logs,
                                 delete=False) as tmp:
-            print("Element:", elem, file=tmp)
+            print("Element:", elem, score, file=tmp)
             print(stdout_results_str, file=tmp)
-        # Parse the results
-        fpm, pfm, nm = self._parse_results(stdout_results_str)
-        self._clean_up(srcfile)
-        return (0 if nm == 0 else fpm/nm if fpm > 0 else -pfm/nm)
+        return score
 
-    def _parse_results(self, stdout_results_str: str) -> Tuple[int, int, int]:
+    def _parse_results(self, stdout_results_str: str,
+                       elem=None) -> Tuple[int, int, int]:
         mutants = re.split('=+\n', stdout_results_str)
         num_mutants = 0
         fail_pass_mutants = 0  # num mutants where at least one failing -> pass
@@ -136,8 +145,13 @@ class Mutation:
         for mutant in mutants:
             try:
                 failing_tests = self._parse_mutant(mutant)
-                fail_pass = len(self._failing_tests.difference(failing_tests))
-                pass_fail = len(failing_tests.difference(self._failing_tests))
+                if (elem is not None):
+                    exe_tests = self.spectrum.get_tests(elem)
+                    orig_failing = self._failing_tests.intersection(exe_tests)
+                else:
+                    orig_failing = self._failing_tests
+                fail_pass = len(orig_failing.difference(failing_tests))
+                pass_fail = len(failing_tests.difference(orig_failing))
                 if (fail_pass > 0):
                     fail_pass_mutants += 1
                 if (pass_fail > 0):
@@ -151,9 +165,9 @@ class Mutation:
         mutant_lines = mutant.splitlines()
         start = next(i for i in range(len(mutant_lines))
                      if mutant_lines[i].startswith("Failing tests"))+1
-        i = 0
         failing_tests = set()
         while (start > 0):
+            i = 0
             while (start+i < len(mutant_lines) and
                    (m := re.match('\\s*-\\s+(.+)', mutant_lines[start+i]))):
                 tests = self.spectrum.search_tests(m.group(1).replace('::', '#'))
@@ -161,7 +175,7 @@ class Mutation:
                     raise ValueError(f'Could not find unique test "{m.group(1)}"')
                 failing_tests.add(sorted(tests, key=lambda x: len(str(x)))[0])
                 i += 1
-            start = next((i for i in range(len(mutant_lines))
+            start = next((i for i in range(start, len(mutant_lines))
                         if mutant_lines[i].startswith("Failing tests")), -2)+1
         return failing_tests
 

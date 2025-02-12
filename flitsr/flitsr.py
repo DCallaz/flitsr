@@ -174,9 +174,9 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         ranking.sort(True)
     # Check for mutation filtering
     if (AdvancedType.MUTATION in advanced_type):
-        mutor = Mutation('defects4j test -t <<TEST>>', spectrum,
+        mutor = Mutation('defects4j test [-t <<TEST>>]', spectrum,
                          'defects4j compile', 'src/main/java')
-        mutor.filter_ranking(ranking)
+        ranking = mutor.filter_ranking(ranking)
     unset_orig()
     return ranking
 

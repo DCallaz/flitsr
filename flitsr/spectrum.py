@@ -447,7 +447,7 @@ class Spectrum:
                             if t.name.find(name_part) != -1])
         return results
 
-    def search_elements(self, name_part, groups=False):
+    def search_elements(self, name_part, groups=False) -> List[Group | Element]:
         """
         Searches for any element that matches the partial element name
         `name_part`. Returns a list of all the matches.
