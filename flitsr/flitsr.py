@@ -174,8 +174,10 @@ def run(spectrum: Spectrum, formula: str, advanced_type: AdvancedType,
         ranking.sort(True)
     # Check for mutation filtering
     if (AdvancedType.MUTATION in advanced_type):
-        mutor = Mutation('defects4j test [-t <<TEST>>]', spectrum,
-                         'defects4j compile', 'src/main/java')
+        mutor = Mutation('defects4j test [-t <<TEST>>]; grep -Ev "^\\s+at" failing_tests',
+                         spectrum, formula, lambda a: sum(a)/len(a),
+                         'defects4j compile', 'source')
+        # mutor = Mutation('mvn test', spectrum, 'mvn compile', 'src/main/java')
         ranking = mutor.filter_ranking(ranking)
     unset_orig()
     return ranking

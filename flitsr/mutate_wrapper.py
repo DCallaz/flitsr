@@ -2,7 +2,9 @@ from flitsr.universalmutator import genmutants, analyze
 from flitsr.spectrum import Spectrum
 from flitsr import errors
 from flitsr.ranking import Ranking
-from typing import List, Tuple, Set, Dict, Optional
+from flitsr.suspicious import Suspicious
+from typing import List, Set, Dict, Optional
+from collections.abc import Callable
 from os import path as osp
 from io import StringIO
 from contextlib import redirect_stdout
@@ -15,10 +17,12 @@ import glob
 
 
 class Mutation:
-    def __init__(self, test_cmd: str, spectrum: Spectrum,
-                 compile_cmd: Optional[str] = None, srcdir: str = '**/',
-                 method_lvl: bool = False):
+    def __init__(self, test_cmd: str, spectrum: Spectrum, formula: str,
+                 aggr: Callable, compile_cmd: Optional[str] = None,
+                 srcdir: str = '**/', method_lvl: bool = False):
         self.spectrum = spectrum
+        self.formula = formula
+        self.aggr = aggr
         self._mutant_dir = osp.join(osp.curdir, 'mutants')
         os.makedirs(self._mutant_dir, exist_ok=True)
         self._test_cmd = test_cmd
@@ -32,7 +36,7 @@ class Mutation:
         self._mutant_logs = osp.join(osp.curdir, 'mutant_logs')
         os.makedirs(self._mutant_logs, exist_ok=True)
 
-    def filter_ranking(self, ranking: Ranking, cutoff=10):
+    def filter_ranking(self, ranking: Ranking, cutoff=3):
         """
         Filter the given ranking based on mutation results to push up
         suspicious elements and push down unsuspicious elements according to
@@ -54,7 +58,7 @@ class Mutation:
                         new_groups[score] = Spectrum.Group()
                     new_groups[score].append(elem)
                 # Add groups in order of mutation scores
-                for score, group in sorted(new_groups.items(),
+                for score, group in sorted(new_groups.items(), reverse=True,
                                            key=lambda x: x[0]):
                     group.set_index(group_index)
                     group_index += 1
@@ -126,23 +130,26 @@ class Mutation:
             pass
         stdout_results_str = stdout_results.getvalue()
         # Parse the results
-        fpm, pfm, nm = self._parse_results(stdout_results_str, elem=elem)
+        mut_scores = self._parse_results(stdout_results_str, elem=elem)
         self._clean_up(srcfile)
-        score = (0 if nm == 0 else fpm/nm if fpm > 0 else -pfm/nm)
+        score = self.aggr(mut_scores) if len(mut_scores) > 0 else 0.0
         # Store log file
         with NamedTemporaryFile('w', dir=self._mutant_logs,
                                 delete=False) as tmp:
             print("Element:", elem, score, file=tmp)
+            print(mut_scores, file=tmp)
             print(stdout_results_str, file=tmp)
         return score
 
     def _parse_results(self, stdout_results_str: str,
-                       elem=None) -> Tuple[int, int, int]:
+                       elem=None) -> List[float]:
         mutants = re.split('=+\n', stdout_results_str)
-        num_mutants = 0
-        fail_pass_mutants = 0  # num mutants where at least one failing -> pass
-        pass_fail_mutants = 0  # num mutants where at least one pass -> failing
+        mutant_scores = []
         for mutant in mutants:
+            # first check if mutant was terminated
+            if ("HAD TO TERMINATE ANALYSIS" in mutant):
+                # remove this mutant from evaluation
+                continue
             try:
                 failing_tests = self._parse_mutant(mutant)
                 if (elem is not None):
@@ -152,14 +159,13 @@ class Mutation:
                     orig_failing = self._failing_tests
                 fail_pass = len(orig_failing.difference(failing_tests))
                 pass_fail = len(failing_tests.difference(orig_failing))
-                if (fail_pass > 0):
-                    fail_pass_mutants += 1
-                if (pass_fail > 0):
-                    pass_fail_mutants += 1
-                num_mutants += 1
+                sus = Suspicious(fail_pass, self.spectrum.tf, pass_fail,
+                                 self.spectrum.tp)
+                score = sus.execute('muse')
+                mutant_scores.append(score)
             except StopIteration:
                 continue
-        return fail_pass_mutants, pass_fail_mutants, num_mutants
+        return mutant_scores
 
     def _parse_mutant(self, mutant: str) -> Set[Spectrum.Test]:
         mutant_lines = mutant.splitlines()

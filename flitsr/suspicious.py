@@ -195,6 +195,9 @@ class Suspicious():
         denominator = self.ef + self.np + 2*(self.ef + self.ep)
         return self.ef/denominator
 
+    def muse(self) -> float:
+        return self.ef - (self.tf/self.tp) * self.ep
+
     def ochiai(self) -> float:
         """
         Ref: Ochiai, A. Zoogeographical studies on the soleoid
