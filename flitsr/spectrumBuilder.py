@@ -15,6 +15,7 @@ class SpectrumBuilder:
     def addTest(self, name: str, index: int, outcome: Outcome):
         t = Spectrum.Test(name, index, outcome)
         self._tests.append(t)
+        self._executions[t] = {}
         return t
 
     def addElement(self, details: List[str],
