@@ -119,13 +119,13 @@ def read_flitsr_ranking(ranking_file: str) -> Tuple[Ranking, Spectrum]:
         group_elems = []
         while (not line.startswith("]")):
             # read in ranked element (old or new FLITSR format)
-            m = re.fullmatch("\\s*(?:\([0-9]+\)\\s*)?(\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
+            m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
             if (m is None):
                 # if normal format fails, try DUA format
-                m = re.fullmatch("\\s*(?:\([0-9]+\)\\s*)?(\\S*\\s\\S*\\s\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
+                m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*\\s\\S*\\s\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
                 if (m is None):
                     raise ValueError("Incorrectly formatted line \"" + line +
-                                 "\" when reading input ranking file")
+                                     "\" when reading input ranking file")
             details = m.group(1).split('|')
             if (m.group(2)):
                 faults = [int(i) if i.isdecimal() else float(i)
