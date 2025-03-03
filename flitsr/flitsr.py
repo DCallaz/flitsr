@@ -90,26 +90,38 @@ def flitsr(spectrum: Spectrum, formula: str,
     return faulty
 
 
+def get_inverse_confidence_scores(spectrum: Spectrum,
+                                  basis: List[Spectrum.Group]) -> List[int]:
+    """
+    Using the given basis and spectrum, calculates the confidence scores for
+    each basis element. The confidence scores returned are the inverse of the
+    actual confidence scores.
+    """
+    confs: List[int] = []
+    for group in basis:
+        ts = list(spectrum.get_tests(group, only_failing=True))
+        possibles: Set[Spectrum.Group] = set()
+        possibles.update(spectrum.get_executed_groups(ts[0]))
+        for test in ts[1:]:
+            possibles.intersection_update(spectrum.get_executed_groups(test))
+        confs.append(len(possibles))
+    return confs
+
+
 def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
                     ranking: Ranking,
                     flitsr_order='auto') -> List[Spectrum.Group]:
     if (len(basis) == 0):
         return basis
-    confs = []
+    inv_confs = []
     # check if internal ranking order needs to be determined
     if (flitsr_order in ['auto', 'conf']):
-        for group in basis:
-            ts = list(spectrum.get_tests(group, only_failing=True))
-            possibles: Set[Spectrum.Group] = set()
-            possibles.update(spectrum.get_executed_groups(ts[0]))
-            for test in ts[1:]:
-                possibles.intersection_update(spectrum.get_executed_groups(test))
-            confs.append(len(possibles))
+        inv_confs = get_inverse_confidence_scores(spectrum, basis)
     if (flitsr_order == 'auto'):
-        if (all(c > 3 for c in confs)):
+        if (all(c > 3 for c in inv_confs)):
             flitsr_order = 'reverse'
-        elif (all(c <= 3 for c in confs)):
-            flitsr_order = 'flitsr'
+        elif (all(c <= 3 for c in inv_confs)):
+            flitsr_order = 'original'
         else:
             flitsr_order = 'conf'
         # check for big groups
@@ -128,16 +140,13 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
     elif (flitsr_order == 'reverse'):
         ordered_basis = list(reversed(basis))
     elif (flitsr_order == 'original'):
-        ordered_basis = []
-        for x in ranking:
-            if (x.group in basis):
-                ordered_basis.append(x.group)
+        ordered_basis = [x for x in ranking if x.group in basis]
         # add any missing elements
         if (len(ordered_basis) < len(basis)):
             ordered_basis.extend([e for e in basis if e not in ordered_basis])
     elif (flitsr_order == 'conf'):
-        ordered_basis = [x for _, x in sorted(zip(confs, basis), key=lambda x:
-                                              x[0])]
+        ordered_basis = [x for _, x in sorted(zip(inv_confs, basis),
+                                              key=lambda x: x[0])]
     return ordered_basis
 
 
