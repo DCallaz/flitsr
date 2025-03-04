@@ -1,0 +1,250 @@
+#!/bin/bash
+
+open_sem() {
+  mkfifo pipe-$$
+  exec 3<>pipe-$$
+  rm pipe-$$
+  local i=$1
+  for((;i>0;i--)); do
+    printf %s 000 >&3
+  done
+}
+
+run_with_lock() {
+  local x
+  # this read waits until there is something to read
+  read -u 3 -n 3 x && ((0==x)) || exit $x
+  (
+   ( "$@"; )
+  # push the return code of the command to the semaphore
+  printf '%.3d' $? >&3
+  )&
+}
+
+# Progress bar
+progress () {
+  if [ $# -lt 2 ]; then
+    echo "USAGE: progress <current> <total>"
+    return 1
+  fi
+  cur=$1
+  max=$2
+  size=$(tput cols)
+  size=$(($size-7))
+  perc=$(($cur*100/$max))
+  nfill=$(($cur*$size/$max))
+  nempty=$(($size-$nfill))
+  fill="$(printf '%*s' $nfill | tr ' ' '#')"
+  empty="$(printf '%*s' $nempty)"
+  printf "\r[$fill$empty] %3i%%" $perc
+}
+
+# Function to call FLITSR & cleanup
+call_flitsr() {
+  local input="$1"
+  # call FLITSR
+  $FLITSR_HOME/.venv/bin/python3 -m flitsr.ordering_driver \
+    --all ${recover:+ --no-override} $m_metrics \
+    ${args:+ ${args[@]}} "$input" 2> "$input.err"
+  # clean up (mark this input as done)
+  echo "$input" >> done_inputs.tmp
+}
+
+USAGE="USAGE: run_all [-h] [-i/e <dir>] [-m/-M metric[,metric...]] \
+[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>]
+  where:
+    -h                    : Prints this USAGE message
+    -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
+    -M metric[,metric...] : Excludes the given metrics (can be specified multiple times)
+    -i <dir>              : Include directories named <dir> in run (can be specified multiple times)
+    -e <dir>              : Exclude directories names <dir> in run (can be specified multiple times)
+    -d <depth>            : Specifies the depth at which to look for inputs
+    -t [<extension>]      : Look only for TCM type inputs (with optional extension <extension>)
+    -g                    : Look only for GZoltar type inputs
+    -c <cores>            : Sets the number of cores to run in parallel on (default automatic)
+    -r                    : Recover from a partial run_all run by re-using existing files
+    -a <flitsr arg>       : Specify an argument to give to the flitsr program"
+
+if [ "$(command -v nproc 2>&1)" ]; then
+  N="$(nproc --all)"
+else
+  N="1"
+fi
+metrics=()
+excl_metrics=()
+args=()
+base_dir="$PWD"
+incl_dirs=()
+excl_dirs=()
+tcm_ext="*"
+while getopts ":d:c:m:M:i:e:a:tgrh" opt; do
+  case ${opt} in
+    d )
+      depth="$OPTARG"
+      ;;
+    t )
+      tcm=1
+      # Check for optional agrument
+      eval nextopt=\${$OPTIND}
+      # existing or starting with dash?
+      if [[ -n $nextopt && $nextopt != -* ]] ; then
+        OPTIND=$((OPTIND + 1))
+        tcm_ext="$nextopt"
+      fi
+      ;;
+    c )
+      if [[ ! "$OPTARG" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: Number of cores must be a number"
+        echo "$USAGE"
+        exit 1
+      elif [ "$(command -v nproc 2>&1)" ] && [ "$OPTARG" -gt "$(nproc --all)" ]; then
+        echo "WARNING: Number of given cores is greater than the number of actual cores"
+      fi
+      N="$OPTARG"
+      ;;
+    g )
+      tcm=0
+      ;;
+    i )
+      incl_dirs+=("-path" "*/${OPTARG/\//}/*")
+      ;;
+    e )
+      excl_dirs+=("-path" "*/${OPTARG/\//}" "-prune" "-o")
+      ;;
+    a )
+      args+=("$OPTARG")
+      ;;
+    m )
+      metrics+=(${OPTARG//,/ })
+      ;;
+    M )
+      excl_metrics+=(${OPTARG//,/ })
+      ;;
+    r )
+      recover="True"
+      ;;
+    h )
+      echo "$USAGE"
+      exit 0
+      ;;
+    \? )
+      echo "Invalid option: $OPTARG" 1>&2
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
+open_sem $N
+
+if [ ! "$depth" ] && [ ! "$tcm" ]; then
+  echo "ERROR: Please specify a depth or input type"
+  echo "$USAGE"
+  exit 1
+elif [ "$depth" ] && [[ ! "$depth" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: Depth \"$depth\" is not an integer"
+  echo "$USAGE"
+  exit 1
+fi
+
+if [ "$metrics" == "" ]; then
+  metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.suspicious))
+fi
+# remove all excluded metrics
+for metric in "${excl_metrics[@]}"; do
+  metrics=($(echo "${metrics[@]}" | sed -E "s/\b$metric( |$)//"))
+done
+
+cd "$base_dir"
+
+if [ -n "$recover" ]; then
+  # Firstly delete all empty results
+  find . -type f -name "*results*" -empty -delete -printf "Deleting empty results file: %P\n"
+  # Also delete all empty runs, as this could cause problems for recover
+  find . -type f -name "*.run" -empty -delete -printf "Deleting empty run file: %P\n"
+fi
+
+if [ "$tcm" ] && [ "$tcm" -eq 0 ]; then
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "spectra.csv" -print | xargs -n 1 dirname | sort -V)"
+elif [ "$tcm" ] && [ "$tcm" -eq 1 ]; then
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -type f -name "*.$tcm_ext" -print | sort -V)"
+else
+  inputs="$(find . "${excl_dirs[@]}" "${incl_dirs[@]}" ${depth:+-mindepth "$depth" -maxdepth "$depth"} \
+              -print | sort -V)"
+fi
+
+directories="$(echo "$inputs" | xargs -d $'\n' dirname | uniq)"
+
+m_metrics="$(printf -- ' -m %s' "${metrics[@]}" | cut -c2-)"
+# replace the error file if not recover
+if [ -z "$recover" ] && [ -f "$base_dir/results.err" ]; then
+  rm "$base_dir/results.err"
+fi
+while read -r dir; do
+  echo "Running ${dir#./}"
+  cd "$dir"
+  if [ -n "$recover" ] && [ -f "results" ]; then
+    echo "Recovered ${dir#./}, skipping..."
+    cd "$base_dir"
+    continue
+  elif [ -z "$recover" ] && [ -f "done_inputs.tmp" ]; then
+    rm done_inputs.tmp
+  fi
+  mapfile -t proj_inp < <(echo "$inputs" | grep -P "^\Q$dir/\E" | xargs -d $'\n' -n 1 basename)
+  num_inputs="${#proj_inp[@]}"
+  i=0
+  progress 0 $num_inputs
+  for input in "${proj_inp[@]}"; do
+    # Don't run if recover and input in done_inputs, otherwise run
+    if [ -z "$recover" ] || ! grep -Fxqs "$input" "done_inputs.tmp"; then
+      run_with_lock call_flitsr "$input"
+    fi
+    ((i++))
+    if [ $i -gt $N ]; then
+      progress $(($i - $N)) $num_inputs
+    fi
+  done
+  i=0
+  while [ $(jobs -rp | wc -l) -ge 1 ]; do
+    wait -n
+    ((i++))
+    # display only for the last N processes (not the previous num_inputs-N)
+    if [ $i -gt $(($num_inputs - $N)) ]; then
+      progress $i $num_inputs
+    fi
+  done
+  wait
+  progress $num_inputs $num_inputs
+  # print out the error files
+  for error_file in *.err; do
+    if [ "$error_file" != "results.err" ]; then
+      if [ -s "$error_file" ]; then
+        echo "Dir ${dir#./} File $(basename -s '.err' $error_file):"
+        cat "$error_file"
+      fi
+      rm "$error_file"
+    fi
+  done >> "$base_dir/results.err"
+  echo
+  for m in "${metrics[@]}"; do
+    while read -r t || [ -n "$t" ]; do
+      for file in "$t${m}_"*.run; do
+        orig=${file#"$t${m}_"}
+        echo "$orig"
+        cat "$file"; rm "$file";
+        echo "--------------------------"
+      done > "$t${m}.results"
+    done < <(find . -type f | sed -nE "s/\.\/(.*_?)${m}_.+\.run/\1/p" | sort -u)
+  done
+  merge
+  rm done_inputs.tmp
+  echo "Done in ${dir#./}"
+  cd "$base_dir"
+done < <(echo "$directories")
+if [ -e "$base_dir/results.err" ] && [ ! -s "$base_dir/results.err" ]; then
+  rm "$base_dir/results.err"
+fi
