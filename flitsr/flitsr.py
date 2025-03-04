@@ -140,7 +140,7 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
     elif (flitsr_order == 'reverse'):
         ordered_basis = list(reversed(basis))
     elif (flitsr_order == 'original'):
-        ordered_basis = [x for x in ranking if x.group in basis]
+        ordered_basis = [x.group for x in ranking if x.group in basis]
         # add any missing elements
         if (len(ordered_basis) < len(basis)):
             ordered_basis.extend([e for e in basis if e not in ordered_basis])
