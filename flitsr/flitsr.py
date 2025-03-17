@@ -119,9 +119,9 @@ def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
         inv_confs = get_inverse_confidence_scores(spectrum, basis)
     if (flitsr_order == 'auto'):
         if (all(c > 3 for c in inv_confs)):
-            flitsr_order = 'reverse'
-        elif (all(c <= 3 for c in inv_confs)):
             flitsr_order = 'original'
+        elif (all(c <= 3 for c in inv_confs)):
+            flitsr_order = 'flitsr'
         else:
             flitsr_order = 'conf'
         # check for big groups
