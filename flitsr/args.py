@@ -2,13 +2,13 @@ import argparse
 import argcomplete
 import sys
 from os import path as osp
-from typing import List
+from typing import List, Optional
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.advanced_types import AdvancedType
 
 
-def parse_args(argv: List[str]) -> argparse.Namespace:
+def parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
     """
     Parse the arguments defined by args for the flitsr program with python's
     argparse. The result is an argparse Namespace object which includes all of

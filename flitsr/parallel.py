@@ -7,6 +7,7 @@ import copy
 import os
 from typing import List
 import tempfile
+from importlib import resources
 
 
 def parallel(inp_file: str, spectrum: Spectrum,
@@ -30,10 +31,10 @@ def parallel(inp_file: str, spectrum: Spectrum,
 
 def partition_table(d: str, spectrum: Spectrum,
                     parType: str) -> List[Spectrum]:
-    jar_file = os.path.join(os.environ['FLITSR_HOME'], 'flitsr',
-                            'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar')
-    output = subprocess.check_output(['java', '-jar', jar_file, d,
-                                      parType]).decode('utf-8')
+    jar_name = 'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar'
+    with resources.path('flitsr', jar_name) as jar_file:
+        output = subprocess.check_output(['java', '-jar', str(jar_file), d,
+                                          parType]).decode('utf-8')
     partitions = re.split("partition \\d+\n", output)[1:]
     spectrums: List[Spectrum] = []
     for partition in partitions:

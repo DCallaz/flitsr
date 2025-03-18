@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 import re
 from flitsr.percent_at_n import combine
 import os
@@ -345,7 +346,7 @@ class Threshold:
         return f'threshold ({self.calc}, {self.comp.__name__}, {self.threshold})'
 
 
-if __name__ == "__main__":
+def main():
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             super().__init__(option_strings, dest, nargs, **kwargs)
@@ -489,3 +490,7 @@ if __name__ == "__main__":
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
           incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
           sign_less=args.sign_less, thrs=args.threshold)
+
+
+if __name__ == "__main__":
+    main()

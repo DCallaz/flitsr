@@ -149,7 +149,7 @@ elif [ "$depth" ] && [[ ! "$depth" =~ ^[0-9]+$ ]]; then
 fi
 
 if [ "$metrics" == "" ]; then
-  metrics=($($FLITSR_HOME/.venv/bin/python -m flitsr.suspicious))
+  metrics=($(python -m flitsr.suspicious))
 fi
 # remove all excluded metrics
 for metric in "${excl_metrics[@]}"; do

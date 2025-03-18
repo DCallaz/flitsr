@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 import math
 import sys
 import ast
@@ -215,7 +216,7 @@ def auc_calc(points: List[Tuple[float, float]],
     return auc
 
 
-if __name__ == "__main__":
+def main():
     parser = ArgumentParser(prog="percent_at_n")
     subparsers = parser.add_subparsers(title='Modes', description='The '
                                        'following modes are available '
@@ -287,3 +288,7 @@ if __name__ == "__main__":
             flitsr_m = auc_calc(points[(metric, "FLITSR*")], cutoff)
             print("{} FLITSR imprv: {:.6%}".format(metric, flitsr/base))
             print("{} FLITSR* imprv: {:.6%}".format(metric, flitsr_m/base))
+
+
+if __name__ == "__main__":
+    main()
