@@ -37,7 +37,7 @@ def construct_details(f: TextIOWrapper, method_level: bool,
                         faults.append(int(b))
                 bugs += 1
             if (method_level):
-                details_m = re.match('([^:]+):([^:+]):([0-9]+)', m.group(1))
+                details_m = re.match('([^:]+):([^:]+):([0-9]+)', m.group(1))
                 if (details_m is None):
                     errors.error("Incorrectly formatted line \"" + line +
                                  "\" for method level evaluation")
