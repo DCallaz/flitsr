@@ -43,14 +43,14 @@ progress () {
 call_flitsr() {
   local input="$1"
   # call FLITSR
-  flitsr --all ${recover:+ --no-override} $m_metrics \
+  $driver --all ${recover:+ --no-override} $m_metrics \
     ${args:+ ${args[@]}} "$input" 2> "$input.err"
   # clean up (mark this input as done)
   echo "$input" >> done_inputs.tmp
 }
 
 USAGE="USAGE: run_all [-h] [-i/e <dir>] [-m/-M metric[,metric...]] \
-[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>]
+[-d <depth>/-t [<ext>]/-g] [-c <cores>] [-r] [-a <flitsr arg>] [-p <driver>]
   where:
     -h                    : Prints this USAGE message
     -m metric[,metric...] : Runs only the given metrics (can be specified multiple times)
@@ -62,7 +62,8 @@ USAGE="USAGE: run_all [-h] [-i/e <dir>] [-m/-M metric[,metric...]] \
     -g                    : Look only for GZoltar type inputs
     -c <cores>            : Sets the number of cores to run in parallel on (default automatic)
     -r                    : Recover from a partial run_all run by re-using existing files
-    -a <flitsr arg>       : Specify an argument to give to the flitsr program"
+    -a <flitsr arg>       : Specify an argument to give to the flitsr program
+    -p <driver>           : Specify an alternate flitsr driver to use for running"
 
 if [ "$(command -v nproc 2>&1)" ]; then
   N="$(nproc --all)"
@@ -76,7 +77,8 @@ base_dir="$PWD"
 incl_dirs=()
 excl_dirs=()
 tcm_ext="*"
-while getopts ":d:c:m:M:i:e:a:tgrh" opt; do
+driver="flitsr"
+while getopts ":d:c:m:M:i:e:a:p:tgrh" opt; do
   case ${opt} in
     d )
       depth="$OPTARG"
@@ -121,6 +123,18 @@ while getopts ":d:c:m:M:i:e:a:tgrh" opt; do
       ;;
     r )
       recover="True"
+      ;;
+    p )
+      driver_name="${OPTARG}"
+      # check if valid
+      python3 -c "from flitsr import $driver_name" &> /dev/null
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Driver \"$driver_name\" is not a flitsr driver"
+        echo "$USAGE"
+        exit 1
+      else
+        driver="$FLITSR_HOME/.venv/bin/python3 -m flitsr.$driver_name"
+      fi
       ;;
     h )
       echo "$USAGE"
