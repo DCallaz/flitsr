@@ -363,7 +363,8 @@ def main(argv: List[str]):
                                               args.parallel or 'msp',
                                               method_lvl=args.method)
                 # Set default metric for parallel
-                metric = 'ochiai'
+                if (metric == 'parallel'):
+                    metric = 'ochiai'
             else:
                 spectrums = [spectrum]
             rankings: List[Ranking] = []
