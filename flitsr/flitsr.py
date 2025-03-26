@@ -111,6 +111,16 @@ def get_inverse_confidence_scores(spectrum: Spectrum,
 def flitsr_ordering(spectrum: Spectrum, basis: List[Spectrum.Group],
                     ranking: Ranking,
                     flitsr_order='auto') -> List[Spectrum.Group]:
+    """
+    Order the given flitsr basis using the specified ordering strategy.
+    Strategies include 'auto', 'conf', 'original', 'reverse', and 'flitsr'.
+    'flitsr' preserves the current ordering of the basis, 'reverse' reverses
+    this order (i.e. order elements were identified by flitsr), 'original'
+    orders elements by their position in the original ranking (given by
+    ranking). 'conf' gets the confidence scores for each element and orders by
+    these. 'auto' also gets the confidence scores for each element and uses
+    them to pick which strategy to use (either 'flitsr', 'original' or 'conf').
+    """
     if (len(basis) == 0):
         return basis
     inv_confs = []

@@ -1,3 +1,16 @@
+"""
+This is a custom driver for running flitsr that facilitates the flitsr basis
+ordering experiments.
+
+The driver runs flitsr with each of its basis ordering types and stores each
+result. The driver mostly mimicks the main method in the flitsr module (i.e.
+the main entry point of flitsr), and uses the same command line arguments. The
+main difference is the restriction to only running techniques with flitsr
+activated (no base SBFL techniques) and running all variants of the flitsr
+basis orderings on these.
+"""
+
+
 import re
 import sys
 from os import path as osp
