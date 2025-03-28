@@ -215,7 +215,7 @@ def auc_calc(points: List[Tuple[float, float]],
     return auc
 
 
-if __name__ == "__main__":
+def main(argv: List[str]):
     parser = ArgumentParser(prog="percent_at_n")
     subparsers = parser.add_subparsers(title='Modes', description='The '
                                        'following modes are available '
@@ -268,7 +268,7 @@ if __name__ == "__main__":
                             help='Specifies the percentage cut-off point to '
                             'use for the AUC calculations', default='101.0')
     argcomplete.autocomplete(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if (args.mode == "combine"):
         infile = args.input_file
         lines = open(infile).readlines()
@@ -287,3 +287,7 @@ if __name__ == "__main__":
             flitsr_m = auc_calc(points[(metric, "FLITSR*")], cutoff)
             print("{} FLITSR imprv: {:.6%}".format(metric, flitsr/base))
             print("{} FLITSR* imprv: {:.6%}".format(metric, flitsr_m/base))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

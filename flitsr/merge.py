@@ -345,7 +345,7 @@ class Threshold:
         return f'threshold ({self.calc}, {self.comp.__name__}, {self.threshold})'
 
 
-if __name__ == "__main__":
+def main(argv: List[str]):
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             super().__init__(option_strings, dest, nargs, **kwargs)
@@ -481,7 +481,7 @@ if __name__ == "__main__":
                         'calculations need to be found in the corresponding '
                         '.results files', dest='sign_less', default=[])
     argcomplete.autocomplete(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if ('max' not in args):
         args.max = None
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
@@ -489,3 +489,7 @@ if __name__ == "__main__":
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
           incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
           sign_less=args.sign_less, thrs=args.threshold)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
