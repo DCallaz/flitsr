@@ -162,7 +162,9 @@ class Runall:
             # clean up after running flitsr
             # print out the error files
             with redirect_stdout(open(osp.join(basedir, "results.err"), 'a')):
-                for error_file in find('.', type='f', name="*.err", depth=0):
+                err_files = sorted(find('.', type='f', name="*.err", depth=0),
+                                   key=natsort)
+                for error_file in err_files:
                     if (error_file != "results.err"):
                         if (osp.getsize(error_file) > 0):
                             print_err = (error_file.removeprefix("./")
@@ -276,7 +278,7 @@ def main(argv: List[str]):
             parser.error(f"Driver {args.driver} is not a valid flitsr driver")
             quit()
 
-    run_all = Runall(metrics, num_cpus=args.num_cores, recover=args.recover,
+    run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver)
     run_all.run(inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, ext=args.tcm)
