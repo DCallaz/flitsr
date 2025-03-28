@@ -1,23 +1,23 @@
 from multiprocessing import Pool
 from typing import List, Optional, Set, Any, Iterator
-from types import ModuleType
 from collections.abc import Callable
 import importlib
 import sys
 import os
+from os import path as osp
 from pathlib import Path
 import shutil
-import time
 from fnmatch import fnmatch
 import re
-from contextlib import redirect_stderr
-import random
+from contextlib import redirect_stderr, redirect_stdout
 from enum import Enum, auto
 
 import argparse
 import argcomplete
 
 from flitsr.suspicious import Suspicious
+from flitsr import merge
+from flitsr.errors import warning
 
 
 class InputType(Enum):
@@ -49,8 +49,8 @@ def find(directory: str, type: Optional[str] = None,
         for filename in to_check:
             # check the name and emptiness
             if ((name is None or fnmatch(filename, name)) and
-                (empty is None or empty == (os.path.getsize(filename) == 0))):
-                path = os.path.join(root, filename)
+                (empty is None or empty == (osp.getsize(filename) == 0))):
+                path = osp.join(root, filename)
                 # Check for action
                 if (action is not None):
                     yield action(path)
@@ -66,17 +66,18 @@ def natsort(s, _nsre=re.compile(r'(\d+)')):
 class Runall:
     def __init__(self, metrics: Set[str], num_cpus: Optional[int] = None,
                  recover: bool = False, flitsr_args: List[str] = None,
-                 driver: Optional[ModuleType] = None):
+                 driver: Optional[str] = None):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
-            driver = importlib.import_module('flitsr')
+            driver = 'flitsr'
         self.driver = driver
         self.num_cpus = num_cpus
+        self.metrics = metrics
+        self.recover = recover
         # set up the args
         self.args = ["--all"]
         for metric in metrics:
             self.args.extend(["-m", metric])
-        self.recover = recover
         if (recover):
             self.args.append("--no-override")
         if (flitsr_args is not None):
@@ -87,10 +88,13 @@ class Runall:
         args = self.args + [input_cov]
         with open(input_cov+".err", 'w') as errfile:
             with redirect_stderr(errfile):
-                for i in range(10):
-                    print(input_cov, file=sys.stderr)
-                    time.sleep(random.random())
-                self.driver.main(args)
+                driver = importlib.import_module('flitsr.'+self.driver)
+                try:
+                    driver.main(args)
+                except SystemExit:
+                    pass
+        with open("done_inputs.tmp", 'a') as done:
+            print(input_cov, file=done)
 
     def progress(self, cur):
         size = shutil.get_terminal_size().columns - 7
@@ -116,7 +120,7 @@ class Runall:
         if (input_type == InputType.GZOLTAR):
             inputs_us = find('.', type='f', name="spectra.csv",
                              excl_dirs=exclude, incl_dirs=include,
-                             depth=depth, action=os.path.dirname)
+                             depth=depth, action=osp.dirname)
         elif (input_type == InputType.TCM):
             if (ext is None):  # Sanity check
                 ext = '*'
@@ -126,26 +130,28 @@ class Runall:
             inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
                              depth=depth)
         inputs = sorted(inputs_us, key=natsort)
-        dirs = {os.path.dirname(f) for f in inputs}
+        dirs_us = {osp.dirname(f) for f in inputs}
+        dirs = sorted(dirs_us, key=natsort)
 
         # save base directory
         basedir = Path(os.curdir).absolute()
 
-        if (not self.recover and os.path.isfile("results.err")):
+        if (not self.recover and osp.isfile("results.err")):
             os.remove("results.err")
 
         # Iterate over each directory
         for dir_ in dirs:
+            # Initial housekeeping
             print(f'Running {dir_.removeprefix("./")}')
             os.chdir(dir_)
-            if (self.recover and os.path.isfile("results")):
+            if (self.recover and osp.isfile("results")):
                 print(f'Recovered {dir_.removeprefix("./")}, skipping...')
                 os.chdir(basedir)
                 continue
-            elif (not self.recover and os.path.isfile("done_inputs.tmp")):
+            elif (not self.recover and osp.isfile("done_inputs.tmp")):
                 os.remove("done_inputs.tmp")
-            proj_inp = list(map(os.path.basename, [i for i in inputs if
-                                                   i.startswith(dir_+"/")]))
+            proj_inp = list(map(osp.basename, [i for i in inputs if
+                                               i.startswith(dir_+"/")]))
             self.num_inputs = len(proj_inp)
             # start worker processes
             self.progress(0)
@@ -153,7 +159,48 @@ class Runall:
                 for i, _ in enumerate(pool.imap_unordered(self.run_flitsr,
                                                           proj_inp), 1):
                     self.progress(i)
-            self.progress(self.num_inputs)
+            # clean up after running flitsr
+            # print out the error files
+            with redirect_stdout(open(osp.join(basedir, "results.err"), 'a')):
+                for error_file in find('.', type='f', name="*.err", depth=0):
+                    if (error_file != "results.err"):
+                        if (osp.getsize(error_file) > 0):
+                            print_err = (error_file.removeprefix("./")
+                                         .removesuffix(".err"))
+                            print(f'Dir {dir_.removeprefix("./")}',
+                                  f'File {print_err}')
+                            with open(error_file) as file:
+                                print(file.read(), end='')
+                        os.remove(error_file)
+            # collect the results files
+            for m in self.metrics:
+                rs = find('.', type='f', name='*.run')
+                tre = f"\\.\\/(.*)_{m}_.+\\.run"
+                try:
+                    types = {m.group(1) for m in (re.match(tre, r) for r in rs)
+                             if m is not None}
+                except AttributeError:
+                    warning("Could not collect types")
+                    pass
+                for t in sorted(types, key=natsort):
+                    with redirect_stdout(open(f'{t}_{m}.results', 'w')):
+                        runs = sorted(find('.', type='f', depth=0,
+                                           name=f'{t}_{m}_*.run'), key=natsort)
+                        for run in runs:
+                            orig = run.removeprefix(f'./{t}_{m}_')
+                            print(orig)
+                            with open(run) as file:
+                                print(file.read(), end='')
+                            os.remove(run)
+                            print("--------------------------")
+            merge.main([])
+            os.remove("done_inputs.tmp")
+            print(f'Done in {dir_.removeprefix("./")}')
+            os.chdir(basedir)
+        # Check for empty results file
+        results_fl = osp.join(basedir, "results.err")
+        if (os.path.isfile(results_fl) and os.path.getsize(results_fl) == 0):
+            os.remove(results_fl)
 
 
 def main(argv: List[str]):
@@ -169,37 +216,47 @@ def main(argv: List[str]):
                         'metrics (can be specified multiple times)',
                         choices=metric_names)
 
-    parser.add_argument('-i', '--include', metavar='dir', action='append',
-                        help='Include directories named <dir> in run (can be '
+    parser.add_argument('-i', '--include', metavar='DIR', action='append',
+                        help='Include directories named DIR in run (can be '
                         'specified multiple times)')
-    parser.add_argument('-e', '--exclude', metavar='dir', action='append',
-                        help='Exclude directories names <dir> in run (can be '
-                        'specified multiple times')
+    parser.add_argument('-e', '--exclude', metavar='DIR', action='append',
+                        help='Exclude directories names DIR in run (can be '
+                        'specified multiple times)')
 
     parser.add_argument('-d', '--depth', action='store', help='Specifies the '
-                        'depth at which to look for inputs')
-    parser.add_argument('-t', '--tcm', metavar='extension', nargs='?',
+                        'depth at which to look for inputs', type=int)
+    parser.add_argument('-t', '--tcm', metavar='EXT', nargs='?',
                         default=None, const='*', help='Look only for TCM type '
-                        'inputs (with optional extension <extension>)')
+                        'inputs (with optional extension EXT)')
     parser.add_argument('-g', '--gzoltar', action='store_true', help='Look '
                         'only for GZoltar type inputs')
 
-    parser.add_argument('-c', '--num-cores', metavar='cores', type=int,
-                        help='Sets the number of cores to run in parallel on '
+    parser.add_argument('-c', '--num-cpus', metavar='CPUS', type=int,
+                        help='Sets the number of CPUs to run in parallel on '
                         '(default automatic)')
     parser.add_argument('-r', '--recover', action='store_true', help='Recover '
-                        'from a partial run_all run by re-using existing files')
+                        'from a partial run_all run by re-using existing '
+                        'files')
     parser.add_argument('-a', '--flitsr_arg', nargs='+', action='extend',
-                        help='Specify an argument to give to the flitsr program')
+                        help='Specify an argument to give to the flitsr '
+                        'program. NOTE: use -a="<argument>" syntax for '
+                        'arguments beginning with a dash ("-")')
     parser.add_argument('-p', '--driver', help='Specify an alternate flitsr '
                         'driver to use for running')
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
 
+    # Process incl & excl (remove trailing slashes)
+    if (args.include is not None):
+        args.include = [path.rstrip('/') for path in args.include]
+    if (args.exclude is not None):
+        args.exclude = [path.rstrip('/') for path in args.exclude]
+
     # Process metrics
     metrics = set(args.metrics or Suspicious.getNames())
-    metrics.difference_update(args.exclude_metrics)
+    if (args.exclude_metrics is not None):
+        metrics.difference_update(args.exclude_metrics)
 
     # Process input type
     if (args.gzoltar):
@@ -211,19 +268,19 @@ def main(argv: List[str]):
     else:
         parser.error("Please specify a depth or input type")
 
-    # Process driver
-    driver = None
+    # check if driver exists
     if (args.driver is not None):
-        try:
-            driver = importlib.import_module('flitsr.'+args.driver)
-        except ModuleNotFoundError:
+        spec = importlib.util.find_spec('flitsr.'+args.driver)
+        if (spec is None):
+            print("ERROR")
             parser.error(f"Driver {args.driver} is not a valid flitsr driver")
+            quit()
 
     run_all = Runall(metrics, num_cpus=args.num_cores, recover=args.recover,
-                     flitsr_args=args.flitsr_args, driver=driver)
+                     flitsr_args=args.flitsr_arg, driver=args.driver)
     run_all.run(inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, ext=args.tcm)
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main(sys.argv[1:])
