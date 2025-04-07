@@ -106,7 +106,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
           percs=None, incl_metrics=None, flitsrs=None, sign=None,
-          sign_less=[], thrs=[]):
+          sign_less=[], base_type=None, thrs=[], keep_order=False):
     # Set up the include and exclude dir names dicts
     incl_dict: Dict[str, List[str]] = {}
     excl_dict: Dict[str, List[str]] = {}
@@ -115,9 +115,11 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     for d, n in excl:
         excl_dict.setdefault(d, []).append(n)
     # set up other variables
-    metrics: Set[str] = set()
+    if (base_type is None):
+        base_type = 'base'
+    temp_metrics: Set[str] = set()
     modes: Set[str] = set()
-    calcs: Set[str] = set()
+    temp_calcs: Set[str] = set()
     #           dir       mode      metric
     files: Dict[str, Dict[str, Dict[str, File]]] = {}
     #          mode      metric    calc
@@ -142,7 +144,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 mode = m.group(1) or ""
                 modes.add(mode)
                 metric = m.group(2)
-                metrics.add(metric)
+                temp_metrics.add(metric)
                 files[d].setdefault(mode, {})[metric] = File(file)
                 avgs.setdefault(mode, {}).setdefault(metric, {})
         if (rel):
@@ -151,7 +153,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     # Collect all the results
     for d in dirs:
         for mode in modes:
-            for metric in metrics:
+            for metric in temp_metrics:
                 try:
                     block = readBlock(files[d][mode][metric])
                 except Exception:
@@ -164,7 +166,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                     for line in block:
                         line_s = line.split(": ")
                         calc = line_s[0]
-                        calcs.add(calc)
+                        temp_calcs.add(calc)
                         if (calc == PERC_N):
                             vals = line_s[1].split(",")
                             avgs[mode][metric].setdefault(calc, Avg(percn=True)).add(
@@ -176,14 +178,12 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                             avgs[mode][metric].setdefault(calc, Avg(s)).add(
                                     float(line_s[1]))
                     block = readBlock(files[d][mode][metric])
-    if (incl_calcs is not None):  # select only included calcs
-        calcs = set([c for c in calcs if ci_in(c, incl_calcs)])
     # calculate thresholds
     for thr in thrs:
         thr_key = str(thr).lower()
-        calcs.add(thr_key)
+        temp_calcs.add(thr_key)
         for mode in modes:
-            for metric in metrics:
+            for metric in temp_metrics:
                 vals = avgs[mode][metric][thr.calc].all
                 count = 0.0
                 for val in vals:
@@ -192,6 +192,18 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 avgs[mode][metric][thr_key] = Avg()
                 avgs[mode][metric][thr_key].adds = len(vals)
                 avgs[mode][metric][thr_key].all = [count]
+    # select only included calcs
+    if (incl_calcs is not None):
+        # preserves the order of calcs from cmd line
+        calcs = [c for c in incl_calcs if ci_in(c, temp_calcs)]
+    # select only included metrics
+    if (incl_metrics is not None):
+        # preserves the order of metrics from cmd line
+        metrics = [m for m in incl_metrics if ci_in(m, temp_metrics)]
+    # sort metrics or keep cmd line order
+    if (not keep_order):
+        calcs = sorted(temp_calcs)
+        metrics = sorted(metrics)
 
     def print_heading(name, tabs):
         name_disp = name.replace("_", " ").title()
@@ -207,7 +219,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
               file=tex_file)
 
     def print_results(mode, metric):
-        for j, calc in enumerate(sorted(calcs)):
+        for j, calc in enumerate(calcs):
             if (ci_eq(calc, PERC_N)):
                 if (perc_file is not None):
                     comb = combine(avgs[mode][metric][calc].eval())
@@ -243,10 +255,11 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 if (tex_file):
                     # process TeX significance only for advanced types
                     sign_disp = ''
-                    if (sign == 'type' and not ci_eq(mode, 'base')):
+                    base = base_type.format(re.sub('_[^_]*$', '', mode))
+                    if (sign == 'type' and not ci_eq(mode, base)):
                         try:
                             r, p = avg.significance(
-                                    avgs['base'][metric][calc])
+                                    avgs[base][metric][calc])
                             if ((calc in sign_less and r == 'less') or
                                 (calc not in sign_less and r == 'greater')):
                                 sign_disp = '\\tp'
@@ -259,9 +272,9 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
 
     # Print out merged results
     if (ci_eq(group, 'metric')):
-        zipped = [(mo, me) for me in sorted(metrics) for mo in sorted(modes)]
+        zipped = [(mo, me) for me in metrics for mo in sorted(modes)]
     else:
-        zipped = [(mo, me) for mo in sorted(modes) for me in sorted(metrics)]
+        zipped = [(mo, me) for mo in sorted(modes) for me in metrics]
     cur = None
     # Set up tex file
     if (tex_file):
@@ -271,14 +284,13 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
         # print("\\begin{longtable}", file=tex_file)
         print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
               file=tex_file)
-        print("Metric & "+' & '.join([c for c in sorted(calcs) if not
+        print("Metric & "+' & '.join([c for c in calcs if not
                                       ci_eq(c, PERC_N)])+"\\\\",
               file=tex_file)
     for (mode, metric) in zipped:
-        # check if this metric and mode should be displayed
-        if ((incl_metrics is None or ci_in(metric, incl_metrics)) and
-            (ci_eq(mode, 'base') or flitsrs is None or ci_in(metric, flitsrs)) and
-            (ci_in(mode, avgs) and ci_in(metric, avgs[mode]))):
+        # check if this mode should be displayed
+        if ((ci_eq(mode, 'base') or flitsrs is None or ci_in(metric, flitsrs))
+            and (ci_in(mode, avgs) and ci_in(metric, avgs[mode]))):
             if (ci_eq(group, 'metric')):
                 if (metric != cur):
                     print_heading(metric, 0)
@@ -458,7 +470,8 @@ def main(argv: List[str]):
                         '--tex option is also used, significance indicators '
                         'will be added to the TeX output indicating advanced '
                         'types significantly greater than their baselines '
-                        '(see --less-significance for significantly less)')
+                        '(see --base-type for changing the baseline, and '
+                        '--less-significance for significantly less)')
     parser.add_argument('-f', '--flitsrs', nargs='+', metavar='METRIC',
                         help='Specify the metrics for which to display FLITSR '
                         'and FLITSR* values for. By default all metric\'s '
@@ -480,6 +493,19 @@ def main(argv: List[str]):
                         'for the TeX output. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
                         '.results files', dest='sign_less', default=[])
+    parser.add_argument('-b', '--base-type', help='Intended for use with '
+                        '--significance and --tex options. Specify the base '
+                        'type that will be compared against for all other '
+                        'types when adding significance test annotations to '
+                        'the TeX output. Use the format "{}_<type>" if the '
+                        'baseline to compare to is dependant on the type.')
+    parser.add_argument('-k', '--keep-order', action='store_true',
+                        help='Instead of sorting the metrics and calculations '
+                        'by alphabetical order, keep the order that the are '
+                        'specified on the command line by the -m and -c '
+                        'options. This option does nothing to the '
+                        'corresponding order if either of those options are '
+                        'unspecified')
     argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
     if ('max' not in args):
@@ -488,7 +514,8 @@ def main(argv: List[str]):
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
           incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
-          sign_less=args.sign_less, thrs=args.threshold)
+          sign_less=args.sign_less, base_type=args.base_type,
+          thrs=args.threshold, keep_order=args.keep_order)
 
 
 if __name__ == "__main__":

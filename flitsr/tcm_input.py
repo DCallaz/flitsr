@@ -144,9 +144,8 @@ def read_spectrum(input_path: str, split_faults: bool,
     file.close()
     if (sum(exec_checks.values()) != 3):
         missing = [e[0] for e in exec_checks.items() if e[1] is False]
-        print("ERROR: Input file missing components:", missing,
-              " terminating...", file=sys.stderr)
-        quit()
+        errors.error(f"Input file missing components: {missing},",
+                     "terminating...")
     spectrum = sb.get_spectrum()
     del sb
     # Split fault groups if necessary
@@ -165,7 +164,7 @@ def read_spectrum(input_path: str, split_faults: bool,
             elem.faults = f_list
         if (len(faults) == 0):
             errors.error(f"No exposable faults in {input_path},",
-                         " terminating...")
+                         "terminating...")
     return spectrum
 
 
