@@ -1,4 +1,4 @@
 from flitsr import flitsr
 import sys
 
-flitsr.main(sys.argv)
+flitsr.main(sys.argv[1:])

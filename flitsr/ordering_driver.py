@@ -24,7 +24,7 @@ from flitsr.ranking import Ranking
 
 
 def main(argv: List[str]):
-    args: Namespace = parse_args(argv[1:])
+    args: Namespace = parse_args(argv)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
@@ -100,4 +100,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main(sys.argv[1:])

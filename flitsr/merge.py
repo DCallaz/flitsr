@@ -357,7 +357,7 @@ class Threshold:
         return f'threshold ({self.calc}, {self.comp.__name__}, {self.threshold})'
 
 
-if __name__ == "__main__":
+def main(argv: List[str]):
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             super().__init__(option_strings, dest, nargs, **kwargs)
@@ -507,7 +507,7 @@ if __name__ == "__main__":
                         'corresponding order if either of those options are '
                         'unspecified')
     argcomplete.autocomplete(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if ('max' not in args):
         args.max = None
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
@@ -516,3 +516,7 @@ if __name__ == "__main__":
           incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
           sign_less=args.sign_less, base_type=args.base_type,
           thrs=args.threshold, keep_order=args.keep_order)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
