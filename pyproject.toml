@@ -15,6 +15,8 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
   "License :: OSI Approved :: MIT License",
+  "Topic :: Software Development :: Debuggers",
+  "Intended Audience :: Developers",
 ]
 dependencies = [
   'argcomplete',
