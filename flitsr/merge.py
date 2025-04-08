@@ -196,13 +196,17 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     if (incl_calcs is not None):
         # preserves the order of calcs from cmd line
         calcs = [c for c in incl_calcs if ci_in(c, temp_calcs)]
+    else:
+        calcs = list(temp_calcs)
     # select only included metrics
     if (incl_metrics is not None):
         # preserves the order of metrics from cmd line
         metrics = [m for m in incl_metrics if ci_in(m, temp_metrics)]
+    else:
+        metrics = list(temp_metrics)
     # sort metrics or keep cmd line order
     if (not keep_order):
-        calcs = sorted(temp_calcs)
+        calcs = sorted(calcs)
         metrics = sorted(metrics)
 
     def print_heading(name, tabs):
