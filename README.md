@@ -326,7 +326,8 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
              [-d DECIMALS] [-g {metric,type}] [-c CALC [CALC ...]]
              [--threshold THRESHOLD THRESHOLD THRESHOLD]
              [--percentage CALC [CALC ...]] [-s [{metric,type}]]
-             [-f [METRIC ...]] [-m METRIC [METRIC ...]] [-l CALC [CALC ...]]
+             [-f METRIC [METRIC ...]] [-m METRIC [METRIC ...]]
+             [-l CALC [CALC ...]] [-b BASE_TYPE] [-k]
 ```
 * `-h`, `--help`: show this help message and exit
 * `-R`, `--relative`: Compute relative values instead of absolute values
@@ -374,6 +375,14 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
 * `--percentage CALC [CALC ...]`: Specify calculations that must be intepreted as
     a percentage value. NOTE: the names of the calculations need to be found in
     the corresponding .results files
+* `-s [{metric,type}]`, `--significance [{metric,type}]`: Specifies that additional
+    significance tests should be performed to test the differences in results.
+    The significance tests will either be conducted between metrics of the same
+    type `[metric]` or between types using the same metric `[type]` (default
+    `type`). If `type` is given, and the `--tex` option is also used, significance
+    indicators will be added to the TeX output indicating advanced types
+    significantly greater than their baselines (see `--base-type` for changing
+    the baseline, and `--less-significance` for significantly less)
 * `-f [METRIC [METRIC ...]]`, `--flitsrs [METRIC [METRIC ...]]`: Specify the
     metrics for which to display FLITSR and FLITSR* values for. By default all
     metric's FLITSR and FLITSR* values are shown.
@@ -387,6 +396,16 @@ usage: merge [-h] [-R] [-r [X]] [-i DIR_ARG [DIR_ARG ...]]
     instead of significantly greater, which is the default. Affects the
     significance indicators for the TeX output. NOTE: the names of the
     calculations need to be found in the corresponding `.results` files
+* `-b BASE_TYPE`, `--base-type BASE_TYPE`: Intended for use with
+  `--significance` and `--tex` options. Specify the base type that will be compared
+  against for all other types when adding significance test annotations to the TeX
+  output. Use the format `"{}_<type>"` if the baseline to compare to is dependant
+  on the type.
+* `-k`, `--keep-order`: Instead of sorting the metrics and calculations by
+    alphabetical order, keep the order that the are specified on the command line
+    by the `-m` and `-c` options. This option does nothing to the corresponding order
+    if either of those options are unspecified
+
 ### Percentage at n plots (`percent_at_n`)
 Once the merge script has been called, a `perc_at_n_results` file will be
 generated from which you can plot the percentage at n graphs using the
