@@ -144,20 +144,30 @@ class Runall:
             # Initial housekeeping
             print(f'Running {dir_.removeprefix("./")}')
             os.chdir(dir_)
+            done_inp = []
             if (self.recover and osp.isfile("results")):
                 print(f'Recovered {dir_.removeprefix("./")}, skipping...')
                 os.chdir(basedir)
                 continue
             elif (not self.recover and osp.isfile("done_inputs.tmp")):
                 os.remove("done_inputs.tmp")
+            elif (self.recover and osp.isfile("done_inputs.tmp")):
+                done_inp = list(map(str.strip,
+                                    open("done_inputs.tmp").readlines()))
+                if (len(done_inp) > 0):
+                    print('Skipping done inputs:')
+                    print(*done_inp, sep=", ")
             proj_inp = list(map(osp.basename, [i for i in inputs if
                                                i.startswith(dir_+"/")]))
             self.num_inputs = len(proj_inp)
+            # Remove done inputs
+            proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)
             # start worker processes
-            self.progress(0)
+            self.progress(len(done_inp))
             with Pool(processes=self.num_cpus) as pool:
                 for i, _ in enumerate(pool.imap_unordered(self.run_flitsr,
-                                                          proj_inp), 1):
+                                                          proj_inp),
+                                      len(done_inp)+1):
                     self.progress(i)
             # clean up after running flitsr
             # print out the error files
