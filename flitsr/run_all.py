@@ -1,6 +1,5 @@
 from multiprocessing import Pool
-from typing import List, Optional, Set, Any, Iterator
-from collections.abc import Callable
+from typing import List, Optional, Set, Any, Iterator, Callable
 import importlib
 import sys
 import os
@@ -58,6 +57,17 @@ def find(directory: str, type: Optional[str] = None,
                     yield path
 
 
+def removeprefix(string : str, prefix: str):
+    if (prefix and string.startswith(prefix)):
+        return string[len(prefix):]
+    return string
+
+def removesuffix(string: str, suffix: str):
+    if (suffix and string.endswith(suffix)):
+        return string[:-len(suffix)]
+    return string
+
+
 def natsort(s, _nsre=re.compile(r'(\d+)')):
     return [int(text) if text.isdigit() else text.lower()
             for text in _nsre.split(s)]
@@ -102,7 +112,7 @@ class Runall:
         nfill = int((cur * size) / self.num_inputs)
         nempty = size - nfill
         bar = u'\u2588'
-        print(f'[{bar*nfill}{' '*nempty}] {perc:3d}%', end='\r')
+        print(f'[{bar*nfill}{" "*nempty}] {perc:3d}%', end='\r')
         if (cur == self.num_inputs):
             print()
 
@@ -143,11 +153,11 @@ class Runall:
         # Iterate over each directory
         for dir_ in dirs:
             # Initial housekeeping
-            print(f'Running {dir_.removeprefix("./")}')
+            print(f'Running {removeprefix(dir_, "./")}')
             os.chdir(dir_)
             done_inp = []
             if (self.recover and osp.isfile("results")):
-                print(f'Recovered {dir_.removeprefix("./")}, skipping...')
+                print(f'Recovered {removeprefix(dir_, "./")}, skipping...')
                 os.chdir(basedir)
                 continue
             elif (not self.recover and osp.isfile("done_inputs.tmp")):
@@ -178,9 +188,9 @@ class Runall:
                 for error_file in err_files:
                     if (error_file != "results.err"):
                         if (osp.getsize(error_file) > 0):
-                            print_err = (error_file.removeprefix("./")
-                                         .removesuffix(".err"))
-                            print(f'Dir {dir_.removeprefix("./")}',
+                            print_err = (removesuffix(removeprefix(
+                                error_file, "./"), ".err"))
+                            print(f'Dir {removeprefix(dir_, "./")}',
                                   f'File {print_err}')
                             with open(error_file) as file:
                                 print(file.read(), end='')
@@ -200,7 +210,7 @@ class Runall:
                         runs = sorted(find('.', type='f', depth=0,
                                            name=f'{t}_{m}_*.run'), key=natsort)
                         for run in runs:
-                            orig = run.removeprefix(f'./{t}_{m}_')
+                            orig = removeprefix(run, f'./{t}_{m}_')
                             print(orig)
                             with open(run) as file:
                                 print(file.read(), end='')
@@ -208,7 +218,7 @@ class Runall:
                             print("--------------------------")
             merge.main([])
             os.remove("done_inputs.tmp")
-            print(f'Done in {dir_.removeprefix("./")}')
+            print(f'Done in {removeprefix(dir_, "./")}')
             os.chdir(basedir)
         # Check for empty results file
         results_fl = osp.join(basedir, "results.err")
