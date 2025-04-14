@@ -101,7 +101,8 @@ class Runall:
         perc = int((cur * 100) / self.num_inputs)
         nfill = int((cur * size) / self.num_inputs)
         nempty = size - nfill
-        print(f'[{u"\u2588"*nfill}{' '*nempty}] {perc:3d}%', end='\r')
+        bar = u'\u2588'
+        print(f'[{bar*nfill}{' '*nempty}] {perc:3d}%', end='\r')
         if (cur == self.num_inputs):
             print()
 
