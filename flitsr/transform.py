@@ -50,8 +50,8 @@ def main(argv: List[str]):
                         'different format type.')
     parser.add_argument('-t', '--tcm', action='store_true',
                         help='Convert input file into TCM format')
-    parser.add_argument('-g', '--gzoltar', help='Convert input file into '
-                        'Gzoltar format')
+    parser.add_argument('-g', '--gzoltar', action='store_true',
+                        help='Convert input file into Gzoltar format')
     parser.add_argument('-o', '--output-file', help='Specifies the name of '
                         'the output file. By default, the name is derived '
                         'from the name of the input file; for example, if the '

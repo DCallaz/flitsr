@@ -1,0 +1,4 @@
+#!/bin/bash
+source "$FLITSR_HOME/.venv/bin/activate"
+python -m flitsr.transform "$@"
+deactivate
