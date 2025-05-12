@@ -6,6 +6,7 @@ from typing import List
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.advanced_types import AdvancedType
+from flitsr.input_type import IntputType
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -328,10 +329,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         args.types = [advanced_type]
     # Check the input file type and set input method
     if (osp.isfile(args.input)):
-        args.input_m = 1
+        args.input_type = IntputType.TCM
     elif (osp.isdir(args.input) and
             osp.isfile(osp.join(args.input, "matrix.txt"))):
-        args.input_m = 0
+        args.input_type = IntputType.GZOLTAR
     else:
         parser.error("Input file type not supported")
     if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):

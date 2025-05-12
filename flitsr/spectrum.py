@@ -5,6 +5,8 @@ import numpy as np
 from enum import Enum
 from abc import ABC, abstractmethod
 from flitsr.const_iter import ConstIter
+from flitsr.input_type import InputType
+from flitsr.errors import error
 
 
 class Outcome(Enum):
@@ -93,19 +95,25 @@ class Spectrum:
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
-        def gzoltar_str(self, incl_faults=True) -> str:
+        def output_str(self, type_: InputType, incl_faults=True) -> str:
+            if (type_ is InputType.TCM):
+                seps = ['.', ':', ':', ' | ']
+            elif (type_ is InputType.GZOLTAR):
+                seps = ['$', '#', ':', ':']
+            else:
+                error(f"Input type {type_} not supported for output string")
             gstring = ''
             path_part = self.path.rpartition('.')
             if (path_part[0] != '' and path_part[2] != ''):
-                gstring = path_part[0] + '$' + path_part[2]
+                gstring = path_part[0] + seps[0] + path_part[2]
             elif (path_part[0] != '' or path_part[2] != ''):
                 gstring = path_part[0] + path_part[2]
             if (self.method):
-                gstring += ('#' if (gstring != '') else '') + self.method
+                gstring += (seps[1] if (gstring != '') else '') + self.method
             if (self.line):
-                gstring += (':' if (gstring != '') else '') + str(self.line)
+                gstring += (seps[2] if (gstring != '') else '') + str(self.line)
             if (incl_faults and self.isFaulty()):
-                gstring += ':' + ':'.join(str(x) for x in self.faults)
+                gstring += seps[3] + seps[3].join(str(x) for x in self.faults)
             return gstring
 
         def __repr__(self):
