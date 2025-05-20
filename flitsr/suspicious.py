@@ -4,7 +4,6 @@ import sys
 from typing import List
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking
-from flitsr.args import Args
 
 
 class Suspicious():
@@ -41,6 +40,7 @@ class Suspicious():
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.
         """
+        from flitsr.args import Args
         if (tiebrk is None):
             tiebrk = Args().get_arg('tiebrk')
             if (tiebrk is None):

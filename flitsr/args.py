@@ -5,7 +5,6 @@ from os import path as osp
 from typing import List, Dict, Any
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
-from flitsr.advanced_types import AdvancedType
 from flitsr.singleton import SingletonMeta
 
 
