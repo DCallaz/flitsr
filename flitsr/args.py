@@ -1,13 +1,16 @@
 import argparse
 import argcomplete
+import inspect
 import sys
+from pathlib import Path
 from os import path as osp
 from typing import List, Dict, Any
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
-from flitsr.advanced_types import AdvancedType
+# from flitsr.advanced_types import AdvancedType
 from flitsr.input_type import InputType
+from flitsr import advanced
 
 
 class Args(metaclass=SingletonMeta):
@@ -16,9 +19,9 @@ class Args(metaclass=SingletonMeta):
 
     def parse_args(self, argv: List[str]) -> argparse.Namespace:
         """
-        Parse the arguments defined by args for the flitsr program with python's
-        argparse. The result is an argparse Namespace object which includes all of
-        the arguments parsed (or default values).
+        Parse the arguments defined by args for the flitsr program with
+        python's argparse. The result is an argparse Namespace object which
+        includes all of the arguments parsed (or default values).
 
         Args:
           argv: The list of arguments to parse, usual taken from the command
@@ -30,20 +33,6 @@ class Args(metaclass=SingletonMeta):
                 return filename
             else:
                 raise argparse.ArgumentTypeError(f'Could not find input file: \"{filename}\"')
-
-        # check FLITSR type combinations function
-        def check_type(type_comb: str):
-            type_sep = type_comb.split('+')
-            adv_type = AdvancedType.BASE
-            for t in type_sep:
-                t = t.upper()
-                if (hasattr(AdvancedType, t)):
-                    cur_type = getattr(AdvancedType, t)
-                    adv_type |= cur_type
-                else:
-                    raise argparse.ArgumentTypeError('Invalid type for '
-                                                     f'--all-types: \"{t}\"')
-            return adv_type
 
         # General options
         parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
@@ -73,24 +62,6 @@ class Args(metaclass=SingletonMeta):
                 'metric to a seperate file using the metric\'s name instead of '
                 'stdout. Allowed values are: ['+', '.join(Suspicious.getNames(True))+'] '
                 '(default: {})'.format(default_metric))
-        parser.add_argument('-s', '--sbfl', action='store_true',
-                help='Disables the FLITSR algorithm so that only the base metric '
-                'is used to produce the ranking. This is equivalent to using the '
-                'base metric as-is, but allows the user to run these metrics '
-                'within the FLITSR framework')
-        parser.add_argument('--multi', action='store_true',
-                help='Runs the FLITSR* (i.e. multi-round) algorithm')
-        parser.add_argument('-i', '--internal-ranking', action='store',
-                choices=['flitsr', 'reverse', 'original', 'auto', 'conf'], default='auto',
-                help='Specify the order in which the elements of each FLITSR basis '
-                'are ranked. "flitsr" uses the order that FLITSR returns the basis '
-                'in (i.e. from FLITSRs lowest to highest recursion depth), which '
-                'aligns with FLITSRs confidence for each element being a fault. '
-                '"reverse" uses the reverse of "flitsr" (i.e. the order in which '
-                'FLITSR identifies the elements) which gives elements that use a '
-                'larger part of the original test suite first. "original" returns '
-                'the elements based on their original positions in the ranking '
-                'produced by the base SBFL metric used by FLITSR.')
         parser.add_argument('-r', '--ranking', action='store_true',
                 help='Changes FLITSR\'s expected input to be an SBFL ranking in '
                 'Gzoltar or FLITSR format (determined automatically), instead of '
@@ -123,17 +94,6 @@ class Args(metaclass=SingletonMeta):
                 'above evaluation calculations. Prints the results out to files '
                 'named [<flitsr method>_]<metric>.run for each FLITSR method '
                 'and metric')
-        adv_types = list(AdvancedType.__members__)
-        parser.add_argument('-t', '--types', action='append', type=check_type,
-                            help='Specify the advanced type combination to use '
-                            'when running FLITSR. Note that this argument '
-                            'overrides any of the individual advanced type '
-                            'arguments given to FLITSR (such as --multi, --sblf, etc.).'
-                            'This argument may be specified multiple times to add '
-                            'multiple type combinations to run. The format for '
-                            'this argument is: "--types <type>[+<type>...]", '
-                            'where each <type> is a (case-insensitive) FLITSR '
-                            f'advanced type. Allowed types are: {adv_types}')
         parser.add_argument('--no-override', action='store_true',
                             help='By default FLITSR will override the output '
                             'file(s) if they already exist, printing a warning '
@@ -144,6 +104,86 @@ class Args(metaclass=SingletonMeta):
         parser.add_argument('-d', '--decimals', action='store', type=int,
                 default=2, help='Sets the precision (number of decimal points) for '
                 'the output of all of the calculations (default: %(default)s)')
+
+        # Advanced types options
+        primitives = (bool, str, int, float, Path)
+        clusters = parser.add_argument_group('Clustering techniques',
+            'One of the following clustering techniques may be specified, '
+            'along with it\'s options')
+        cluster_mu = clusters.add_mutually_exclusive_group()
+        cluster_types = advanced.clusters
+
+        rankers = parser.add_argument_group('Ranking techniques',
+            'One of the following advanced ranking techniques may be '
+            'specified, along with it\'s options')
+        ranker_mu = rankers.add_mutually_exclusive_group()
+        ranker_types = advanced.rankers
+
+        advanced_groups = [(clusters, cluster_mu, cluster_types),
+                           (rankers, ranker_mu, ranker_types)]
+
+        for group, mu, types_ in advanced_groups:
+            for name, class_ in types_.items():
+                name = name.lower()
+                help_ = '(default: %(default)s)'
+                # add docstring
+                if (class_.__doc__ is not None and class_.__doc__ != ''):
+                    help_ = class_.__doc__ + ' ' + help_
+                mu.add_argument('--'+name, action='store_true', help=help_)
+                argspec = inspect.getfullargspec(class_.__init__)
+                def_diff = (len(argspec.args)-1) - (0 if
+                                                    argspec.defaults is None
+                                                    else len(argspec.defaults))
+                print(name, def_diff)
+                for p_index, param in enumerate(argspec.args[1:]):
+                    paramName = '--'+name+'-'+param.replace('_', '-')
+                    parser_args = {'help': '(default %(default)s)'}
+                    # add default arguments
+                    if (argspec.defaults is not None and p_index >= def_diff):
+                        parser_args['default'] = argspec.defaults[p_index-def_diff]
+                    # add types
+                    if (param in argspec.annotations):
+                        paramType = argspec.annotations[param]
+                        if (paramType not in primitives):
+                            if (not hasattr(class_, f'_{param}')):
+                                raise NameError('Could not find type conversion '
+                                                f'for {param} in {name}')
+                            paramType = getattr(class_, f'_{param}')
+                        parser_args['type'] = paramType
+                    # add choices
+                    if (hasattr(class_, f'_{param}_opts')):
+                        parser_args['choices'] = getattr(class_, f'_{param}_opts')
+                    # finalize option
+                    group.add_argument(paramName, **parser_args)
+
+        # manually set flitsr as the default
+        parser.set_defaults(flitsr=True)
+
+
+        # parser.add_argument('--multi', action='store_true',
+        #         help='Runs the FLITSR* (i.e. multi-round) algorithm')
+        # parser.add_argument('-i', '--internal-ranking', action='store',
+        #         choices=['flitsr', 'reverse', 'original', 'auto', 'conf'], default='auto',
+        #         help='Specify the order in which the elements of each FLITSR basis '
+        #         'are ranked. "flitsr" uses the order that FLITSR returns the basis '
+        #         'in (i.e. from FLITSRs lowest to highest recursion depth), which '
+        #         'aligns with FLITSRs confidence for each element being a fault. '
+        #         '"reverse" uses the reverse of "flitsr" (i.e. the order in which '
+        #         'FLITSR identifies the elements) which gives elements that use a '
+        #         'larger part of the original test suite first. "original" returns '
+        #         'the elements based on their original positions in the ranking '
+        #         'produced by the base SBFL metric used by FLITSR.')
+        # adv_types = list(AdvancedType.__members__)
+        # parser.add_argument('-t', '--types', action='append', type=check_type,
+        #                     help='Specify the advanced type combination to use '
+        #                     'when running FLITSR. Note that this argument '
+        #                     'overrides any of the individual advanced type '
+        #                     'arguments given to FLITSR (such as --multi, --sblf, etc.).'
+        #                     'This argument may be specified multiple times to add '
+        #                     'multiple type combinations to run. The format for '
+        #                     'this argument is: "--types <type>[+<type>...]", '
+        #                     'where each <type> is a (case-insensitive) FLITSR '
+        #                     f'advanced type. Allowed types are: {adv_types}')
 
         # Tie breaking options
         tie_grp = parser.add_argument_group('Tie breaking strategy',
@@ -266,19 +306,17 @@ class Args(metaclass=SingletonMeta):
                               const='all',
                               help='Display all info of the faults in the program')
 
-        # Parallel options
-        parallel_opts = ['bdm', 'msp', 'hwk', 'vwk']
-        parser.add_argument('-p', '--parallel', action='store',
-                 choices=parallel_opts, metavar='ALGORITHM',
-                 help='Run one of the parallel debugging algorithms on the spectrum '
-                 'to produce multiple spectrums, and process all other options on '
-                 'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
+        # parser.add_argument('-p', '--parallel', action='store',
+        #          choices=parallel_opts, metavar='ALGORITHM',
+        #          help='Run one of the parallel debugging algorithms on the spectrum '
+        #          'to produce multiple spectrums, and process all other options on '
+        #          'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
 
-        parser.add_argument('--artemis', action='store_true',
-                            help='Run the ARTEMIS technique on the spectrum to '
-                            'produce the ranked lists. This option may be '
-                            'combined with FLITSR and parallel to produce a '
-                            'hybrid technique.')
+        # parser.add_argument('--artemis', action='store_true',
+        #                     help='Run the ARTEMIS technique on the spectrum to '
+        #                     'produce the ranked lists. This option may be '
+        #                     'combined with FLITSR and parallel to produce a '
+        #                     'hybrid technique.')
 
         # TODO: Add OBA and worst args if necessary
         cut_eval_opts=['worst', 'best', 'resolve']
@@ -317,21 +355,6 @@ class Args(metaclass=SingletonMeta):
                 args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
-        elif (args.types is None):
-            advanced_type = AdvancedType.BASE
-            # Add FLITSR
-            if (not args.sbfl):
-                advanced_type |= AdvancedType.FLITSR
-            # Add Multi
-            if (args.multi):
-                advanced_type |= AdvancedType.MULTI
-            # Add parallel
-            if (args.parallel):
-                advanced_type |= AdvancedType.PARALLEL
-            # Add ARTEMIS
-            if (args.artemis):
-                advanced_type |= AdvancedType.ARTEMIS
-            args.types = [advanced_type]
         # Check the input file type and set input method
         if (osp.isfile(args.input)):
             args.input_type = InputType.TCM

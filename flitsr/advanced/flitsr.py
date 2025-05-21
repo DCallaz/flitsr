@@ -9,9 +9,11 @@ from flitsr import advanced
 
 
 class Flitsr(Ranker):
-    def __init__(self, multi: bool = True, order_method: str = 'flitsr'):
+    _internal_ranking_opts = ['auto', 'conf', 'original', 'reverse', 'flitsr']
+
+    def __init__(self, multi: bool = True, internal_ranking: str = 'flitsr'):
         self.multi = multi
-        self.order_method = order_method
+        self.order_method = internal_ranking
 
     def remove_faulty_elements(self, spectrum: Spectrum,
                                tests_removed: Set[Spectrum.Test],

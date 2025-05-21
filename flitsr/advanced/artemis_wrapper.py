@@ -5,6 +5,11 @@ from flitsr.advanced.ranker import Ranker
 
 
 class Artemis(Ranker):
+    """
+    Run the ARTEMIS technique on the spectrum to produce the ranked lists.
+    This option may be combined with FLITSR and parallel to produce a
+    hybrid technique.
+    """
     def __init__(self, numUniverse: int = 17, maxUniverse: int = 20,
                  p: float = 1e-5):
         self.numUniverse = numUniverse

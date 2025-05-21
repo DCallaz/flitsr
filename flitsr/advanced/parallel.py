@@ -10,7 +10,14 @@ from flitsr.advanced.cluster import Cluster
 
 
 class Parallel(Cluster):
-    def __init__(self, parType: str):
+    """
+    Run one of the parallel debugging algorithms on the spectrum to
+    produce multiple spectrums, and process all other options on
+    each spectrum.
+    """
+    _parType_opts = ['bdm', 'msp', 'hwk', 'vwk']
+
+    def __init__(self, parType: str = 'msp'):
         self.parType = parType
 
     def cluster(self, inp_file: str, spectrum: Spectrum,

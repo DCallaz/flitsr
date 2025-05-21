@@ -35,16 +35,11 @@ class Suspicious():
 
     @staticmethod
     def apply_formula(spec: Spectrum, formula: str,
-                      tiebrk: int = None, reverse=True) -> Ranking:
+                      tiebrk: int, reverse=True) -> Ranking:
         """
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.
         """
-        from flitsr.args import Args
-        if (tiebrk is None):
-            tiebrk = Args().get_arg('tiebrk')
-            if (tiebrk is None):
-                raise ValueError("Could not find tie breaking method")
         ranking: Ranking = Ranking(tiebrk)
         for elem in spec.groups():
             sus = Suspicious(spec.f[elem], spec.tf, spec.p[elem], spec.tp)
