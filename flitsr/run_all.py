@@ -186,7 +186,7 @@ class Runall:
                 err_files = sorted(find('.', type='f', name="*.err", depth=0),
                                    key=natsort)
                 for error_file in err_files:
-                    if (error_file != "results.err"):
+                    if (osp.basename(error_file) != "results.err"):
                         if (osp.getsize(error_file) > 0):
                             print_err = (removesuffix(removeprefix(
                                 error_file, "./"), ".err"))

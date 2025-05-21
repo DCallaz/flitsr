@@ -21,6 +21,8 @@ from flitsr.args import parse_args
 from flitsr.flitsr import output, run, compute_cutoff
 from flitsr.advanced_types import AdvancedType
 from flitsr.ranking import Ranking
+from flitsr.input_type import InputType
+from flitsr.errors import error
 
 
 def main(argv: List[str]):
@@ -36,12 +38,14 @@ def main(argv: List[str]):
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
-    if (args.input_m):
+    if (args.input_type is InputType.TCM):
         from flitsr.tcm_input import read_spectrum
         d_p = re.sub("\\.\\w+$", ".run", args.input)
-    else:
+    elif (args.input_type is InputType.GZOLTAR):
         from flitsr.input import read_spectrum
         d_p = args.input.split("/")[0] + ".run"
+    else:
+        error(f"Unknown input type \"{args.input_type}\", exiting...")
     # Read the spectrum in and setup parallel if needed
     spectrum = read_spectrum(args.input, args.split, method_level=args.method)
     if (spectrum is None or len(spectrum.spectrum) == 0):

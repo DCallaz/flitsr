@@ -437,6 +437,31 @@ usage: percent_at_n plot [-h] [-a] [-m METRIC [METRIC ...]]
     separate graphs for each metric, or for each type
 * `-l`, `--log`: By default graphs are plot with both axes in linear scale. This
     option enables plotting the x-axis in log scale instead
+
+### Transform spectra (`transform`)
+If needed, a spectra in one format can be transformed into another format using
+FLITSR's `transform` script. This script reads in the spectral input format
+using FLITSR's usual input readers, and can print the resulting spectrum out to
+any other supported format. For now this just includes TCM and GZoltar format
+(see [Input Structure](#input-structure)). The command-line script has the
+following arguments:
+```
+usage: transform [-h] [-t] [-g GZOLTAR] [-o OUTPUT_FILE] input
+```
+#### Positional arguments:
+* `input`: The spectrum input file. The spectral format is guessed from the
+    input file, and by default the output format is assumed to be a different
+    format type.
+
+#### Options:
+* `-h`, `--help`: show this help message and exit
+* `-t`, `--tcm`: Convert input file into TCM format
+* `-g`, `--gzoltar`: Convert input file into Gzoltar format
+* `-o OUTPUT_FILE`, `--output-file OUTPUT_FILE`: Specifies the name of the
+    output file. By default, the name is derived from the name of the input
+    file; for example, if the input file is `input.tcm`, and the output format
+    is Gzoltar, the output will be `input/`.
+
 ### Results plots (`plot`)
 NOTE: THIS SCRIPT IS CURRENTLY DEPRECATED
 Once the merge script has been called, plots of the results can be generated
