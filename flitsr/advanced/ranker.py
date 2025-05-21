@@ -7,15 +7,6 @@ from flitsr import advanced
 
 class Ranker(ABC):
     @abstractmethod
-    def rank(self, spectrum: Spectrum, base_metric: Ranker) -> Ranking:
-        pass
-
-    def __init_subclass__(cls):
-        advanced.register_ranker(cls)
-
-
-class BasicRanker(ABC):
-    @abstractmethod
     def rank(self, spectrum: Spectrum, base_metric: str) -> Ranking:
         pass
 
