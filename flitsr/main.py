@@ -166,7 +166,6 @@ def main(argv: List[str]):
     # Execute techniques
     for config in args.types:
         for metric in args.metrics:
-            print(config, metric)
             # Get the output channel
             if (len(args.metrics) == 1 and len(args.types) == 1 and not args.all):
                 output_file = args.output

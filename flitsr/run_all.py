@@ -1,6 +1,7 @@
 from multiprocessing import Pool
 from typing import List, Optional, Set, Any, Iterator, Callable
 import importlib
+from importlib.util import find_spec
 import sys
 import os
 from os import path as osp
@@ -293,7 +294,7 @@ def main(argv: List[str]):
 
     # check if driver exists
     if (args.driver is not None):
-        spec = importlib.util.find_spec('flitsr.'+args.driver)
+        spec = find_spec('flitsr.'+args.driver)
         if (spec is None):
             print("ERROR")
             parser.error(f"Driver {args.driver} is not a valid flitsr driver")

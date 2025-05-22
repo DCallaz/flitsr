@@ -15,18 +15,16 @@ import re
 import sys
 from os import path as osp
 from typing import List
-from argparse import Namespace
-from flitsr import parallel
-from flitsr.args import parse_args
-from flitsr.flitsr import output, run, compute_cutoff
-from flitsr.advanced_types import AdvancedType
+from flitsr.args import Args
+from flitsr.main import output, compute_cutoff
 from flitsr.ranking import Ranking
 from flitsr.input_type import InputType
 from flitsr.errors import error
+from flitsr.advanced import Config, rankers, clusters, RankerType, ClusterType
 
 
 def main(argv: List[str]):
-    args: Namespace = parse_args(argv)
+    args: Args = Args().parse_args(argv)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
@@ -53,8 +51,10 @@ def main(argv: List[str]):
               file=sys.stderr)
         return
     # Execute techniques
-    for advanced_type in [AdvancedType.FLITSR, AdvancedType.MULTI]:
-        if (AdvancedType.FLITSR in advanced_type):
+    for config in [Config(RankerType['FLITSR']),
+                   Config(RankerType['MULTI'])]:
+        if (config.ranker is RankerType['FLITSR'] or
+            config.ranker is RankerType['MULTI']):
             orderings = ['auto', 'conf', 'original', 'reverse', 'flitsr']
         else:
             orderings = ['original']
@@ -62,7 +62,7 @@ def main(argv: List[str]):
             for metric in args.metrics:
                 # Get the output channel
                 input_filename = osp.basename(d_p)
-                filename = (advanced_type.get_file_name() + '_' + ordering
+                filename = (config.get_file_name() + '_' + ordering
                             + '_' + metric + '_' + input_filename)
                 try:
                     output_file = open(filename, "x")
@@ -75,21 +75,37 @@ def main(argv: List[str]):
                         print("WARNING: overriding file", filename,
                               file=sys.stderr)
                         output_file = open(filename, 'w')
-                # Check for parallel
-                if (AdvancedType.PARALLEL in advanced_type or metric == 'parallel'):
-                    spectrums = parallel.parallel(args.input, spectrum,
-                                                  args.parallel or 'msp',
-                                                  method_lvl=args.method)
-                    # Set default metric for parallel
-                    metric = 'ochiai'
+                # Check for clustering
+                if (config.cluster is not None or
+                    metric.upper() in clusters):
+                    if (config.cluster is None):
+                        cluster = ClusterType[metric.upper()]
+                        # Set default metric for clustering
+                        metric = 'ochiai'
+                    else:
+                        cluster = config.cluster
+                    cluster_params = args.get_arg_group(cluster.name)
+                    cluster_mthd = clusters[cluster.name](**cluster_params)
+                    spectrums = cluster_mthd.cluster(args.input, spectrum,
+                                                     args.method)
                 else:
                     spectrums = [spectrum]
                 rankings: List[Ranking] = []
                 # Run each sub-spectrum
                 for subspectrum in spectrums:
                     # Run techniques
-                    ranking = run(subspectrum, metric, advanced_type, args.tiebrk,
-                                  ordering)
+                    ranker = config.ranker
+                    if (ranker is None):
+                        ranker = RankerType['SBFL']
+                    if (ranker == RankerType['SBFL'] and
+                        metric.upper() in rankers):
+                        ranker = RankerType[metric.upper()]
+                        metric = 'ochiai'
+                    ranker_params = args.get_arg_group(ranker.name)
+                    if ('internal_ranking' in ranker_params):
+                        ranker_params['internal_ranking'] = ordering
+                    ranker_mthd = rankers[ranker.name](**ranker_params)
+                    ranking = ranker_mthd.rank(subspectrum, metric)
                     # Compute cut-off
                     if (args.cutoff_strategy):
                         ranking = compute_cutoff(args.cutoff_strategy, ranking,

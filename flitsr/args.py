@@ -59,7 +59,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 else:
                     raise argparse.ArgumentTypeError('Invalid type for '
                                                      f'--all-types: \"{t}\"')
-            adv_type = Config(cluster, ranker)
+            adv_type = Config(ranker, cluster)
             return adv_type
 
         # General options

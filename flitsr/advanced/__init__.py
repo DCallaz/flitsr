@@ -26,25 +26,31 @@ def register_refiner(cls):
 __all__ = [m[1] for m in pkgutil.iter_modules(advanced.__path__)]
 from . import *
 
-RefinerType = Enum('RefinerType', " ".join(refiners.keys()))  # type:ignore
-ClusterType = Enum('ClusterType', " ".join(clusters.keys()))  # type:ignore
-RankerType = Enum('RankerType', " ".join(rankers.keys()))  # type:ignore
+RefinerType = Enum('RefinerType', " ".join(refiners.keys()),  # type:ignore
+                   module=advanced, qualname=advanced.RefinerType)
+ClusterType = Enum('ClusterType', " ".join(clusters.keys()),  # type:ignore
+                   module=advanced, qualname=advanced.ClusterType)
+RankerType = Enum('RankerType', " ".join(rankers.keys()),  # type:ignore
+                  module=advanced, qualname=advanced.RankerType)
 
 
 class Config:
-    def __init__(self, ranker: RankerType = None, cluster: ClusterType = None):
+    def __init__(self, ranker: RankerType = None,
+                 cluster: ClusterType = None):
         self.cluster = cluster
         self.ranker = ranker
 
     def __str__(self):
-        if (self.cluster is None and self.ranker is None):
-            return "SBFL"
-        elif (self.cluster is None):
-            return self.ranker.name
-        elif (self.ranker is None):
-            return self.cluster.name
+        if (self.cluster is None):
+            if (self.ranker is None):
+                return "SBFL"
+            else:
+                return self.ranker.name
         else:
-            return self.cluster.name + "+" + self.ranker.name
+            if (self.ranker is None):
+                return self.cluster.name
+            else:
+                return self.cluster.name + "+" + self.ranker.name
 
     def __repr__(self):
         return self.__str__()
