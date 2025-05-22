@@ -403,7 +403,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
         elif (args.types is None):
-            args.types = [Config(args.cluster, args.ranker)]
+            args.types = [Config(args.ranker, args.cluster)]
         # Check the input file type and set input method
         if (osp.isfile(args.input)):
             args.input_type = InputType.TCM
