@@ -166,6 +166,7 @@ def main(argv: List[str]):
     # Execute techniques
     for config in args.types:
         for metric in args.metrics:
+            print(config, metric)
             # Get the output channel
             if (len(args.metrics) == 1 and len(args.types) == 1 and not args.all):
                 output_file = args.output
@@ -189,11 +190,13 @@ def main(argv: List[str]):
             if (config.cluster is not None or
                 metric.upper() in clusters):
                 if (config.cluster is None):
-                    config.cluster = ClusterType['metric.upper()']
+                    cluster = ClusterType[metric.upper()]
                     # Set default metric for clustering
                     metric = 'ochiai'
-                cluster_params = args.get_arg_group(config.cluster.name)
-                cluster_mthd = clusters[config.cluster.name](**cluster_params)
+                else:
+                    cluster = config.cluster
+                cluster_params = args.get_arg_group(cluster.name)
+                cluster_mthd = clusters[cluster.name](**cluster_params)
                 spectrums = cluster_mthd.cluster(args.input, spectrum,
                                                  args.method)
             else:
@@ -202,10 +205,15 @@ def main(argv: List[str]):
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
-                if (config.ranker is None):
-                    config.ranker = RankerType['SBFL']
-                ranker_params = args.get_arg_group(config.ranker.name)
-                ranker_mthd = rankers[config.ranker.name](**ranker_params)
+                ranker = config.ranker
+                if (ranker is None):
+                    ranker = RankerType['SBFL']
+                if (ranker == RankerType['SBFL'] and
+                    metric.upper() in rankers):
+                    ranker = RankerType[metric.upper()]
+                    metric = 'ochiai'
+                ranker_params = args.get_arg_group(ranker.name)
+                ranker_mthd = rankers[ranker.name](**ranker_params)
                 ranking = ranker_mthd.rank(subspectrum, metric)
                 # Compute cut-off
                 if (args.cutoff_strategy):

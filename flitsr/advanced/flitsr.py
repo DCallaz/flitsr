@@ -33,8 +33,8 @@ class Flitsr(Ranker):
         """Executes the recursive flitsr algorithm to identify faulty elements"""
         if (spectrum.tf == 0):
             return []
-        if (formula.capitalize() in advanced.rankers.keys()):
-            ranker = advanced.rankers[formula.capitalize()]()
+        if (formula.upper() in advanced.rankers):
+            ranker = advanced.rankers[formula.upper()]()
             ranking = ranker.rank(spectrum, formula)
         else:
             ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
@@ -130,8 +130,8 @@ class Flitsr(Ranker):
         return ordered_basis
 
     def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
-        if (formula.capitalize() in advanced.rankers.keys()):
-            ranker = advanced.rankers[formula.capitalize()]()
+        if (formula.upper() in advanced.rankers):
+            ranker = advanced.rankers[formula.upper()]()
             ranking = ranker.rank(spectrum, formula)
         else:
             ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
@@ -184,8 +184,8 @@ class Multi(Flitsr):
         return multiFault
 
     def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
-        if (formula.capitalize() in advanced.rankers.keys()):
-            ranker = advanced.rankers[formula.capitalize()]()
+        if (formula.upper() in advanced.rankers):
+            ranker = advanced.rankers[formula.upper()]()
             ranking = ranker.rank(spectrum, formula)
         else:
             ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)

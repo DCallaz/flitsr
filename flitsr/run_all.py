@@ -79,7 +79,7 @@ class Runall:
                  driver: Optional[str] = None):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
-            driver = 'flitsr'
+            driver = 'main'
         self.driver = driver
         self.num_cpus = num_cpus
         self.metrics = metrics

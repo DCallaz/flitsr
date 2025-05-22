@@ -32,7 +32,7 @@ RankerType = Enum('RankerType', " ".join(rankers.keys()))  # type:ignore
 
 
 class Config:
-    def __init__(self, cluster: ClusterType = None, ranker: RankerType = None):
+    def __init__(self, ranker: RankerType = None, cluster: ClusterType = None):
         self.cluster = cluster
         self.ranker = ranker
 
