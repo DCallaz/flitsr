@@ -1,3 +1,4 @@
+from __future__ import annotations
 import argparse
 import argcomplete
 import inspect
@@ -11,13 +12,16 @@ from flitsr.singleton import SingletonMeta
 # from flitsr.advanced_types import AdvancedType
 from flitsr.input_type import InputType
 from flitsr import advanced
+from flitsr.advanced import Config
 
 
-class Args(metaclass=SingletonMeta):
-    def __init__(self):
-        self.args: Dict[str, Any] = {}
+class Args(argparse.Namespace, metaclass=SingletonMeta):
+    def _add_params(self, params: argparse.Namespace):
+        dict_ = vars(params)
+        for key in dict_:
+            setattr(self, key, dict_[key])
 
-    def parse_args(self, argv: List[str]) -> argparse.Namespace:
+    def parse_args(self, argv: List[str]) -> Args:
         """
         Parse the arguments defined by args for the flitsr program with
         python's argparse. The result is an argparse Namespace object which
@@ -32,7 +36,31 @@ class Args(metaclass=SingletonMeta):
             if (osp.exists(filename)):
                 return filename
             else:
-                raise argparse.ArgumentTypeError(f'Could not find input file: \"{filename}\"')
+                raise argparse.ArgumentTypeError('Could not find input file:'
+                                                 f' \"{filename}\"')
+
+        # check FLITSR type combinations function
+        def check_type(type_comb: str):
+            type_sep = type_comb.split('+')
+            cluster = None
+            ranker = None
+            for t in type_sep:
+                t = t.upper()
+                if (hasattr(advanced.ClusterType, t)):
+                    if (cluster is not None):
+                        raise argparse.ArgumentTypeError('Cannot have two '
+                            f'cluster types: {cluster.name} and {t}')
+                    cluster = advanced.ClusterType[t]
+                elif (hasattr(advanced.RankerType, t)):
+                    if (ranker is not None):
+                        raise argparse.ArgumentTypeError('Cannot have two '
+                            f'ranker types: {ranker.name} and {t}')
+                    ranker = advanced.RankerType[t]
+                else:
+                    raise argparse.ArgumentTypeError('Invalid type for '
+                                                     f'--all-types: \"{t}\"')
+            adv_type = Config(cluster, ranker)
+            return adv_type
 
         # General options
         parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
@@ -112,53 +140,83 @@ class Args(metaclass=SingletonMeta):
             'along with it\'s options')
         cluster_mu = clusters.add_mutually_exclusive_group()
         cluster_types = advanced.clusters
+        cluster_enum = advanced.ClusterType
 
         rankers = parser.add_argument_group('Ranking techniques',
             'One of the following advanced ranking techniques may be '
             'specified, along with it\'s options')
         ranker_mu = rankers.add_mutually_exclusive_group()
         ranker_types = advanced.rankers
+        ranker_enum = advanced.RankerType
 
-        advanced_groups = [(clusters, cluster_mu, cluster_types),
-                           (rankers, ranker_mu, ranker_types)]
+        advanced_groups = [('cluster', cluster_enum, clusters, cluster_mu, cluster_types),
+                           ('ranker', ranker_enum, rankers, ranker_mu, ranker_types)]
 
-        for group, mu, types_ in advanced_groups:
+        for adv_name, adv_enum, group, mu, types_ in advanced_groups:
             for name, class_ in types_.items():
-                name = name.lower()
+                disp_name = name.lower()
                 help_ = '(default: %(default)s)'
                 # add docstring
                 if (class_.__doc__ is not None and class_.__doc__ != ''):
                     help_ = class_.__doc__ + ' ' + help_
-                mu.add_argument('--'+name, action='store_true', help=help_)
+                mu.add_argument('--'+disp_name, dest=adv_name,
+                                action='store_const', const=adv_enum[name],
+                                help=help_)
                 argspec = inspect.getfullargspec(class_.__init__)
                 def_diff = (len(argspec.args)-1) - (0 if
                                                     argspec.defaults is None
                                                     else len(argspec.defaults))
-                print(name, def_diff)
                 for p_index, param in enumerate(argspec.args[1:]):
-                    paramName = '--'+name+'-'+param.replace('_', '-')
+                    paramName = '--'+disp_name+'-'+param.replace('_', '-')
                     parser_args = {'help': '(default %(default)s)'}
                     # add default arguments
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
-                    # add types
-                    if (param in argspec.annotations):
-                        paramType = argspec.annotations[param]
-                        if (paramType not in primitives):
-                            if (not hasattr(class_, f'_{param}')):
-                                raise NameError('Could not find type conversion '
-                                                f'for {param} in {name}')
-                            paramType = getattr(class_, f'_{param}')
-                        parser_args['type'] = paramType
                     # add choices
                     if (hasattr(class_, f'_{param}_opts')):
                         parser_args['choices'] = getattr(class_, f'_{param}_opts')
+                    # add types
+                    if (param in argspec.annotations):
+                        paramType = argspec.annotations[param]
+                        if (paramType is bool):
+                            if ('default' in parser_args):
+                                # check if default is True
+                                if (parser_args['default']):
+                                    parser_args['dest'] = disp_name+'_'+param
+                                    paramName = ('--' + disp_name + '-no-' +
+                                                 param.replace('_', '-'))
+                                    parser_args['action'] = 'store_false'
+                                else:
+                                    parser_args['action'] = 'store_true'
+                            else:
+                                parser_args['action'] = 'store_true'
+                        else:
+                            if (paramType not in primitives):
+                                if (not hasattr(class_, f'_{param}')):
+                                    err = ('Could not find type conversion '
+                                           f'for {param} in {name}')
+                                    raise NameError(err)
+                                paramType = getattr(class_, f'_{param}')
+                            parser_args['type'] = paramType
+                            if ('choices' not in parser_args):
+                                parser_args['metavar'] = param
                     # finalize option
-                    group.add_argument(paramName, **parser_args)
+                    group.add_argument(paramName, **parser_args)  # type:ignore
 
         # manually set flitsr as the default
-        parser.set_defaults(flitsr=True)
+        parser.set_defaults(ranker=advanced.RankerType['FLITSR'])
 
+        adv_types = list(advanced.all_types.keys())
+        parser.add_argument('-t', '--types', action='append', type=check_type,
+                             help='Specify the advanced type combination to use '
+                             'when running FLITSR. Note that this argument '
+                             'overrides any of the individual advanced type '
+                             'arguments given to FLITSR (such as --multi, --sblf, etc.).'
+                             'This argument may be specified multiple times to add '
+                             'multiple type combinations to run. The format for '
+                             'this argument is: "--types <type>[+<type>...]", '
+                             'where each <type> is a (case-insensitive) FLITSR '
+                             f'advanced type. Allowed types are: {adv_types}')
 
         # parser.add_argument('--multi', action='store_true',
         #         help='Runs the FLITSR* (i.e. multi-round) algorithm')
@@ -173,17 +231,6 @@ class Args(metaclass=SingletonMeta):
         #         'larger part of the original test suite first. "original" returns '
         #         'the elements based on their original positions in the ranking '
         #         'produced by the base SBFL metric used by FLITSR.')
-        # adv_types = list(AdvancedType.__members__)
-        # parser.add_argument('-t', '--types', action='append', type=check_type,
-        #                     help='Specify the advanced type combination to use '
-        #                     'when running FLITSR. Note that this argument '
-        #                     'overrides any of the individual advanced type '
-        #                     'arguments given to FLITSR (such as --multi, --sblf, etc.).'
-        #                     'This argument may be specified multiple times to add '
-        #                     'multiple type combinations to run. The format for '
-        #                     'this argument is: "--types <type>[+<type>...]", '
-        #                     'where each <type> is a (case-insensitive) FLITSR '
-        #                     f'advanced type. Allowed types are: {adv_types}')
 
         # Tie breaking options
         tie_grp = parser.add_argument_group('Tie breaking strategy',
@@ -346,8 +393,8 @@ class Args(metaclass=SingletonMeta):
         # Set the flitsr types based on 'all' or what is set
         if (args.all is True):
             if (args.types is None):
-                args.types = [AdvancedType.BASE, AdvancedType.FLITSR,
-                              AdvancedType.MULTI]
+                args.types = [Config(), Config(advanced.RankerType['FLITSR']),
+                              Config(advanced.RankerType['MULTI'])]
             if (len(args.weff) == 0 and len(args.top1) == 0 and
                     len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
                 args.weff = ["first", "avg", "med", "last", 2, 3, 5]
@@ -355,6 +402,8 @@ class Args(metaclass=SingletonMeta):
                 args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
+        elif (args.types is None):
+            args.types = [Config(args.cluster, args.ranker)]
         # Check the input file type and set input method
         if (osp.isfile(args.input)):
             args.input_type = InputType.TCM
@@ -366,19 +415,17 @@ class Args(metaclass=SingletonMeta):
         if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
             args.sbfl = False
             args.multi = 1
-        self.args = vars(args)
-        return args
+        self._add_params(args)
+        return self
 
-    def get_args(self):
-        """Get all available arguments"""
-        return self.args
-
-    def get_arg(self, arg):
-        """
-        Returns the value of the given argument, or None if the argument is
-        not present
-        """
-        return self.args.get(arg)
+    def get_arg_group(self, group_name):
+        group = {}
+        prefix = group_name.lower()+'_'
+        arg_dict = vars(self)
+        for key in arg_dict:
+            if (key.startswith(prefix)):
+                group[key.removeprefix(prefix)] = arg_dict[key]
+        return group
 
 
 if __name__ == "__main__":

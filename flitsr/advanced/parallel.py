@@ -39,7 +39,7 @@ class Parallel(Cluster):
         return spectrums
 
     def partition_table(self, d: str, spectrum: Spectrum) -> List[Spectrum]:
-        jar_file = os.path.join(os.environ['FLITSR_HOME'], 'flitsr',
+        jar_file = os.path.join(os.environ['FLITSR_HOME'], 'flitsr', 'advanced',
                                 'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar')
         output = subprocess.check_output(['java', '-jar', jar_file, d,
                                           self.parType]).decode('utf-8')

@@ -15,7 +15,7 @@ from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking
 from flitsr.tie import Ties
 from flitsr.args import Args
-from flitsr import advanced
+from flitsr.advanced import clusters, rankers, ClusterType, RankerType
 from flitsr.input_type import InputType
 from flitsr.errors import error
 
@@ -137,7 +137,7 @@ def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
 
 
 def main(argv: List[str]):
-    args: Namespace = Args().parse_args(argv)
+    args: Args = Args().parse_args(argv)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
@@ -164,7 +164,7 @@ def main(argv: List[str]):
               file=sys.stderr)
         return
     # Execute techniques
-    for advanced_type in args.types:
+    for config in args.types:
         for metric in args.metrics:
             # Get the output channel
             if (len(args.metrics) == 1 and len(args.types) == 1 and not args.all):
@@ -172,7 +172,7 @@ def main(argv: List[str]):
             else:
                 # store output files in the current directory
                 input_filename = osp.basename(d_p)
-                filename = (advanced_type.get_file_name() + '_' + metric + '_'
+                filename = (config.get_file_name() + '_' + metric + '_'
                             + input_filename)
                 try:
                     output_file = open(filename, "x")
@@ -185,22 +185,28 @@ def main(argv: List[str]):
                         print("WARNING: overriding file", filename,
                               file=sys.stderr)
                         output_file = open(filename, 'w')
-            # Check for parallel
-            if (AdvancedType.PARALLEL in advanced_type or metric == 'parallel'):
-                spectrums = parallel.parallel(args.input, spectrum,
-                                              args.parallel or 'msp',
-                                              method_lvl=args.method)
-                # Set default metric for parallel
-                if (metric == 'parallel'):
+            # Check for clustering
+            if (config.cluster is not None or
+                metric.upper() in clusters):
+                if (config.cluster is None):
+                    config.cluster = ClusterType['metric.upper()']
+                    # Set default metric for clustering
                     metric = 'ochiai'
+                cluster_params = args.get_arg_group(config.cluster.name)
+                cluster_mthd = clusters[config.cluster.name](**cluster_params)
+                spectrums = cluster_mthd.cluster(args.input, spectrum,
+                                                 args.method)
             else:
                 spectrums = [spectrum]
             rankings: List[Ranking] = []
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
-                ranking = run(subspectrum, metric, advanced_type, args.tiebrk,
-                              args.internal_ranking)
+                if (config.ranker is None):
+                    config.ranker = RankerType['SBFL']
+                ranker_params = args.get_arg_group(config.ranker.name)
+                ranker_mthd = rankers[config.ranker.name](**ranker_params)
+                ranking = ranker_mthd.rank(subspectrum, metric)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     ranking = compute_cutoff(args.cutoff_strategy, ranking,

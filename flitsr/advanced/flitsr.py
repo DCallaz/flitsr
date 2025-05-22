@@ -5,14 +5,16 @@ from flitsr.suspicious import Suspicious
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, set_orig, unset_orig
 from flitsr.advanced.ranker import Ranker
+from flitsr.advanced.sbfl import SBFL
 from flitsr import advanced
 
 
 class Flitsr(Ranker):
     _internal_ranking_opts = ['auto', 'conf', 'original', 'reverse', 'flitsr']
 
-    def __init__(self, multi: bool = True, internal_ranking: str = 'flitsr'):
-        self.multi = multi
+    def __init__(self, internal_ranking: str = 'flitsr'):
+        from flitsr.args import Args
+        self.sbfl_args = Args().get_arg_group('SBFL')
         self.order_method = internal_ranking
 
     def remove_faulty_elements(self, spectrum: Spectrum,
@@ -27,32 +29,6 @@ class Flitsr(Ranker):
                     break
         tests_removed.difference_update(toRemove)
 
-    def multiRemove(self, spectrum: Spectrum,
-                    faulty: List[Spectrum.Group]) -> bool:
-        """
-        Remove the elements given by faulty from the spectrum, and remove any
-        test cases executing these elements only.
-        """
-        # Get tests executing elems in faulty set
-        executing: Set[Spectrum.Test] = set()
-        for elem in faulty:
-            exe = spectrum.get_tests(elem, only_failing=True)
-            executing.update(exe)
-
-        # Remove all elements in faulty set
-        for group in faulty:
-            spectrum.remove_group(group)
-
-        multiFault = False
-        for test in executing:
-            for group in spectrum.groups():  # remaining groups not in faulty
-                if (spectrum[test][group]):
-                    break
-            else:
-                multiFault = True
-                spectrum.remove(test, hard=True)
-        return multiFault
-
     def flitsr(self, spectrum: Spectrum, formula: str) -> List[Spectrum.Group]:
         """Executes the recursive flitsr algorithm to identify faulty elements"""
         if (spectrum.tf == 0):
@@ -61,7 +37,7 @@ class Flitsr(Ranker):
             ranker = advanced.rankers[formula.capitalize()]()
             ranking = ranker.rank(spectrum, formula)
         else:
-            ranking = Suspicious.apply_formula(spectrum, formula)
+            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
         r_iter = iter(ranking)
         group = next(r_iter).group
         tests_removed = spectrum.get_tests(group, only_failing=True,
@@ -158,7 +134,61 @@ class Flitsr(Ranker):
             ranker = advanced.rankers[formula.capitalize()]()
             ranking = ranker.rank(spectrum, formula)
         else:
-            ranking = Suspicious.apply_formula(spectrum, formula)
+            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+        set_orig(ranking)
+        val = 2**64
+        basis = self.flitsr(spectrum, formula)
+        if (not basis == []):
+            ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
+                                                 self.order_method)
+            for x in ranking:
+                if (x.group in basis):
+                    x.score = val - ordered_basis.index(x.group)
+            val = val-len(basis)
+        # Reset the coverage matrix and counts
+        spectrum.reset()
+        ranking.sort(True)
+        unset_orig()
+        return ranking
+
+
+class Multi(Flitsr):
+    def __init__(self):
+        from flitsr.args import Args
+        super().__init__(Args().flitsr_internal_ranking)
+
+    def multiRemove(self, spectrum: Spectrum,
+                    faulty: List[Spectrum.Group]) -> bool:
+        """
+        Remove the elements given by faulty from the spectrum, and remove any
+        test cases executing these elements only.
+        """
+        # Get tests executing elems in faulty set
+        executing: Set[Spectrum.Test] = set()
+        for elem in faulty:
+            exe = spectrum.get_tests(elem, only_failing=True)
+            executing.update(exe)
+
+        # Remove all elements in faulty set
+        for group in faulty:
+            spectrum.remove_group(group)
+
+        multiFault = False
+        for test in executing:
+            for group in spectrum.groups():  # remaining groups not in faulty
+                if (spectrum[test][group]):
+                    break
+            else:
+                multiFault = True
+                spectrum.remove(test, hard=True)
+        return multiFault
+
+    def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
+        if (formula.capitalize() in advanced.rankers.keys()):
+            ranker = advanced.rankers[formula.capitalize()]()
+            ranking = ranker.rank(spectrum, formula)
+        else:
+            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
         set_orig(ranking)
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)
@@ -178,8 +208,6 @@ class Flitsr(Ranker):
             # multi-explanation -> we assume there are multiple explanations
             # for the same faults
             self.multiRemove(newSpectrum, basis)
-            if (not self.multi):
-                break
             val = val-1
         ranking.sort(True)
         unset_orig()
