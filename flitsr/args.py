@@ -122,6 +122,17 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'above evaluation calculations. Prints the results out to files '
                 'named [<flitsr method>_]<metric>.run for each FLITSR method '
                 'and metric')
+        adv_types = list(advanced.all_types.keys())
+        parser.add_argument('-t', '--types', action='append', type=check_type,
+                             help='Specify the advanced type combination to use '
+                             'when running FLITSR. Note that this argument '
+                             'overrides any of the individual advanced type '
+                             'arguments given to FLITSR (such as --multi, --sblf, etc.).'
+                             'This argument may be specified multiple times to add '
+                             'multiple type combinations to run. The format for '
+                             'this argument is: "--types <type>[+<type>...]", '
+                             'where each <type> is a (case-insensitive) FLITSR '
+                             f'advanced type. Allowed types are: {adv_types}')
         parser.add_argument('--no-override', action='store_true',
                             help='By default FLITSR will override the output '
                             'file(s) if they already exist, printing a warning '
@@ -204,18 +215,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # manually set flitsr as the default
         parser.set_defaults(ranker=advanced.RankerType['FLITSR'])
-
-        adv_types = list(advanced.all_types.keys())
-        parser.add_argument('-t', '--types', action='append', type=check_type,
-                             help='Specify the advanced type combination to use '
-                             'when running FLITSR. Note that this argument '
-                             'overrides any of the individual advanced type '
-                             'arguments given to FLITSR (such as --multi, --sblf, etc.).'
-                             'This argument may be specified multiple times to add '
-                             'multiple type combinations to run. The format for '
-                             'this argument is: "--types <type>[+<type>...]", '
-                             'where each <type> is a (case-insensitive) FLITSR '
-                             f'advanced type. Allowed types are: {adv_types}')
 
         # parser.add_argument('--multi', action='store_true',
         #         help='Runs the FLITSR* (i.e. multi-round) algorithm')
