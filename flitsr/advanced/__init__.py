@@ -1,6 +1,8 @@
+from __future__ import annotations
 import pkgutil
 from flitsr import advanced
 from enum import Enum
+import importlib
 
 rankers = {}
 clusters = {}
@@ -24,14 +26,15 @@ def register_refiner(cls):
 
 
 __all__ = [m[1] for m in pkgutil.iter_modules(advanced.__path__)]
-from . import *
+for module in __all__:
+    importlib.import_module('.'+module, package=__name__)
 
 RefinerType = Enum('RefinerType', " ".join(refiners.keys()),  # type:ignore
-                   module=advanced, qualname=advanced.RefinerType)
+                   module=advanced, qualname='advanced.RefinerType')
 ClusterType = Enum('ClusterType', " ".join(clusters.keys()),  # type:ignore
-                   module=advanced, qualname=advanced.ClusterType)
+                   module=advanced, qualname='advanced.ClusterType')
 RankerType = Enum('RankerType', " ".join(rankers.keys()),  # type:ignore
-                  module=advanced, qualname=advanced.RankerType)
+                  module=advanced, qualname='advanced.RankerType')
 
 
 class Config:
