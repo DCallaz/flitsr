@@ -12,7 +12,7 @@ from flitsr import advanced
 class Flitsr(Ranker):
     _internal_ranking_opts = ['auto', 'conf', 'original', 'reverse', 'flitsr']
 
-    def __init__(self, internal_ranking: str = 'flitsr'):
+    def __init__(self, internal_ranking: str = 'auto'):
         from flitsr.args import Args
         self.sbfl_args = Args().get_arg_group('SBFL')
         self.order_method = internal_ranking
@@ -138,6 +138,7 @@ class Flitsr(Ranker):
         set_orig(ranking)
         val = 2**64
         basis = self.flitsr(spectrum, formula)
+        spectrum.reset()
         if (not basis == []):
             ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
                                                  self.order_method)
@@ -146,7 +147,6 @@ class Flitsr(Ranker):
                     x.score = val - ordered_basis.index(x.group)
             val = val-len(basis)
         # Reset the coverage matrix and counts
-        spectrum.reset()
         ranking.sort(True)
         unset_orig()
         return ranking
