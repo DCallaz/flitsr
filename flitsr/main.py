@@ -15,7 +15,7 @@ from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking
 from flitsr.tie import Ties
 from flitsr.args import Args
-from flitsr.advanced import clusters, rankers, ClusterType, RankerType
+from flitsr.advanced import ClusterType, RankerType
 from flitsr.input_type import InputType
 from flitsr.errors import error
 
@@ -187,7 +187,7 @@ def main(argv: List[str]):
                         output_file = open(filename, 'w')
             # Check for clustering
             if (config.cluster is not None or
-                metric.upper() in clusters):
+                hasattr(ClusterType, metric.upper())):
                 if (config.cluster is None):
                     cluster = ClusterType[metric.upper()]
                     # Set default metric for clustering
@@ -195,7 +195,7 @@ def main(argv: List[str]):
                 else:
                     cluster = config.cluster
                 cluster_params = args.get_arg_group(cluster.name)
-                cluster_mthd = clusters[cluster.name](**cluster_params)
+                cluster_mthd = cluster.value(**cluster_params)
                 spectrums = cluster_mthd.cluster(args.input, spectrum,
                                                  args.method)
             else:
@@ -208,11 +208,11 @@ def main(argv: List[str]):
                 if (ranker is None):
                     ranker = RankerType['SBFL']
                 if (ranker == RankerType['SBFL'] and
-                    metric.upper() in rankers):
+                    hasattr(RankerType, metric.upper())):
                     ranker = RankerType[metric.upper()]
                     metric = 'ochiai'
                 ranker_params = args.get_arg_group(ranker.name)
-                ranker_mthd = rankers[ranker.name](**ranker_params)
+                ranker_mthd = ranker.value(**ranker_params)
                 ranking = ranker_mthd.rank(subspectrum, metric)
                 # Compute cut-off
                 if (args.cutoff_strategy):

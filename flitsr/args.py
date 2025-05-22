@@ -139,21 +139,20 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             'One of the following clustering techniques may be specified, '
             'along with it\'s options')
         cluster_mu = clusters.add_mutually_exclusive_group()
-        cluster_types = advanced.clusters
         cluster_enum = advanced.ClusterType
 
         rankers = parser.add_argument_group('Ranking techniques',
             'One of the following advanced ranking techniques may be '
             'specified, along with it\'s options')
         ranker_mu = rankers.add_mutually_exclusive_group()
-        ranker_types = advanced.rankers
         ranker_enum = advanced.RankerType
 
-        advanced_groups = [('cluster', cluster_enum, clusters, cluster_mu, cluster_types),
-                           ('ranker', ranker_enum, rankers, ranker_mu, ranker_types)]
+        advanced_groups = [('cluster', cluster_enum, clusters, cluster_mu),
+                           ('ranker', ranker_enum, rankers, ranker_mu)]
 
-        for adv_name, adv_enum, group, mu, types_ in advanced_groups:
-            for name, class_ in types_.items():
+        for adv_name, adv_enum, group, mu in advanced_groups:
+            for type_ in list(adv_enum):
+                name, class_ = type_.name, type_.value
                 disp_name = name.lower()
                 help_ = '(default: %(default)s)'
                 # add docstring

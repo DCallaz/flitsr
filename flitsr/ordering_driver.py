@@ -20,7 +20,7 @@ from flitsr.main import output, compute_cutoff
 from flitsr.ranking import Ranking
 from flitsr.input_type import InputType
 from flitsr.errors import error
-from flitsr.advanced import Config, rankers, clusters, RankerType, ClusterType
+from flitsr.advanced import Config, RankerType, ClusterType
 
 
 def main(argv: List[str]):
@@ -77,7 +77,7 @@ def main(argv: List[str]):
                         output_file = open(filename, 'w')
                 # Check for clustering
                 if (config.cluster is not None or
-                    metric.upper() in clusters):
+                    hasattr(ClusterType, metric.upper())):
                     if (config.cluster is None):
                         cluster = ClusterType[metric.upper()]
                         # Set default metric for clustering
@@ -85,7 +85,7 @@ def main(argv: List[str]):
                     else:
                         cluster = config.cluster
                     cluster_params = args.get_arg_group(cluster.name)
-                    cluster_mthd = clusters[cluster.name](**cluster_params)
+                    cluster_mthd = cluster.value(**cluster_params)
                     spectrums = cluster_mthd.cluster(args.input, spectrum,
                                                      args.method)
                 else:
@@ -98,13 +98,13 @@ def main(argv: List[str]):
                     if (ranker is None):
                         ranker = RankerType['SBFL']
                     if (ranker == RankerType['SBFL'] and
-                        metric.upper() in rankers):
+                        hasattr(RankerType, metric.upper())):
                         ranker = RankerType[metric.upper()]
                         metric = 'ochiai'
                     ranker_params = args.get_arg_group(ranker.name)
                     if ('internal_ranking' in ranker_params):
                         ranker_params['internal_ranking'] = ordering
-                    ranker_mthd = rankers[ranker.name](**ranker_params)
+                    ranker_mthd = ranker.value(**ranker_params)
                     ranking = ranker_mthd.rank(subspectrum, metric)
                     # Compute cut-off
                     if (args.cutoff_strategy):

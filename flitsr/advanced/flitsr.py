@@ -15,6 +15,7 @@ class Flitsr(Ranker):
     def __init__(self, internal_ranking: str = 'auto'):
         from flitsr.args import Args
         self.sbfl_args = Args().get_arg_group('SBFL')
+        self.args = Args()
         self.order_method = internal_ranking
 
     def remove_faulty_elements(self, spectrum: Spectrum,
@@ -29,15 +30,21 @@ class Flitsr(Ranker):
                     break
         tests_removed.difference_update(toRemove)
 
+    def run_metric(self, spectrum: Spectrum, formula: str):
+        if (hasattr(advanced.RankerType, formula.upper())):
+            ranker_args = self.args.get_arg_group(formula)
+            ranker = advanced.RankerType[formula.upper()].value(**ranker_args)
+            ranking = ranker.rank(spectrum, formula)
+        else:
+            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+        return ranking
+
+
     def flitsr(self, spectrum: Spectrum, formula: str) -> List[Spectrum.Group]:
         """Executes the recursive flitsr algorithm to identify faulty elements"""
         if (spectrum.tf == 0):
             return []
-        if (formula.upper() in advanced.rankers):
-            ranker = advanced.rankers[formula.upper()]()
-            ranking = ranker.rank(spectrum, formula)
-        else:
-            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+        ranking = self.run_metric(spectrum, formula)
         r_iter = iter(ranking)
         group = next(r_iter).group
         tests_removed = spectrum.get_tests(group, only_failing=True,
@@ -130,11 +137,7 @@ class Flitsr(Ranker):
         return ordered_basis
 
     def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
-        if (formula.upper() in advanced.rankers):
-            ranker = advanced.rankers[formula.upper()]()
-            ranking = ranker.rank(spectrum, formula)
-        else:
-            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+        ranking = self.run_metric(spectrum, formula)
         set_orig(ranking)
         val = 2**64
         basis = self.flitsr(spectrum, formula)
@@ -184,11 +187,7 @@ class Multi(Flitsr):
         return multiFault
 
     def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
-        if (formula.upper() in advanced.rankers):
-            ranker = advanced.rankers[formula.upper()]()
-            ranking = ranker.rank(spectrum, formula)
-        else:
-            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+        ranking = self.run_metric(spectrum, formula)
         set_orig(ranking)
         val = 2**64
         newSpectrum = copy.deepcopy(spectrum)

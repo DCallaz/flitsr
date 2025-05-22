@@ -4,24 +4,24 @@ from flitsr import advanced
 from enum import Enum
 import importlib
 
-rankers = {}
-clusters = {}
-refiners = {}
+_rankers = {}
+_clusters = {}
+_refiners = {}
 all_types = {}
 
 
 def register_ranker(cls):
-    rankers[cls.__name__.upper()] = cls
+    _rankers[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
 def register_cluster(cls):
-    clusters[cls.__name__.upper()] = cls
+    _clusters[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
 def register_refiner(cls):
-    refiners[cls.__name__.upper()] = cls
+    _refiners[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
@@ -29,11 +29,11 @@ __all__ = [m[1] for m in pkgutil.iter_modules(advanced.__path__)]
 for module in __all__:
     importlib.import_module('.'+module, package=__name__)
 
-RefinerType = Enum('RefinerType', " ".join(refiners.keys()),  # type:ignore
+RefinerType = Enum('RefinerType', _refiners,  # type:ignore
                    module=advanced, qualname='advanced.RefinerType')
-ClusterType = Enum('ClusterType', " ".join(clusters.keys()),  # type:ignore
+ClusterType = Enum('ClusterType', _clusters,  # type:ignore
                    module=advanced, qualname='advanced.ClusterType')
-RankerType = Enum('RankerType', " ".join(rankers.keys()),  # type:ignore
+RankerType = Enum('RankerType', _rankers,  # type:ignore
                   module=advanced, qualname='advanced.RankerType')
 
 
