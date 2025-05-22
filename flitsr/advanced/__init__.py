@@ -3,6 +3,7 @@ import pkgutil
 from flitsr import advanced
 from enum import Enum
 import importlib
+from typing import Union
 
 _rankers = {}
 _clusters = {}
@@ -44,19 +45,36 @@ class Config:
         self.ranker = ranker
 
     def __str__(self):
+        return self._get_str()
+
+    def _get_str(self, printed=False):
+        if (printed):
+            c = '_'
+        else:
+            c = '+'
         if (self.cluster is None):
             if (self.ranker is None):
-                return "SBFL"
+                return self._get_name(RankerType['SBFL'], printed)
             else:
-                return self.ranker.name
+                return self._get_name(self.ranker, printed)
         else:
             if (self.ranker is None):
-                return self.cluster.name
+                return self._get_name(self.cluster, printed)
             else:
-                return self.cluster.name + "+" + self.ranker.name
+                return (self._get_name(self.cluster, printed) + c +
+                            _get_name(self.ranker, printed))
+
+    def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
+                  printed) -> str:
+        if (printed and hasattr(typ.value, '_print_name')):
+            return typ.value._print_name.lower()
+        elif (printed):
+            return typ.name.lower()
+        else:
+            return typ.name.upper()
 
     def __repr__(self):
-        return self.__str__()
+        return self._get_str()
 
     def get_file_name(self):
-        return str(self).lower().replace('+', '_')
+        return _get_str(printed=True)

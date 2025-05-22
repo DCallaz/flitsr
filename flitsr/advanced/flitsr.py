@@ -156,6 +156,9 @@ class Flitsr(Ranker):
 
 
 class Multi(Flitsr):
+
+    _print_name = 'flitsr_multi'
+
     def __init__(self):
         from flitsr.args import Args
         super().__init__(Args().flitsr_internal_ranking)

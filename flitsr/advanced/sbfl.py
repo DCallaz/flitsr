@@ -11,6 +11,8 @@ class SBFL(Ranker):
     base metric as-is, but allows the user to run these metrics
     within the FLITSR framework
     """
+    _print_name = 'base'
+
     _tiebrk_opts = ['exec', 'rndm', 'orig']
 
     def __init__(self, tiebrk: str = 'orig'):
