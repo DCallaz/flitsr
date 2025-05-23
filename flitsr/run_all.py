@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 from multiprocessing import Pool
 from typing import List, Optional, Set, Any, Iterator, Callable, Optional
 import importlib
