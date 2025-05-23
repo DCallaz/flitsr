@@ -1,5 +1,5 @@
 from multiprocessing import Pool
-from typing import List, Optional, Set, Any, Iterator, Callable
+from typing import List, Optional, Set, Any, Iterator, Callable, Optional
 import importlib
 from importlib.util import find_spec
 import sys
@@ -227,7 +227,7 @@ class Runall:
             os.remove(results_fl)
 
 
-def main(argv: List[str]):
+def main(argv: Optional[List[str]] = None):
     parser = argparse.ArgumentParser(prog='run_all', description='Run large '
                                      'experiments automatically')
 
@@ -307,4 +307,4 @@ def main(argv: List[str]):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

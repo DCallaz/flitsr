@@ -41,7 +41,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
         print_gzoltar(spectrum, output_file)
 
 
-def main(argv: List[str]):
+def main(argv: Optional[List[str]] = None):
     parser = ArgumentParser('transform', description='Transform a spectrum '
                             'from one format to another')
     parser.add_argument('input', help='The spectrum input file. The spectral '
@@ -68,4 +68,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
