@@ -30,10 +30,8 @@ Homepage = "https://github.com/DCallaz/flitsr"
 Issues = "https://github.com/DCallaz/flitsr/issues"
 
 [project.scripts]
-flitsr = "flitsr.flitsr:main"
+flitsr = "flitsr.main:main"
 merge = "flitsr.merge:main"
 percent_at_n = "flitsr.percent_at_n:main"
-# run_all = "bin/run_all"
-
-[tool.setuptools]
-script-files = ["bin/run_all"]
+run_all = "flitsr.run_all:main"
+transform = "flitsr.transform:main"
