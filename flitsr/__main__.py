@@ -1,3 +1,3 @@
-from flitsr import flitsr
+from flitsr import main
 
-flitsr.main()
+main.main()

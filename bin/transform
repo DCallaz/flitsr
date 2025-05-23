@@ -1,4 +1,4 @@
 #!/bin/bash
 source "$FLITSR_HOME/.venv/bin/activate"
-python -m flitsr.run_all "$@"
+python -m flitsr.transform "$@"
 deactivate
