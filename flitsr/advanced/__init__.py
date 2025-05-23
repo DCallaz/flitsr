@@ -62,7 +62,7 @@ class Config:
                 return self._get_name(self.cluster, printed)
             else:
                 return (self._get_name(self.cluster, printed) + c +
-                            _get_name(self.ranker, printed))
+                        self._get_name(self.ranker, printed))
 
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:
@@ -77,4 +77,4 @@ class Config:
         return self._get_str()
 
     def get_file_name(self):
-        return _get_str(printed=True)
+        return self._get_str(printed=True)
