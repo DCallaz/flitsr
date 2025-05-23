@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 import re
 from flitsr.percent_at_n import combine
 import os
@@ -9,7 +10,7 @@ from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
 import argcomplete
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
-from typing import Set, Dict, List, Tuple, Collection
+from typing import Set, Dict, List, Tuple, Collection, Optional
 
 PERC_N = "percentage at n"
 
@@ -361,7 +362,7 @@ class Threshold:
         return f'threshold ({self.calc}, {self.comp.__name__}, {self.threshold})'
 
 
-def main(argv: List[str]):
+def main(argv: Optional[List[str]] = None):
     class RecurseAction(Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             super().__init__(option_strings, dest, nargs, **kwargs)
@@ -523,4 +524,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

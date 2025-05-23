@@ -5,7 +5,7 @@ import inspect
 import sys
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -21,7 +21,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         for key in dict_:
             setattr(self, key, dict_[key])
 
-    def parse_args(self, argv: List[str]) -> Args:
+    def parse_args(self, argv: Optional[List[str]]) -> Args:
         """
         Parse the arguments defined by args for the flitsr program with
         python's argparse. The result is an argparse Namespace object which

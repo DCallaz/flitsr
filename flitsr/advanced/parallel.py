@@ -4,6 +4,7 @@ import copy
 import os
 from typing import List
 import tempfile
+from importlib import resources
 from flitsr.spectrum import Spectrum
 from flitsr.output import print_tcm
 from flitsr.advanced.cluster import Cluster
@@ -39,10 +40,10 @@ class Parallel(Cluster):
         return spectrums
 
     def partition_table(self, d: str, spectrum: Spectrum) -> List[Spectrum]:
-        jar_file = os.path.join(os.environ['FLITSR_HOME'], 'flitsr', 'advanced',
-                                'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar')
-        output = subprocess.check_output(['java', '-jar', jar_file, d,
-                                          self.parType]).decode('utf-8')
+        jar_name = 'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar'
+        with resources.path('flitsr.advanced', jar_name) as jar_file:
+            output = subprocess.check_output(['java', '-jar', str(jar_file), d,
+                                              self.parType]).decode('utf-8')
         partitions = re.split("partition \\d+\n", output)[1:]
         spectrums: List[Spectrum] = []
         for partition in partitions:

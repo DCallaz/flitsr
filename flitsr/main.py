@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 import sys
 import re
 from argparse import Namespace
@@ -136,7 +137,7 @@ def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
             print_names(spectrum, s, file)
 
 
-def main(argv: List[str]):
+def main(argv: Optional[List[str]] = None):
     args: Args = Args().parse_args(argv)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
@@ -228,4 +229,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

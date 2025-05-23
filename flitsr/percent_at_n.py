@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 import math
 import sys
 import ast
@@ -215,7 +216,7 @@ def auc_calc(points: List[Tuple[float, float]],
     return auc
 
 
-def main(argv: List[str]):
+def main(argv: Optional[List[str]] = None):
     parser = ArgumentParser(prog="percent_at_n")
     subparsers = parser.add_subparsers(title='Modes', description='The '
                                        'following modes are available '
@@ -290,4 +291,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

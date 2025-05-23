@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flitsr"
+version = "2.0.0"
+authors = [
+  {name="Dylan Callaghan", email="dcallaghan@acm.org"}
+]
+description="An automatic fault finding/localization tool for multiple faults"
+readme = "README.md"
+requires-python = ">=3.6"
+license = "MIT"
+license-files = ["LICENSE"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development :: Debuggers",
+  "Intended Audience :: Developers",
+]
+dependencies = [
+  'argcomplete',
+  'numpy',
+  'bitarray',
+  'scipy'
+]
+
+[project.urls]
+Homepage = "https://github.com/DCallaz/flitsr"
+Issues = "https://github.com/DCallaz/flitsr/issues"
+
+[project.scripts]
+flitsr = "flitsr.main:main"
+merge = "flitsr.merge:main"
+percent_at_n = "flitsr.percent_at_n:main"
+run_all = "flitsr.run_all:main"
+transform = "flitsr.transform:main"
