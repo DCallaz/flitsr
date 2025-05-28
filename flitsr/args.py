@@ -5,7 +5,7 @@ import inspect
 import sys
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional, IO, BinaryIO
+from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -149,6 +149,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Advanced types options
         primitives = (bool, str, int, float, Path)
+        adv_required_args: Dict[str, Tuple[str, List[str]]] = dict()
 
         refiners = parser.add_argument_group('Spectrum refiner techniques',
             'One of the following spectrum refining techniques may be '
@@ -197,11 +198,16 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         param in init.__existing__):
                         continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
-                    parser_args: Dict[str, Any] = {'help':
-                                                   '(default %(default)s)'}
+                    parser_args: Dict[str, Any] = {}
                     # add default arguments
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
+                        parser_args['help'] = '(default: %(default)s)'
+                    else:  # add parameter as "required" if this type is used
+                        if (name not in adv_required_args):
+                            adv_required_args[name] = (adv_name, list())
+                        adv_required_args[name][1].append(param)
+                        parser_args['help'] = '(required)'
                     # add choices
                     if (hasattr(init, '__choices__') and
                         param in init.__choices__):
@@ -415,6 +421,16 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         argcomplete.autocomplete(parser)
 
         args = parser.parse_args(argv)
+        # check "required" advanced type arguments
+        for adv_name, (adv_type, adv_args) in adv_required_args.items():
+            if (getattr(args, adv_type) is not None and
+                getattr(args, adv_type).name == adv_name):
+                dname = adv_name.lower()
+                for adv_arg in adv_args:
+                    if (getattr(args, dname+'_'+adv_arg) is None):
+                        err = (f'--{dname}-{adv_arg} is required when '
+                               f'--{dname} is used')
+                        parser.error(err)
         # Set the metrics based on 'all' or the default metric
         if (args.metrics is None):
             if (args.all is True):
