@@ -39,30 +39,22 @@ RankerType = Enum('RankerType', _rankers,  # type:ignore
 
 
 class Config:
-    def __init__(self, ranker: RankerType = None,
-                 cluster: ClusterType = None):
+    def __init__(self, ranker: RankerType = None, cluster: ClusterType = None,
+                 refiner: RefinerType = None):
         self.cluster = cluster
         self.ranker = ranker
+        self.refiner = refiner
 
     def __str__(self):
         return self._get_str()
 
     def _get_str(self, printed=False):
-        if (printed):
-            c = '_'
-        else:
-            c = '+'
-        if (self.cluster is None):
-            if (self.ranker is None):
-                return self._get_name(RankerType['SBFL'], printed)
-            else:
-                return self._get_name(self.ranker, printed)
-        else:
-            if (self.ranker is None):
-                return self._get_name(self.cluster, printed)
-            else:
-                return (self._get_name(self.cluster, printed) + c +
-                        self._get_name(self.ranker, printed))
+        c = '_' if printed else '+'
+        components = [self.ranker or RankerType['SBFL'], self.refiner,
+                      self.cluster]
+        string = c.join(self._get_name(c, printed) for c in components
+                        if c is not None)
+        return string
 
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:

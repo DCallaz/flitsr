@@ -5,7 +5,7 @@ import inspect
 import sys
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, IO, BinaryIO
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -146,6 +146,12 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Advanced types options
         primitives = (bool, str, int, float, Path)
+
+        refiners = parser.add_argument_group('Spectrum refiner techniques',
+            'One of the following spectrum refining techniques may be '
+            'specified, along with it\'s options')
+        refiner_enum = advanced.RefinerType
+
         clusters = parser.add_argument_group('Clustering techniques',
             'One of the following clustering techniques may be specified, '
             'along with it\'s options')
@@ -158,7 +164,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         ranker_mu = rankers.add_mutually_exclusive_group()
         ranker_enum = advanced.RankerType
 
-        advanced_groups = [('cluster', cluster_enum, clusters, cluster_mu),
+        advanced_groups = [('refiner', refiner_enum, refiners, refiners),
+                           ('cluster', cluster_enum, clusters, cluster_mu),
                            ('ranker', ranker_enum, rankers, ranker_mu)]
 
         for adv_name, adv_enum, group, mu in advanced_groups:
@@ -178,7 +185,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                                     else len(argspec.defaults))
                 for p_index, param in enumerate(argspec.args[1:]):
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
-                    parser_args = {'help': '(default %(default)s)'}
+                    parser_args: Dict[str, Any] = {'help':
+                                                   '(default %(default)s)'}
                     # add default arguments
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
@@ -188,6 +196,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     # add types
                     if (param in argspec.annotations):
                         paramType = argspec.annotations[param]
+                        # specially handle bools
                         if (paramType is bool):
                             if ('default' in parser_args):
                                 # check if default is True
@@ -200,6 +209,13 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                     parser_args['action'] = 'store_true'
                             else:
                                 parser_args['action'] = 'store_true'
+                        # specially handle file IO types
+                        elif (issubclass(paramType, IO)):
+                            if (issubclass(paramType, BinaryIO)):
+                                parser_args['type'] = argparse.FileType('rb')
+                            else:
+                                parser_args['type'] = \
+                                  argparse.FileType('r', encoding='UTF-8')
                         else:
                             if (paramType not in primitives):
                                 if (not hasattr(class_, f'_{param}')):
@@ -391,8 +407,14 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         # Set the flitsr types based on 'all' or what is set
         if (args.all is True):
             if (args.types is None):
-                args.types = [Config(), Config(advanced.RankerType['FLITSR']),
-                              Config(advanced.RankerType['MULTI'])]
+                ts = {}
+                if (args.refiner is not None):
+                    ts['refiner'] = args.refiner
+                if (args.cluster is not None):
+                    ts['cluster'] = args.cluster
+                args.types = [Config(**ts),
+                              Config(advanced.RankerType['FLITSR'], **ts),
+                              Config(advanced.RankerType['MULTI'], **ts)]
             if (len(args.weff) == 0 and len(args.top1) == 0 and
                     len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
                 args.weff = ["first", "avg", "med", "last", 2, 3, 5]
@@ -401,7 +423,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
         elif (args.types is None):
-            args.types = [Config(args.ranker, args.cluster)]
+            args.types = [Config(args.ranker, args.cluster, args.refiner)]
         # Check the input file type and set input method
         if (osp.isfile(args.input)):
             args.input_type = InputType.TCM
