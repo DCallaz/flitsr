@@ -118,6 +118,28 @@ class Runall:
         if (cur == self.num_inputs):
             print()
 
+    def collect_results(self):
+        for m in self.metrics:
+            rs = find('.', type='f', name='*.run')
+            tre = f"\\.\\/(.*)_{m}_.+\\.run"
+            try:
+                types = {m.group(1) for m in (re.match(tre, r) for r in rs)
+                         if m is not None}
+            except AttributeError:
+                warning("Could not collect types")
+                pass
+            for t in sorted(types, key=natsort):
+                with redirect_stdout(open(f'{t}_{m}.results', 'w')):
+                    runs = sorted(find('.', type='f', depth=0,
+                                       name=f'{t}_{m}_*.run'), key=natsort)
+                    for run in runs:
+                        orig = removeprefix(run, f'./{t}_{m}_')
+                        print(orig)
+                        with open(run) as file:
+                            print(file.read(), end='')
+                        os.remove(run)
+                        print("--------------------------")
+
     def run(self, input_type: InputType, include: List[str] = [],
             exclude: List[str] = [], depth: Optional[int] = None,
             ext: Optional[str] = None):
@@ -198,26 +220,7 @@ class Runall:
                                 print(file.read(), end='')
                         os.remove(error_file)
             # collect the results files
-            for m in self.metrics:
-                rs = find('.', type='f', name='*.run')
-                tre = f"\\.\\/(.*)_{m}_.+\\.run"
-                try:
-                    types = {m.group(1) for m in (re.match(tre, r) for r in rs)
-                             if m is not None}
-                except AttributeError:
-                    warning("Could not collect types")
-                    pass
-                for t in sorted(types, key=natsort):
-                    with redirect_stdout(open(f'{t}_{m}.results', 'w')):
-                        runs = sorted(find('.', type='f', depth=0,
-                                           name=f'{t}_{m}_*.run'), key=natsort)
-                        for run in runs:
-                            orig = removeprefix(run, f'./{t}_{m}_')
-                            print(orig)
-                            with open(run) as file:
-                                print(file.read(), end='')
-                            os.remove(run)
-                            print("--------------------------")
+            self.collect_results()
             merge.main([])
             os.remove("done_inputs.tmp")
             print(f'Done in {removeprefix(dir_, "./")}')
@@ -269,19 +272,31 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument('-p', '--driver', help='Specify an alternate flitsr '
                         'driver to use for running')
 
+    parser.add_argument('-C', '--collect-results', action='store_true',
+                        help='Only collect already generated run files in the '
+                        'current directory into results file(s). Ignores most '
+                        'other options, except those for metrics (see -m and '
+                        '-M).')
+
     argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
+
+    # Process metrics
+    metrics = set(args.metrics or Suspicious.getNames())
+    if (args.exclude_metrics is not None):
+        metrics.difference_update(args.exclude_metrics)
+
+    # Process stand-alone results collection (i.e. -C)
+    if (args.collect_results):
+        run_all = Runall(metrics)
+        run_all.collect_results()
+        return
 
     # Process incl & excl (remove trailing slashes)
     if (args.include is not None):
         args.include = [path.rstrip('/') for path in args.include]
     if (args.exclude is not None):
         args.exclude = [path.rstrip('/') for path in args.exclude]
-
-    # Process metrics
-    metrics = set(args.metrics or Suspicious.getNames())
-    if (args.exclude_metrics is not None):
-        metrics.difference_update(args.exclude_metrics)
 
     # Process input type
     if (args.gzoltar):
