@@ -1,4 +1,5 @@
 import re
+from flitsr.advanced.attributes import existing
 from flitsr.advanced.refiner import Refiner
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumUpdater
@@ -6,10 +7,9 @@ from flitsr.input import read_spectrum
 
 
 class Sliced(Refiner):
-    def __init__(self, unclustered_input: str):
-        from flitsr.args import Args
-        a = Args()
-        self.old_spectrum = read_spectrum(unclustered_input, a.split, a.method)
+    @existing('method', 'split')
+    def __init__(self, unclustered_input: str, split: bool, method: bool):
+        self.old_spectrum = read_spectrum(unclustered_input, split, method)
 
     def find_old_test(self, sliced_test: Spectrum.Test):
         """ Search for old test """

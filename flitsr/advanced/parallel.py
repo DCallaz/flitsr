@@ -8,6 +8,7 @@ from importlib import resources
 from flitsr.spectrum import Spectrum
 from flitsr.output import print_tcm
 from flitsr.advanced.cluster import Cluster
+from flitsr.advanced.attributes import choices
 
 
 class Parallel(Cluster):
@@ -16,8 +17,8 @@ class Parallel(Cluster):
     produce multiple spectrums, and process all other options on
     each spectrum.
     """
-    _parType_opts = ['bdm', 'msp', 'hwk', 'vwk']
 
+    @choices('parType', ['bdm', 'msp', 'hwk', 'vwk'])
     def __init__(self, parType: str = 'msp'):
         self.parType = parType
 

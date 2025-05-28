@@ -1,7 +1,14 @@
 import random
 from typing import List, Optional, Dict
+from enum import Enum, auto
 from flitsr.spectrum import Spectrum
 import copy
+
+
+class Tiebrk(Enum):
+    EXEC = auto()
+    RNDM = auto()
+    ORIG = auto()
 
 
 class Rank:
@@ -22,7 +29,7 @@ class Rank:
 
 
 class Ranking:
-    def __init__(self, tiebrk: int = 3):
+    def __init__(self, tiebrk: Tiebrk = Tiebrk.ORIG):
         self._ranks: List[Rank] = []
         self._tiebrk = tiebrk
         self.group_map: Dict[Spectrum.Group, Rank] = {}
@@ -35,13 +42,11 @@ class Ranking:
         return self.group_map[group]
 
     def sort(self, reverse: bool):
-        if (self._tiebrk == 1):  # Sorted by execution counts
+        if (self._tiebrk == Tiebrk.EXEC):  # Sorted by execution counts
             self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
-            self._ranks.sort(key=lambda x: x.score, reverse=reverse)
-        elif (self._tiebrk == 2):  # random ordering
+        elif (self._tiebrk == Tiebrk.RNDM):  # random ordering
             random.shuffle(self._ranks)
-            self._ranks.sort(key=lambda x: x.score, reverse=reverse)
-        elif (self._tiebrk == 3):  # original ranking tie break
+        elif (self._tiebrk == Tiebrk.ORIG):  # original ranking tie break
             if (orig is not None):  # sort by original rank then exec count
                 self._ranks.sort(key=lambda x: orig.get_rank(x.group).exec,
                                  reverse=reverse)
@@ -49,9 +54,7 @@ class Ranking:
                                  reverse=reverse)
             else:  # if no orig, still sort by current execution count
                 self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
-            self._ranks.sort(key=lambda x: x.score, reverse=reverse)
-        else:
-            self._ranks.sort(key=lambda x: x.score, reverse=reverse)
+        self._ranks.sort(key=lambda x: x.score, reverse=reverse)
 
     def append(self, group: Spectrum.Group, score: float, exec_count: int):
         created = Rank(group, score, exec_count)

@@ -9,13 +9,16 @@ from typing import List, Dict, Any, Optional, IO, BinaryIO
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
-# from flitsr.advanced_types import AdvancedType
+from flitsr.ranking import Tiebrk
 from flitsr.input_type import InputType
 from flitsr import advanced
 from flitsr.advanced import Config
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
+    def __init__(self):
+        self._advanced_params: Dict[str, List[str]] = {}
+
     def _add_params(self, params: argparse.Namespace):
         dict_ = vars(params)
         for key in dict_:
@@ -160,7 +163,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         rankers = parser.add_argument_group('Ranking techniques',
             'One of the following advanced ranking techniques may be '
-            'specified, along with it\'s options')
+            'specified, along with it\'s options (default: flitsr)')
         ranker_mu = rankers.add_mutually_exclusive_group()
         ranker_enum = advanced.RankerType
 
@@ -171,19 +174,28 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         for adv_name, adv_enum, group, mu in advanced_groups:
             for type_ in list(adv_enum):
                 name, class_ = type_.name, type_.value
+                init = class_.__init__
                 disp_name = name.lower()
-                help_ = '(default: %(default)s)'
+                help_ = ''  # '(default: %(default)s)'
                 # add docstring
                 if (class_.__doc__ is not None and class_.__doc__ != ''):
                     help_ = class_.__doc__ + ' ' + help_
+                # add cmd line argument for this advanced type
                 mu.add_argument('--'+disp_name, dest=adv_name,
                                 action='store_const', const=adv_enum[name],
                                 help=help_)
-                argspec = inspect.getfullargspec(class_.__init__)
+                argspec = inspect.getfullargspec(init)
                 def_diff = (len(argspec.args)-1) - (0 if
                                                     argspec.defaults is None
                                                     else len(argspec.defaults))
+                # add cmd-line arguments for each parameter of this adv type
+                self._advanced_params[name] = list()
                 for p_index, param in enumerate(argspec.args[1:]):
+                    self._advanced_params[name].append(param)
+                    # skip adding this parameter if it is marked as existing
+                    if (hasattr(init, '__existing__') and
+                        param in init.__existing__):
+                        continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
                     parser_args: Dict[str, Any] = {'help':
                                                    '(default %(default)s)'}
@@ -191,8 +203,9 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
                     # add choices
-                    if (hasattr(class_, f'_{param}_opts')):
-                        parser_args['choices'] = getattr(class_, f'_{param}_opts')
+                    if (hasattr(init, '__choices__') and
+                        param in init.__choices__):
+                        parser_args['choices'] = init.__choices__[param]
                     # add types
                     if (param in argspec.annotations):
                         paramType = argspec.annotations[param]
@@ -227,7 +240,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                             if ('choices' not in parser_args):
                                 parser_args['metavar'] = param
                     # finalize option
-                    group.add_argument(paramName, **parser_args)  # type:ignore
+                    group.add_argument(paramName, **parser_args)
 
         # manually set flitsr as the default
         parser.set_defaults(ranker=advanced.RankerType['FLITSR'])
@@ -248,15 +261,19 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Tie breaking options
         tie_grp = parser.add_argument_group('Tie breaking strategy',
-                'Specifies the tie breaking strategy to use for FLITSR and the '
-                'localization')
-        tie_grp.add_argument('--tiebrk', action='store_const', const=1,
-                default=3, help='Breaks ties using only execution counts')
-        tie_grp.add_argument('--rndm', action='store_const', const=2, dest='tiebrk',
-                help='Breaks ties by a randomly ordering')
-        tie_grp.add_argument('--otie', action='store_const', const=3, dest='tiebrk',
-                help='Breaks ties by using the original base metric ranking (in '
-                'the case of FLITSR) and by execution counts otherwise')
+                                            'Specifies the tie breaking '
+                                            'strategy to use for FLITSR and '
+                                            'the localization')
+        tie_grp.add_argument('--tiebrk', action='store_const',
+                             default=Tiebrk.ORIG, const=Tiebrk.EXEC,
+                             help='Breaks ties using only execution counts')
+        tie_grp.add_argument('--rndm', action='store_const', const=Tiebrk.RNDM,
+                             dest='tiebrk', help='Breaks ties by a randomly '
+                             'ordering')
+        tie_grp.add_argument('--otie', action='store_const', const=Tiebrk.ORIG,
+                             dest='tiebrk', help='Breaks ties by using the '
+                             'original base metric ranking (in the case of '
+                             'FLITSR) and by execution counts otherwise')
 
         # Calculation options
         calc_grp = parser.add_argument_group('Calculations',
@@ -440,11 +457,17 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
     def get_arg_group(self, group_name):
         group = {}
+        params = self._advanced_params[group_name.upper()]
         prefix = group_name.lower()+'_'
-        arg_dict = vars(self)
-        for key in arg_dict:
-            if (key.startswith(prefix)):
-                group[key.removeprefix(prefix)] = arg_dict[key]
+        for param in params:
+            if (hasattr(self, prefix+param)):
+                group[param] = getattr(self, prefix+param)
+            elif (hasattr(self, param)):
+                group[param] = getattr(self, param)
+            elif (param == 'args'):  # special case for full args
+                group[param] = self
+            else:
+                raise KeyError(f'Could not find {param} in args!')
         return group
 
 

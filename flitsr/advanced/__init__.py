@@ -58,8 +58,8 @@ class Config:
 
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:
-        if (printed and hasattr(typ.value, '_print_name')):
-            return typ.value._print_name.lower()
+        if (printed and hasattr(typ.value, '__print_name__')):
+            return typ.value.__print_name__.lower()
         elif (printed):
             return typ.name.lower()
         else:
