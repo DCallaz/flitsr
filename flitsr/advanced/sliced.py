@@ -1,4 +1,5 @@
 import re
+from os import path as osp
 from flitsr.advanced.attributes import existing
 from flitsr.advanced.refiner import Refiner
 from flitsr.spectrum import Spectrum, Outcome
@@ -7,15 +8,18 @@ from flitsr.input import read_spectrum
 
 
 class Sliced(Refiner):
-    @existing('method', 'split')
-    def __init__(self, unclustered_input: str, split: bool, method: bool):
-        self.old_spectrum = read_spectrum(unclustered_input, split, method)
+    @existing('method', 'split', 'input')
+    def __init__(self, spectrum: str, split: bool, method: bool, input: str):
+        abs_input = osp.abspath(input)
+        pth = osp.dirname(abs_input)
+        bsnm, ext = osp.splitext(osp.basename(abs_input))
+        conv_spectrum = spectrum.format(pth=pth, bsnm=bsnm, ext=ext)
+        self.sliced_spectrum = read_spectrum(conv_spectrum, split, method)
 
-    def find_old_test(self, sliced_test: Spectrum.Test):
-        """ Search for old test """
-        search_name = self.get_name(sliced_test)
-        for t in self.old_spectrum.tests():
-            if (t.name == search_name):
+    def find_test(self, spectrum, test_name: 'str'):
+        """ Search for a test with the given name in the given spectrum """
+        for t in spectrum.tests():
+            if (t.name == test_name):
                 return t
         return None
 
@@ -31,13 +35,13 @@ class Sliced(Refiner):
 
     def refine(self, spectrum: Spectrum, method_lvl=False) -> Spectrum:
         print("Refining spectrum!")
-        sb = SpectrumUpdater(spectrum)
-        for failed in spectrum.failing():
-            old_test = self.find_old_test(failed)
+        sb = SpectrumUpdater(self.sliced_spectrum)
+        for failed in self.sliced_spectrum.failing():
+            name = self.get_name(failed)
+            old_test = self.find_test(spectrum, name)
             if (old_test is not None and old_test.outcome is Outcome.PASS):
                 print(failed, "is not failing in original")
                 sb.remove_test_with_executions(failed)
-                sb.copy_test_and_execution(old_test,
-                                           self.old_spectrum[old_test])
+                sb.copy_test_and_execution(old_test, spectrum[old_test])
         print("Finished refining!")
         return sb.get_spectrum()

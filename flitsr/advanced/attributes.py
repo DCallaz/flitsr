@@ -1,5 +1,6 @@
 from typing import Collection, Any
 
+
 def existing(*params: str):
     """
     A python decorator to mark the given parameter(s) as one(s) already defined
@@ -16,6 +17,7 @@ def existing(*params: str):
         return fn
     return add_existing
 
+
 def choices(param: str, choices: Collection[Any]):
     """
     An advanced types decorator to specfiy the choices available for a given
@@ -29,6 +31,7 @@ def choices(param: str, choices: Collection[Any]):
         choices_dict[param] = choices
         return fn
     return add_choices
+
 
 def print_name(print_name: str):
     """
