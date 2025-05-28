@@ -13,6 +13,13 @@ class SpectrumBuilder:
         return self._tests
 
     def addTest(self, name: str, index: int, outcome: Outcome):
+        """
+        Add a new test to the spectrum with the given name, index, and outcome.
+
+        :param name: the name of the test
+        :param index: a unique identifier for this test (this may be modified)
+        :param outcome: the outcome (pass/fail) of the test
+        """
         t = Spectrum.Test(name, index, outcome)
         self._tests.append(t)
         self._executions[t] = {}
@@ -20,21 +27,33 @@ class SpectrumBuilder:
 
     def addElement(self, details: List[str],
                    faults: List[Any]) -> Spectrum.Element:
+        """
+        Add a new element to the spectrum, with the given details and faults.
+        """
         e = Spectrum.Element(details, len(self._elements), faults)
         self._elements.append(e)
         self._groups[0].append(e)
         return e
 
-    def addExecution(self, test: Spectrum.Test, elem: Spectrum.Element,
-                     executed: bool):
+    def addExecution(self, test: Spectrum.Test, elem: Spectrum.Element):
+        """
+        Mark the specified element as executed in the given test.
+        """
         if (test not in self._executions):
             self._executions[test] = {}
-        self._executions[test][elem] = executed
-        # if (executed):
-        #     if (test.outcome is Outcome.PASSED):
-        #         self.p[elem] += 1
-        #     else:
-        #         self.f[elem] += 1
+        self._executions[test][elem] = True
+
+    def addNonExecution(self, test: Spectrum.Test, elem: Spectrum.Element):
+        """
+        Mark the specified element as not executed in the given test.
+        NOTE: Adding non-executions is not required for the spectrum
+        (non-execution is assumed by default), and may consume large amounts
+        of memory due to the size of the spectrum. Therefore it is advised to
+        call this method with cation.
+        """
+        if (test not in self._executions):
+            self._executions[test] = {}
+        self._executions[test][elem] = False
 
     def split_groups_on_test(self, test: Spectrum.Test):
         """
@@ -56,20 +75,36 @@ class SpectrumBuilder:
         self._groups = new_groups
 
     def get_spectrum(self):
+        """ Return the computed spectrum """
         spectrum = Spectrum(self._elements, self._groups, self._tests,
                             self._executions)
         return spectrum
 
-    # def remove_unnecessary(self):
-    #     """
-    #     Remove the unnecessary elements that are within the groups from the
-    #     spectrum.
-    #     """
-    #     remove = []
-    #     for group in self._groups:
-    #         remove.extend(group[1:])
-    #         self.group_dict[group[0]] = group
-    #     # remove.sort(reverse=True)
-    #     # self.locs -= len(remove)
-    #     for elem in remove:
-    #         self.remove_element(elem)
+
+class SpectrumUpdater(SpectrumBuilder):
+    def __init__(self, spectrum: Spectrum):
+        super().__init__()
+        self._elements = spectrum._elements[:]
+        self._tests = spectrum.tests()[:]
+        self._groups = spectrum.groups()[:]
+        self._executions = dict()
+        for test in self._tests:
+            self._copy_execution(test, spectrum[test])
+
+    def remove_test_with_executions(self, test: Spectrum.Test):
+        self._tests.remove(test)
+        del self._executions[test]
+
+    def copy_test_and_execution(self, test: Spectrum.Test,
+                                exe: Spectrum.Execution):
+        self._tests.append(test)
+        self._copy_execution(test, exe)
+
+    def _copy_execution(self, test: Spectrum.Test, exe: Spectrum.Execution):
+        new_exe = self._executions.setdefault(test, dict())
+        for group in self._groups:
+            executed = exe[group]
+            # Only copy over actually executed elements
+            if (executed):
+                for elem in group.get_elements():
+                    new_exe[elem] = executed

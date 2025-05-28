@@ -94,7 +94,7 @@ def fill_spectrum(f: TextIOWrapper, method_map: Dict[int, Spectrum.Element],
                              f'at column {i*4+1} on line {t} of the matrix',
                              'component in the input file, terminating...')
             if (elem not in seen):
-                sb.addExecution(test, elem, True)
+                sb.addExecution(test, elem)
                 seen.add(elem)
         # Use row to merge equivalences
         sb.split_groups_on_test(test)

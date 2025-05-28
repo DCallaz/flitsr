@@ -21,6 +21,9 @@ class Spectrum:
     """An implementation for a program spectrum."""
     class Test:
         """A test object holds information pertaining to a particular test."""
+
+        __slots__ = ('name', 'index', 'outcome')
+
         def __init__(self, name: str, index: int, outcome: Outcome):
             self.name = name
             self.index = index
@@ -52,6 +55,9 @@ class Spectrum:
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
+        __slots__ = ('_index', '_group', 'path', 'method', 'line', 'faults',
+                     'tup')
+
         def __init__(self, details: List[str], index: int, faults: List[Any],
                      group: Spectrum.Group = None):
             if (len(details) < 1):
@@ -130,6 +136,8 @@ class Spectrum:
         A spectral group is a collection of spectral elements which have
         identical spectra.
         """
+        __slots__ = ('_elems', '_is_faulty', '_index')
+
         def __init__(self, elems: List[Spectrum.Element] = None,
                      index: int = None):
             """
@@ -177,6 +185,7 @@ class Spectrum:
         The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
+        __slots__ = ('_groups', 'exec', 'test', '_iter')
 
         def __init__(self, test: Spectrum.Test,
                      groups: List[Spectrum.Group]):
@@ -276,10 +285,11 @@ class Spectrum:
                 if (group not in seen):
                     seen.add(group)
                     self.spectrum[test].update(group, exe)
-                    if (test.outcome is Outcome.PASSED):
-                        self.p[group] += 1
-                    else:
-                        self.f[group] += 1
+                    if (exe):
+                        if (test.outcome is Outcome.PASSED):
+                            self.p[group] += 1
+                        else:
+                            self.f[group] += 1
 
     def __getitem__(self, t: Test):
         return self.spectrum[t]

@@ -89,7 +89,7 @@ def fill_spectrum(bin_file: TextIOWrapper,
                 errors.error('Incorrect number of matrix columns', f'({i})',
                              'in input file, terminating...')
             if (arr[i] != "0" and elem not in seen):
-                sb.addExecution(test, elem, arr[i] != "0")
+                sb.addExecution(test, elem)
                 seen.add(elem)
         # Use row to merge equivalences
         sb.split_groups_on_test(test)
