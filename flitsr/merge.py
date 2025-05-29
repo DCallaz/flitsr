@@ -3,6 +3,8 @@ import re
 from flitsr.percent_at_n import combine
 import os
 import sys
+import locale
+from functools import cmp_to_key
 from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
@@ -276,10 +278,16 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                           end=end, file=tex_file)
 
     # Print out merged results
+    def suffix_cmp(s1, s2):  # compare with common suffixes removed
+        i = 0
+        while (s1[-(i+1)] == s2[-(i+1)]):
+            i += 1
+        return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
+    k = cmp_to_key(suffix_cmp)
     if (ci_eq(group, 'metric')):
-        zipped = [(mo, me) for me in metrics for mo in sorted(modes)]
+        zipped = [(mo, me) for me in metrics for mo in sorted(modes, key=k)]
     else:
-        zipped = [(mo, me) for mo in sorted(modes) for me in metrics]
+        zipped = [(mo, me) for mo in sorted(modes, key=k) for me in metrics]
     cur = None
     # Set up tex file
     if (tex_file):
