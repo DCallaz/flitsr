@@ -199,11 +199,12 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
                     parser_args: Dict[str, Any] = {}
-                    # add default arguments
+                    # add default arguments if param has
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
                         parser_args['help'] = '(default: %(default)s)'
-                    else:  # add parameter as "required" if this type is used
+                    # else add param as conditionally "required" if not bool
+                    elif (argspec.annotations[param] is not bool):
                         if (name not in adv_required_args):
                             adv_required_args[name] = (adv_name, list())
                         adv_required_args[name][1].append(param)
