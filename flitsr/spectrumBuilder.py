@@ -74,7 +74,7 @@ class SpectrumBuilder:
                     new_groups.append(Spectrum.Group(c))
         self._groups = new_groups
 
-    def get_spectrum(self):
+    def get_spectrum(self) -> Spectrum:
         """ Return the computed spectrum """
         spectrum = Spectrum(self._elements, self._groups, self._tests,
                             self._executions)
@@ -88,23 +88,32 @@ class SpectrumUpdater(SpectrumBuilder):
         self._tests = spectrum.tests()[:]
         self._groups = spectrum.groups()[:]
         self._executions = dict()
+        # copy all the executions
         for test in self._tests:
-            self._copy_execution(test, spectrum[test])
+            new_exe = self._executions.setdefault(test, dict())
+            for group in self._groups:
+                # Only copy over actually executed elements
+                if (spectrum[test][group]):
+                    for elem in group.get_elements():
+                        new_exe[elem] = True
 
     def remove_test_with_executions(self, test: Spectrum.Test):
         self._tests.remove(test)
         del self._executions[test]
 
-    def copy_test_and_execution(self, test: Spectrum.Test,
-                                exe: Spectrum.Execution):
+    def copy_test_and_execution(self, test: Spectrum.Test, spectrum: Spectrum):
         self._tests.append(test)
-        self._copy_execution(test, exe)
-
-    def _copy_execution(self, test: Spectrum.Test, exe: Spectrum.Execution):
         new_exe = self._executions.setdefault(test, dict())
-        for group in self._groups:
-            executed = exe[group]
+        for group in spectrum.groups():
             # Only copy over actually executed elements
-            if (executed):
-                for elem in group.get_elements():
-                    new_exe[elem] = executed
+            if (spectrum[test][group]):
+                for other in group.get_elements():
+                    # get this spectrum's element
+                    elem = self._get_element(other)
+                    new_exe[elem] = True
+
+    def _get_element(self, other: Spectrum.Element):
+        for elem in self._elements:
+            if (elem.semantic_eq(other)):
+                return elem
+        raise KeyError(f'Could not find element {other} in SpectrumUpdater')

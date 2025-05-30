@@ -49,8 +49,7 @@ class Sliced(Refiner):
             old_test = self.find_test(self.unsliced_spectrum, name)
             if (old_test is not None and old_test.outcome is Outcome.PASS):
                 sb.remove_test_with_executions(failed)
-                sb.copy_test_and_execution(old_test,
-                                           self.unsliced_spectrum[old_test])
+                sb.copy_test_and_execution(old_test, self.unsliced_spectrum)
         return sb.get_spectrum()
 
     def refine_only_failing(self, sliced_spectrum: Spectrum,
@@ -62,5 +61,5 @@ class Sliced(Refiner):
             if (old_test is not None and old_test.outcome is Outcome.FAIL):
                 if (old_test in sb._tests):
                     sb.remove_test_with_executions(old_test)
-                sb.copy_test_and_execution(failed, sliced_spectrum[failed])
+                sb.copy_test_and_execution(failed, sliced_spectrum)
         return sb.get_spectrum()
