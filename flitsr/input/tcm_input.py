@@ -10,7 +10,7 @@ from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
-from flitsr.input import Input
+from flitsr.input.input_reader import Input
 
 class TcmInput(Input):
     def construct_details(self, f: TextIOWrapper, method_level: bool,
@@ -176,8 +176,8 @@ class TcmInput(Input):
         if (osp.isfile(input_path)):
             with open(input_path, 'rb', 0) as file:
                 with mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as f:
-                    return f.find(b'#uuts') != -1 and f.find(b'#tests') != -1 \
-                        and f.find(b'#matrix') != -1
+                    return f.find(b'#uuts\n') != -1 and f.find(b'#tests\n') != -1 \
+                        and f.find(b'#matrix\n') != -1
         return False
 
 

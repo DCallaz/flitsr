@@ -9,7 +9,7 @@ from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
-from flitsr.input import Input
+from flitsr.input.input_reader import Input
 
 class GzoltarInput(Input):
     def construct_details(self, f: TextIOWrapper, method_level: bool,
