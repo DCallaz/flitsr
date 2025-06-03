@@ -13,6 +13,9 @@ from flitsr import errors
 from flitsr.input.input_reader import Input
 
 class TcmInput(Input):
+    def get_run_file_name(self, input_path: str):
+        return re.sub("\\.\\w+$", ".run", input_path)
+
     def construct_details(self, f: TextIOWrapper, method_level: bool,
                           sb: SpectrumBuilder) -> Dict[int, Spectrum.Element]:
         """

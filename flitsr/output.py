@@ -5,7 +5,6 @@ from shutil import rmtree
 from typing import Dict, List, Set
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.ranking import Ranking
-from flitsr.input_type import InputType
 
 
 def print_names(spectrum, ranking=None, file=sys.stdout):

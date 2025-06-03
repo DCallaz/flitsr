@@ -5,7 +5,6 @@ import numpy as np
 from enum import Enum
 from abc import ABC, abstractmethod
 from flitsr.const_iter import ConstIter
-from flitsr.input_type import InputType
 from flitsr.errors import error
 
 

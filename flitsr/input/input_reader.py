@@ -7,6 +7,10 @@ class Input(ABC):
         input.register_input(cls)
 
     @abstractmethod
+    def get_run_file_name(self, input_path: str):
+        pass
+
+    @abstractmethod
     def read_spectrum(self, input_path: str, split_faults: bool,
                       method_level=False) -> Spectrum:
         pass
@@ -25,10 +29,15 @@ class Input(ABC):
     @staticmethod
     def read_in(input_path: str, split_faults: bool,
                 method_level=False) -> Spectrum:
+        reader = Input.get_reader(input_path)
+        return reader.read_spectrum(input_path, split_faults,
+                                       method_level)
+
+    @staticmethod
+    def get_reader(input_path: str) -> Input:
         for input_enum in list(input.InputType):
             input_cls = input_enum.value
             if (input_cls.check_format(input_path)):
-                input_ins = input_cls()
-                return input_ins.read_spectrum(input_path, split_faults,
-                                               method_level)
-        raise ValueError(f'Could not find reader for input file: {input_path}')
+                print(f"Chosen {input_enum.name}")
+                return input_cls()
+        raise ValueError(f"Unknown input type \"{input_path}\"")

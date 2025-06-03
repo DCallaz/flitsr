@@ -12,6 +12,9 @@ from flitsr import errors
 from flitsr.input.input_reader import Input
 
 class GzoltarInput(Input):
+    def get_run_file_name(self, input_path: str):
+        return input_path.split("/")[0] + ".run"
+
     def construct_details(self, f: TextIOWrapper, method_level: bool,
                           sb: SpectrumBuilder) -> Dict[int, Spectrum.Element]:
         """
