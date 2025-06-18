@@ -3,15 +3,16 @@ import re
 import os
 from os import path as osp
 from io import TextIOWrapper
+from shutil import rmtree
 from typing import Dict, Tuple, List
-from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
 from flitsr.input.input_reader import Input
 
-class GzoltarInput(Input):
+
+class Gzoltar(Input):
     def get_run_file_name(self, input_path: str):
         return input_path.split("/")[0] + ".run"
 
@@ -135,9 +136,42 @@ class GzoltarInput(Input):
                 osp.isfile(osp.join(input_path, "spectra.csv")) and
                 osp.isfile(osp.join(input_path, "tests.csv")))
 
+    @classmethod
+    def write_spectrum(cls, spectrum: Spectrum, directory: str):
+        """ Output the spectrum in Gzoltar format """
+        type_ = cls.get_type()
+        # First check that the directory exists and is empty
+        if (not osp.isdir(directory)):
+            os.mkdir(directory)
+        else:
+            rmtree(directory)
+            os.mkdir(directory)
+        # Next print out the tests
+        with open(osp.join(directory, "tests.csv"), 'w') as test_file:
+            print("name,outcome,runtime,stacktrace", file=test_file)
+            for test in spectrum.tests():
+                print(test.name, "PASS" if test.outcome is Outcome.PASSED else
+                      "FAIL", "", "", sep=",", file=test_file)
+        with open(osp.join(directory, "spectra.csv"), 'w') as units_file:
+            print("name", file=units_file)
+            # TODO: change _elements below to elements()
+            for elem in spectrum._elements:
+                print(elem.output_str(type_=type_), file=units_file)
+        with open(osp.join(directory, "matrix.txt"), 'w') as matrix_file:
+            for test in spectrum.tests():
+                for elem in spectrum._elements:
+                    print(int(spectrum[test][elem]), end=" ", file=matrix_file)
+                print('+' if test.outcome is Outcome.PASS else '-',
+                      file=matrix_file)
+
+    @classmethod
+    def get_elem_separators(cls):
+        return ['$', '#', ':', ':']
+
 
 if __name__ == "__main__":
+    from flitsr.output import print_spectrum
     d = sys.argv[1]
-    ginput = GzoltarInput()
+    ginput = Gzoltar()
     spectrum = ginput.read_spectrum(d, False)
     print_spectrum(spectrum)

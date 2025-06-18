@@ -5,14 +5,14 @@ from io import TextIOWrapper
 import re
 import mmap
 from typing import Dict, Tuple, List
-from flitsr.output import print_spectrum
 from flitsr.split_faults import split
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import errors
 from flitsr.input.input_reader import Input
 
-class TcmInput(Input):
+
+class TCM(Input):
     def get_run_file_name(self, input_path: str):
         return re.sub("\\.\\w+$", ".run", input_path)
 
@@ -68,7 +68,6 @@ class TcmInput(Input):
                 line = f.readline()
         return method_map
 
-
     def construct_tests(self, f: TextIOWrapper, sb: SpectrumBuilder):
         line = f.readline()
         i = 0
@@ -81,7 +80,6 @@ class TcmInput(Input):
                 sb.addTest(m.group(1), i, Outcome[m.group(2)])
             line = f.readline()
             i += 1
-
 
     def fill_spectrum(self, f: TextIOWrapper,
                       method_map: Dict[int, Spectrum.Element],
@@ -103,7 +101,6 @@ class TcmInput(Input):
                 if (elem not in seen):
                     sb.addExecution(test, elem)
                     seen.add(elem)
-
 
     def read_spectrum(self, input_path: str, split_faults: bool,
                       method_level=False) -> Spectrum:
@@ -178,9 +175,38 @@ class TcmInput(Input):
                         and f.find(b'#matrix\n') != -1
         return False
 
+    @classmethod
+    def write_spectrum(cls, spectrum: Spectrum, output_path: str):
+        """ Output the spectrum in TCM format """
+        with open(output_path, 'w') as file:
+            type_ = cls.get_type()
+            print("#tests", file=file)
+            for test in spectrum.tests():
+                print(test.name, test.outcome.name, file=file)
+            print(file=file)
+            print("#uuts", file=file)
+            # TODO: change _elements below to elements()
+            for elem in spectrum._elements:
+                print(elem.output_str(type_=type_), file=file)
+            print(file=file)
+            print("#matrix", file=file)
+            for test in spectrum.tests():
+                first = True
+                for elem_id, elem in enumerate(spectrum._elements):
+                    if (spectrum[test][elem]):
+                        print(("" if first else " ")+str(elem_id), "1", end="",
+                              file=file)
+                        first = False
+                print(file=file)
+
+    @classmethod
+    def get_elem_separators(cls):
+        return ['.', ':', ':', ' | ']
+
 
 if __name__ == "__main__":
+    from flitsr.output import print_spectrum
     d = sys.argv[1]
-    tinput = TcmInput()
+    tinput = TCM()
     spectrum = tinput.read_spectrum(d, False)
     print_spectrum(spectrum)

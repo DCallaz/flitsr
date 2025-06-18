@@ -1,6 +1,8 @@
+from typing import List
 from abc import ABC, abstractmethod
 from flitsr.spectrum import Spectrum
 from flitsr import input
+
 
 class Input(ABC):
     def __init_subclass__(cls):
@@ -14,6 +16,20 @@ class Input(ABC):
     def read_spectrum(self, input_path: str, split_faults: bool,
                       method_level=False) -> Spectrum:
         pass
+
+    @classmethod
+    def write_spectrum(cls, spectrum: Spectrum, output_path: str):
+        raise NotImplementedError("Cannot write spectrum in"
+                                  f"{cls.__name__} format")
+
+    @classmethod
+    def get_elem_separators(cls) -> List[str]:
+        raise NotImplementedError(f"Input type {cls.__name__} not supported "
+                                  "for output string")
+
+    @classmethod
+    def get_type(cls) -> 'input.InputType':
+        return input.InputType[cls.__name__.upper()]
 
     @staticmethod
     @abstractmethod
@@ -31,13 +47,12 @@ class Input(ABC):
                 method_level=False) -> Spectrum:
         reader = Input.get_reader(input_path)
         return reader.read_spectrum(input_path, split_faults,
-                                       method_level)
+                                    method_level)
 
     @staticmethod
-    def get_reader(input_path: str) -> Input:
+    def get_reader(input_path: str) -> 'Input':
         for input_enum in list(input.InputType):
             input_cls = input_enum.value
             if (input_cls.check_format(input_path)):
-                print(f"Chosen {input_enum.name}")
                 return input_cls()
         raise ValueError(f"Unknown input type \"{input_path}\"")
