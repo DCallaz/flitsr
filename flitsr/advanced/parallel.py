@@ -50,9 +50,11 @@ class Parallel(Cluster):
             new_spectrum = copy.deepcopy(spectrum)
             tests = [int(i) for i in partition.strip().split("\n")]
             toRemove = set()
+            all_tests = spectrum.tests()
             # keep failing + all passing
-            for test in new_spectrum.failing():
-                if (test.index not in tests):
+            for test in spectrum.failing():
+                ind = all_tests.index(test)
+                if (ind not in tests):
                     toRemove.add(test)
             for test in toRemove:
                 new_spectrum.remove(test, hard=True)

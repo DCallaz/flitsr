@@ -413,7 +413,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         arg_dict = vars(self)
         for key in arg_dict:
             if (key.startswith(prefix)):
-                group[key.removeprefix(prefix)] = arg_dict[key]
+                group[key[len(prefix):]] = arg_dict[key]
         return group
 
 

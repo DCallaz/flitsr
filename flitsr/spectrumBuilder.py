@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set, Tuple
 from flitsr.spectrum import Spectrum, Outcome
 
 
@@ -6,8 +6,7 @@ class SpectrumBuilder:
     def __init__(self):
         self._elements: List[Spectrum.Element] = []
         self._tests: List[Spectrum.Test] = []
-        self._groups: List[Spectrum.Group] = [Spectrum.Group()]
-        self._executions: Dict[Spectrum.Test, Dict[Spectrum.Element, bool]] = {}
+        self._executions: Dict[Spectrum.Test, Set[Spectrum.Element]] = {}
 
     def get_tests(self):
         return self._tests
@@ -22,7 +21,7 @@ class SpectrumBuilder:
         """
         t = Spectrum.Test(name, index, outcome)
         self._tests.append(t)
-        self._executions[t] = {}
+        self._executions[t] = set()
         return t
 
     def addElement(self, details: List[str],
@@ -32,7 +31,6 @@ class SpectrumBuilder:
         """
         e = Spectrum.Element(details, len(self._elements), faults)
         self._elements.append(e)
-        self._groups[0].append(e)
         return e
 
     def addExecution(self, test: Spectrum.Test, elem: Spectrum.Element):
@@ -40,43 +38,50 @@ class SpectrumBuilder:
         Mark the specified element as executed in the given test.
         """
         if (test not in self._executions):
-            self._executions[test] = {}
-        self._executions[test][elem] = True
+            self._executions[test] = set()
+        self._executions[test].add(elem)
 
     def addNonExecution(self, test: Spectrum.Test, elem: Spectrum.Element):
         """
         Mark the specified element as not executed in the given test.
         NOTE: Adding non-executions is not required for the spectrum
-        (non-execution is assumed by default), and may consume large amounts
-        of memory due to the size of the spectrum. Therefore it is advised to
-        call this method with cation.
+        (non-execution is assumed by default), thus this method does not do
+        anything.
         """
-        if (test not in self._executions):
-            self._executions[test] = {}
-        self._executions[test][elem] = False
+        # if (test not in self._executions):
+        #     self._executions[test] = {}
+        # self._executions[test][elem] = False
+        pass
 
-    def split_groups_on_test(self, test: Spectrum.Test):
+    def form_groups(self) -> List[Spectrum.Group]:
         """
         Given one test pertaining to a row in the spectrum, split the groups
         according to the coverage. The split will potentially split each group
         in half, based on those elements that are executed in the test, and
         those that are not.
         """
-        row = self._executions[test]
-        new_groups: List[Spectrum.Group] = []
-        for group in self._groups:
-            elems = group.get_elements()
-            collect: List[List[Spectrum.Element]] = [[], []]
-            for elem in elems:
-                collect[row.get(elem, False)].append(elem)
-            for c in collect:
-                if (c != []):
-                    new_groups.append(Spectrum.Group(c))
-        self._groups = new_groups
+        stack: List[Tuple[Set[Spectrum.Element], int]] = []
+        groups: List[Spectrum.Group] = []
+        # Initialize stack with all elements in one group
+        stack.append((set(self._elements), 0))
+        while (len(stack) > 0):
+            cur, t_ind = stack.pop()
+            if (t_ind >= len(self._tests) or len(cur) == 1):
+                groups.append(Spectrum.Group(list(cur)))
+            else:
+                test = self._tests[t_ind]
+                exe_elem = cur.intersection(self._executions[test])
+                nexe_elem = cur.difference(exe_elem)
+                if (len(exe_elem) != 0):
+                    stack.append((exe_elem, t_ind+1))
+                if (len(nexe_elem) != 0):
+                    stack.append((nexe_elem, t_ind+1))
+        return groups
 
     def get_spectrum(self):
         """ Return the computed spectrum """
-        spectrum = Spectrum(self._elements, self._groups, self._tests,
+        groups = self.form_groups()
+        spectrum = Spectrum(self._elements, groups, self._tests,
                             self._executions)
         return spectrum
 
@@ -101,10 +106,10 @@ class SpectrumUpdater(SpectrumBuilder):
         self._copy_execution(test, exe)
 
     def _copy_execution(self, test: Spectrum.Test, exe: Spectrum.Execution):
-        new_exe = self._executions.setdefault(test, dict())
+        new_exe = self._executions.setdefault(test, set())
         for group in self._groups:
             executed = exe[group]
             # Only copy over actually executed elements
             if (executed):
                 for elem in group.get_elements():
-                    new_exe[elem] = executed
+                    new_exe.add(elem)

@@ -94,11 +94,6 @@ class GzoltarInput(Input):
                 if (arr[i] != "0" and elem not in seen):
                     sb.addExecution(test, elem)
                     seen.add(elem)
-            # Use row to merge equivalences
-            sb.split_groups_on_test(test)
-        # ??? groups.sort(key=lambda group: group[0])
-        # Remove groupings from spectrum
-        # spectrum.remove_unnecessary()
 
     def read_spectrum(self, input_path: str, split_faults: bool,
                       method_level=False) -> Spectrum:

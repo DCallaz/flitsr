@@ -103,11 +103,6 @@ class TcmInput(Input):
                 if (elem not in seen):
                     sb.addExecution(test, elem)
                     seen.add(elem)
-            # Use row to merge equivalences
-            sb.split_groups_on_test(test)
-        # ??? groups.sort(key=lambda group: group[0])
-        # Remove groupings from spectrum
-        # sb.remove_unnecessary()
 
 
     def read_spectrum(self, input_path: str, split_faults: bool,
