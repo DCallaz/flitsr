@@ -1,13 +1,11 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set, Sequence, Tuple
+from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, TYPE_CHECKING
 from bitarray import bitarray
 import numpy as np
 from enum import Enum
 from abc import ABC, abstractmethod
-from flitsr.const_iter import ConstIter
-from flitsr.input_type import InputType
-from flitsr.errors import error
-
+if TYPE_CHECKING:
+    from flitsr.input import InputType
 
 class Outcome(Enum):
     PASSED = 0
@@ -101,13 +99,8 @@ class Spectrum:
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
-        def output_str(self, type_: InputType, incl_faults=True) -> str:
-            if (type_ is InputType.TCM):
-                seps = ['.', ':', ':', ' | ']
-            elif (type_ is InputType.GZOLTAR):
-                seps = ['$', '#', ':', ':']
-            else:
-                error(f"Input type {type_} not supported for output string")
+        def output_str(self, type_: 'InputType', incl_faults=True) -> str:
+            seps = type_.value.get_elem_separators()
             gstring = ''
             path_part = self.path.rpartition('.')
             if (path_part[0] != '' and path_part[2] != ''):
@@ -151,8 +144,8 @@ class Spectrum:
             self._is_faulty = any(e.isFaulty() for e in self._elems)
             self._index = index
 
-        def append(self, element: Spectrum.Element):
-            self._elems.append(element)
+        def sort_elems(self, key: Callable):
+            self._elems.sort(key=key)
 
         def set_index(self, index: int):
             self._index = index
@@ -250,12 +243,14 @@ class Spectrum:
 
     def __init__(self, elements: List[Spectrum.Element],
                  groups: List[Spectrum.Group], tests: List[Spectrum.Test],
-                 executions: Dict[Test, Dict[Element, bool]]):
+                 executions: Dict[Test, Set[Element]]):
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self.p: Dict[Spectrum.Group, int] = dict()
         self.f: Dict[Spectrum.Group, int] = dict()
         # Initialize element related properties
         edict = {e: i for i, e in enumerate(elements)}
+        for group in groups:
+            group.sort_elems(key=lambda x: edict[x])
         self._groups = sorted(groups, key=lambda g: edict[g.get_elements()[0]])
         for i, group in enumerate(self._groups):
             group.set_index(i)
@@ -283,16 +278,15 @@ class Spectrum:
         for test in self._tests:
             test_exe = executions[test]
             seen: Set[Spectrum.Group] = set()
-            for elem, exe in test_exe.items():
+            for elem in test_exe:
                 group = elem.group()
                 if (group not in seen):
                     seen.add(group)
-                    self.spectrum[test].update(group, exe)
-                    if (exe):
-                        if (test.outcome is Outcome.PASSED):
-                            self.p[group] += 1
-                        else:
-                            self.f[group] += 1
+                    self.spectrum[test].update(group, True)
+                    if (test.outcome is Outcome.PASSED):
+                        self.p[group] += 1
+                    else:
+                        self.f[group] += 1
 
     def __getitem__(self, t: Test):
         return self.spectrum[t]
@@ -444,15 +438,22 @@ class Spectrum:
             self._matrix_tests = np.array(list(self.spectrum.keys()))
             self._matrix_elems = np.array(list(self._groups))
             self._matrix = np.zeros((len(self._matrix_tests),
-                                     len(self._matrix_elems)))
-            self._errVector = np.zeros(len(self._matrix_tests))
+                                     len(self._matrix_elems)),
+                                    dtype=bool)
+            self._errVector = np.zeros(len(self._matrix_tests),
+                                       dtype=bool)
             for (i, test) in enumerate(self._matrix_tests):
                 for (j, elem) in enumerate(self._matrix_elems):
                     self._matrix[i][j] = self.spectrum[test][elem]
-                self._errVector[i] = 0 if (test.outcome is Outcome.PASSED) else 1
+                self._errVector[i] = 0 if (test.outcome is
+                                           Outcome.PASSED) else 1
         # Extract submatrix
-        tmask = np.isin(self._matrix_tests, self._tests)
-        emask = np.isin(self._matrix_elems, self._groups)
+        test_set = set(self._tests)
+        tmask = np.array([item in test_set for item in self._matrix_tests])
+        # tmask = np.isin(self._matrix_tests, self._tests)
+        group_set = set(self._groups)
+        emask = np.array([item in group_set for item in self._matrix_elems])
+        # emask = np.isin(self._matrix_elems, self._groups)
         matrix = self._matrix[np.ix_(tmask, emask)]
         errVector = self._errVector[tmask]
         return matrix, errVector

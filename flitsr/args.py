@@ -10,7 +10,6 @@ from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
 from flitsr.ranking import Tiebrk
-from flitsr.input_type import InputType
 from flitsr import advanced
 from flitsr.advanced import Config
 
@@ -458,14 +457,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 args.faults = ["num"]
         elif (args.types is None):
             args.types = [Config(args.ranker, args.cluster, args.refiner)]
-        # Check the input file type and set input method
-        if (osp.isfile(args.input)):
-            args.input_type = InputType.TCM
-        elif (osp.isdir(args.input) and
-                osp.isfile(osp.join(args.input, "matrix.txt"))):
-            args.input_type = InputType.GZOLTAR
-        else:
-            parser.error("Input file type not supported")
         if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
             args.sbfl = False
             args.multi = 1

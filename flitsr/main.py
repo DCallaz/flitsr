@@ -16,7 +16,7 @@ from flitsr.ranking import Ranking
 from flitsr.tie import Ties
 from flitsr.args import Args
 from flitsr.advanced import ClusterType, RankerType
-from flitsr.input_type import InputType
+from flitsr.input.input_reader import Input
 from flitsr.errors import error
 
 
@@ -149,16 +149,13 @@ def main(argv: Optional[List[str]] = None):
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
-    if (args.input_type is InputType.TCM):
-        from flitsr.tcm_input import read_spectrum
-        d_p = re.sub("\\.\\w+$", ".run", args.input)
-    elif (args.input_type is InputType.GZOLTAR):
-        from flitsr.input import read_spectrum
-        d_p = args.input.split("/")[0] + ".run"
-    else:
-        error(f"Unknown input type \"{args.input_type}\", exiting...")
+    try:
+        reader = Input.get_reader(args.input)
+    except ValueError as e:
+        error(e)
+    d_p = reader.get_run_file_name(args.input)
     # Read the spectrum in and setup parallel if needed
-    gspectrum = read_spectrum(args.input, args.split, method_level=args.method)
+    gspectrum = reader.read_spectrum(args.input, args.split, args.method)
     if (gspectrum is None or len(gspectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)

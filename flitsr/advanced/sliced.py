@@ -4,7 +4,7 @@ from flitsr.advanced.attributes import existing
 from flitsr.advanced.refiner import Refiner
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.spectrumBuilder import SpectrumUpdater
-from flitsr.input import read_spectrum
+from flitsr.input.input_reader import Input
 
 
 class Sliced(Refiner):
@@ -15,7 +15,7 @@ class Sliced(Refiner):
         pth = osp.dirname(abs_input)
         bsnm, ext = osp.splitext(osp.basename(abs_input))
         conv_spectrum = unsliced_spectrum.format(pth=pth, bsnm=bsnm, ext=ext)
-        self.unsliced_spectrum = read_spectrum(conv_spectrum, split, method)
+        self.unsliced_spectrum = Input.read_in(conv_spectrum, split, method)
         self.only_failing = only_failing
 
     def find_test(self, spectrum, test_name: 'str'):
