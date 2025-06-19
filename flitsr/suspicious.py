@@ -3,7 +3,7 @@ import argparse
 import sys
 from typing import List
 from flitsr.spectrum import Spectrum
-from flitsr.ranking import Ranking
+from flitsr.ranking import Ranking, Tiebrk
 
 
 class Suspicious():
@@ -35,7 +35,7 @@ class Suspicious():
 
     @staticmethod
     def apply_formula(spec: Spectrum, formula: str,
-                      tiebrk: int, reverse=True) -> Ranking:
+                      tiebrk: Tiebrk, reverse=True) -> Ranking:
         """
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.

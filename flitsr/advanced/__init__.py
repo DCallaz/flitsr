@@ -4,6 +4,7 @@ from flitsr import advanced
 from enum import Enum
 import importlib
 from typing import Union
+import sys
 
 _rankers = {}
 _clusters = {}
@@ -26,9 +27,18 @@ def register_refiner(cls):
     all_types[cls.__name__.upper()] = cls
 
 
+# load local advanced types
 __all__ = [m[1] for m in pkgutil.iter_modules(advanced.__path__)]
 for module in __all__:
     importlib.import_module('.'+module, package=__name__)
+# load plugin advanced types
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+adv_entry_points = entry_points(group='flitsr.advanced')
+for adv_ep in adv_entry_points:
+    adv_ep.load()
 
 RefinerType = Enum('RefinerType', _refiners,  # type:ignore
                    module=advanced, qualname='advanced.RefinerType')
@@ -39,35 +49,27 @@ RankerType = Enum('RankerType', _rankers,  # type:ignore
 
 
 class Config:
-    def __init__(self, ranker: RankerType = None,
-                 cluster: ClusterType = None):
+    def __init__(self, ranker: RankerType = None, cluster: ClusterType = None,
+                 refiner: RefinerType = None):
         self.cluster = cluster
         self.ranker = ranker
+        self.refiner = refiner
 
     def __str__(self):
         return self._get_str()
 
     def _get_str(self, printed=False):
-        if (printed):
-            c = '_'
-        else:
-            c = '+'
-        if (self.cluster is None):
-            if (self.ranker is None):
-                return self._get_name(RankerType['SBFL'], printed)
-            else:
-                return self._get_name(self.ranker, printed)
-        else:
-            if (self.ranker is None):
-                return self._get_name(self.cluster, printed)
-            else:
-                return (self._get_name(self.cluster, printed) + c +
-                        self._get_name(self.ranker, printed))
+        c = '_' if printed else '+'
+        components = [self.ranker or RankerType['SBFL'], self.refiner,
+                      self.cluster]
+        string = c.join(self._get_name(c, printed) for c in components
+                        if c is not None)
+        return string
 
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:
-        if (printed and hasattr(typ.value, '_print_name')):
-            return typ.value._print_name.lower()
+        if (printed and hasattr(typ.value, '__print_name__')):
+            return typ.value.__print_name__.lower()
         elif (printed):
             return typ.name.lower()
         else:

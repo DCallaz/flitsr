@@ -7,6 +7,7 @@ import tempfile
 from importlib import resources
 from flitsr.spectrum import Spectrum
 from flitsr.advanced.cluster import Cluster
+from flitsr.advanced.attributes import choices
 from flitsr.input import InputType
 
 
@@ -16,8 +17,8 @@ class Parallel(Cluster):
     produce multiple spectrums, and process all other options on
     each spectrum.
     """
-    _parType_opts = ['bdm', 'msp', 'hwk', 'vwk']
 
+    @choices('parType', ['bdm', 'msp', 'hwk', 'vwk'])
     def __init__(self, parType: str = 'msp'):
         self.parType = parType
 

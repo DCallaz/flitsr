@@ -5,16 +5,19 @@ import inspect
 import sys
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
-# from flitsr.advanced_types import AdvancedType
+from flitsr.ranking import Tiebrk
 from flitsr import advanced
 from flitsr.advanced import Config
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
+    def __init__(self):
+        self._advanced_params: Dict[str, List[str]] = {}
+
     def _add_params(self, params: argparse.Namespace):
         dict_ = vars(params)
         for key in dict_:
@@ -145,48 +148,81 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Advanced types options
         primitives = (bool, str, int, float, Path)
-        clusters = parser.add_argument_group('Clustering techniques',
-            'One of the following clustering techniques may be specified, '
-            'along with it\'s options')
-        cluster_mu = clusters.add_mutually_exclusive_group()
+        adv_required_args: Dict[str, Tuple[str, List[str]]] = dict()
+
+        advanced_groups: List[Tuple[str, Any, Any, Any]] = []
+
+        refiner_enum = advanced.RefinerType
+        if (len(refiner_enum) != 0):
+            refiners = parser.add_argument_group('Spectrum refiner techniques',
+                'One of the following spectrum refining techniques may be '
+                'specified, along with it\'s options')
+            refiner_mu = refiners.add_mutually_exclusive_group()
+            advanced_groups.append(('refiner', refiner_enum, refiners,
+                                    refiner_mu))
+
         cluster_enum = advanced.ClusterType
+        if (len(cluster_enum) != 0):
+            clusters = parser.add_argument_group('Clustering techniques',
+                'One of the following clustering techniques may be specified, '
+                'along with it\'s options')
+            cluster_mu = clusters.add_mutually_exclusive_group()
+            advanced_groups.append(('cluster', cluster_enum, clusters,
+                                    cluster_mu))
 
-        rankers = parser.add_argument_group('Ranking techniques',
-            'One of the following advanced ranking techniques may be '
-            'specified, along with it\'s options')
-        ranker_mu = rankers.add_mutually_exclusive_group()
         ranker_enum = advanced.RankerType
-
-        advanced_groups = [('cluster', cluster_enum, clusters, cluster_mu),
-                           ('ranker', ranker_enum, rankers, ranker_mu)]
+        if (len(ranker_enum) != 0):
+            rankers = parser.add_argument_group('Ranking techniques',
+                'One of the following advanced ranking techniques may be '
+                'specified, along with it\'s options (default: flitsr)')
+            ranker_mu = rankers.add_mutually_exclusive_group()
+            advanced_groups.append(('ranker', ranker_enum, rankers, ranker_mu))
 
         for adv_name, adv_enum, group, mu in advanced_groups:
             for type_ in list(adv_enum):
                 name, class_ = type_.name, type_.value
+                init = class_.__init__
                 disp_name = name.lower()
-                help_ = '(default: %(default)s)'
+                help_ = ''  # '(default: %(default)s)'
                 # add docstring
                 if (class_.__doc__ is not None and class_.__doc__ != ''):
                     help_ = class_.__doc__ + ' ' + help_
+                # add cmd line argument for this advanced type
                 mu.add_argument('--'+disp_name, dest=adv_name,
                                 action='store_const', const=adv_enum[name],
                                 help=help_)
-                argspec = inspect.getfullargspec(class_.__init__)
+                argspec = inspect.getfullargspec(init)
                 def_diff = (len(argspec.args)-1) - (0 if
                                                     argspec.defaults is None
                                                     else len(argspec.defaults))
+                # add cmd-line arguments for each parameter of this adv type
+                self._advanced_params[name] = list()
                 for p_index, param in enumerate(argspec.args[1:]):
+                    self._advanced_params[name].append(param)
+                    # skip adding this parameter if it is marked as existing
+                    if (hasattr(init, '__existing__') and
+                        param in init.__existing__):
+                        continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
-                    parser_args = {'help': '(default %(default)s)'}
-                    # add default arguments
+                    parser_args: Dict[str, Any] = {}
+                    # add default arguments if param has
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
+                        parser_args['help'] = '(default: %(default)s)'
+                    # else add param as conditionally "required" if not bool
+                    elif (argspec.annotations[param] is not bool):
+                        if (name not in adv_required_args):
+                            adv_required_args[name] = (adv_name, list())
+                        adv_required_args[name][1].append(param)
+                        parser_args['help'] = '(required)'
                     # add choices
-                    if (hasattr(class_, f'_{param}_opts')):
-                        parser_args['choices'] = getattr(class_, f'_{param}_opts')
+                    if (hasattr(init, '__choices__') and
+                        param in init.__choices__):
+                        parser_args['choices'] = init.__choices__[param]
                     # add types
                     if (param in argspec.annotations):
                         paramType = argspec.annotations[param]
+                        # specially handle bools
                         if (paramType is bool):
                             if ('default' in parser_args):
                                 # check if default is True
@@ -199,6 +235,13 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                     parser_args['action'] = 'store_true'
                             else:
                                 parser_args['action'] = 'store_true'
+                        # specially handle file IO types
+                        elif (issubclass(paramType, IO)):
+                            if (issubclass(paramType, BinaryIO)):
+                                parser_args['type'] = argparse.FileType('rb')
+                            else:
+                                parser_args['type'] = \
+                                  argparse.FileType('r', encoding='UTF-8')
                         else:
                             if (paramType not in primitives):
                                 if (not hasattr(class_, f'_{param}')):
@@ -210,7 +253,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                             if ('choices' not in parser_args):
                                 parser_args['metavar'] = param
                     # finalize option
-                    group.add_argument(paramName, **parser_args)  # type:ignore
+                    group.add_argument(paramName, **parser_args)
 
         # manually set flitsr as the default
         parser.set_defaults(ranker=advanced.RankerType['FLITSR'])
@@ -231,15 +274,19 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Tie breaking options
         tie_grp = parser.add_argument_group('Tie breaking strategy',
-                'Specifies the tie breaking strategy to use for FLITSR and the '
-                'localization')
-        tie_grp.add_argument('--tiebrk', action='store_const', const=1,
-                default=3, help='Breaks ties using only execution counts')
-        tie_grp.add_argument('--rndm', action='store_const', const=2, dest='tiebrk',
-                help='Breaks ties by a randomly ordering')
-        tie_grp.add_argument('--otie', action='store_const', const=3, dest='tiebrk',
-                help='Breaks ties by using the original base metric ranking (in '
-                'the case of FLITSR) and by execution counts otherwise')
+                                            'Specifies the tie breaking '
+                                            'strategy to use for FLITSR and '
+                                            'the localization')
+        tie_grp.add_argument('--tiebrk', action='store_const',
+                             default=Tiebrk.ORIG, const=Tiebrk.EXEC,
+                             help='Breaks ties using only execution counts')
+        tie_grp.add_argument('--rndm', action='store_const', const=Tiebrk.RNDM,
+                             dest='tiebrk', help='Breaks ties by a randomly '
+                             'ordering')
+        tie_grp.add_argument('--otie', action='store_const', const=Tiebrk.ORIG,
+                             dest='tiebrk', help='Breaks ties by using the '
+                             'original base metric ranking (in the case of '
+                             'FLITSR) and by execution counts otherwise')
 
         # Calculation options
         calc_grp = parser.add_argument_group('Calculations',
@@ -381,6 +428,16 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         argcomplete.autocomplete(parser)
 
         args = parser.parse_args(argv)
+        # check "required" advanced type arguments
+        for adv_name, (adv_type, adv_args) in adv_required_args.items():
+            if (getattr(args, adv_type) is not None and
+                getattr(args, adv_type).name == adv_name):
+                dname = adv_name.lower()
+                for adv_arg in adv_args:
+                    if (getattr(args, dname+'_'+adv_arg) is None):
+                        err = (f'--{dname}-{adv_arg} is required when '
+                               f'--{dname} is used')
+                        parser.error(err)
         # Set the metrics based on 'all' or the default metric
         if (args.metrics is None):
             if (args.all is True):
@@ -390,8 +447,14 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         # Set the flitsr types based on 'all' or what is set
         if (args.all is True):
             if (args.types is None):
-                args.types = [Config(), Config(advanced.RankerType['FLITSR']),
-                              Config(advanced.RankerType['MULTI'])]
+                ts = {}
+                if (args.refiner is not None):
+                    ts['refiner'] = args.refiner
+                if (args.cluster is not None):
+                    ts['cluster'] = args.cluster
+                args.types = [Config(**ts),
+                              Config(advanced.RankerType['FLITSR'], **ts),
+                              Config(advanced.RankerType['MULTI'], **ts)]
             if (len(args.weff) == 0 and len(args.top1) == 0 and
                     len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
                 args.weff = ["first", "avg", "med", "last", 2, 3, 5]
@@ -400,7 +463,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
         elif (args.types is None):
-            args.types = [Config(args.ranker, args.cluster)]
+            args.types = [Config(args.ranker, args.cluster, args.refiner)]
         if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
             args.sbfl = False
             args.multi = 1
@@ -409,11 +472,17 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
     def get_arg_group(self, group_name):
         group = {}
+        params = self._advanced_params[group_name.upper()]
         prefix = group_name.lower()+'_'
-        arg_dict = vars(self)
-        for key in arg_dict:
-            if (key.startswith(prefix)):
-                group[key[len(prefix):]] = arg_dict[key]
+        for param in params:
+            if (hasattr(self, prefix+param)):
+                group[param] = getattr(self, prefix+param)
+            elif (hasattr(self, param)):
+                group[param] = getattr(self, param)
+            elif (param == 'args'):  # special case for full args
+                group[param] = self
+            else:
+                raise KeyError(f'Could not find {param} in args!')
         return group
 
 

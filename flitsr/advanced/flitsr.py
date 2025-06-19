@@ -1,21 +1,28 @@
 import sys
 import copy
-from typing import List, Set
-from flitsr.suspicious import Suspicious
+from typing import List, Set, TYPE_CHECKING
+if TYPE_CHECKING:
+    from flitsr.args import Args
 from flitsr.spectrum import Spectrum
-from flitsr.ranking import Ranking, set_orig, unset_orig
+from flitsr.ranking import Ranking, Tiebrk, set_orig, unset_orig
 from flitsr.advanced.ranker import Ranker
 from flitsr.advanced.sbfl import SBFL
+from flitsr.advanced.attributes import existing, choices, print_name
 from flitsr import advanced
 
 
 class Flitsr(Ranker):
-    _internal_ranking_opts = ['auto', 'conf', 'original', 'reverse', 'flitsr']
-
-    def __init__(self, internal_ranking: str = 'auto'):
-        from flitsr.args import Args
-        self.sbfl_args = Args().get_arg_group('SBFL')
-        self.args = Args()
+    """
+    Run the main FLITSR algorithm over the spectrum to produce ranked lists.
+    """
+    @existing('tiebrk')
+    @existing('args')
+    @choices('internal_ranking', ['auto', 'conf', 'original', 'reverse',
+                                  'flitsr'])
+    def __init__(self, args: 'Args', internal_ranking: str = 'auto',
+                 tiebrk: Tiebrk = Tiebrk.ORIG):
+        self.tiebrk = tiebrk
+        self.args = args
         self.order_method = internal_ranking
 
     def remove_faulty_elements(self, spectrum: Spectrum,
@@ -36,12 +43,14 @@ class Flitsr(Ranker):
             ranker = advanced.RankerType[formula.upper()].value(**ranker_args)
             ranking = ranker.rank(spectrum, formula)
         else:
-            ranking = SBFL(**self.sbfl_args).rank(spectrum, formula)
+            sbfl_args = self.args.get_arg_group('SBFL')
+            ranking = SBFL(**sbfl_args).rank(spectrum, formula)
         return ranking
 
-
     def flitsr(self, spectrum: Spectrum, formula: str) -> List[Spectrum.Group]:
-        """Executes the recursive flitsr algorithm to identify faulty elements"""
+        """
+        Executes the recursive flitsr algorithm to identify faulty elements
+        """
         if (spectrum.tf == 0):
             return []
         ranking = self.run_metric(spectrum, formula)
@@ -155,13 +164,15 @@ class Flitsr(Ranker):
         return ranking
 
 
+@print_name('flitsr_multi')
 class Multi(Flitsr):
-
-    _print_name = 'flitsr_multi'
-
-    def __init__(self):
-        from flitsr.args import Args
-        super().__init__(Args().flitsr_internal_ranking)
+    """
+    Run the FLITSR* algorithm over the spectrum to produce ranked lists.
+    """
+    @existing('args')
+    def __init__(self, args: 'Args'):
+        flitsr_opts = args.get_arg_group('FLITSR')
+        super().__init__(**flitsr_opts)
 
     def multiRemove(self, spectrum: Spectrum,
                     faulty: List[Spectrum.Group]) -> bool:

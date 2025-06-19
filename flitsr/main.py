@@ -1,16 +1,15 @@
 # PYTHON_ARGCOMPLETE_OK
 import sys
 import re
-from argparse import Namespace
+import copy
 from os import path as osp
 from math import log
-from typing import List, Set, Optional
+from typing import List, Optional
 from flitsr import weffort
 from flitsr import top
 from flitsr import percent_at_n
 from flitsr import precision_recall
 from flitsr.output import print_csv, print_spectrum_csv, print_names
-from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking
@@ -156,8 +155,8 @@ def main(argv: Optional[List[str]] = None):
         error(e)
     d_p = reader.get_run_file_name(args.input)
     # Read the spectrum in and setup parallel if needed
-    spectrum = reader.read_spectrum(args.input, args.split, args.method)
-    if (spectrum is None or len(spectrum.spectrum) == 0):
+    gspectrum = reader.read_spectrum(args.input, args.split, args.method)
+    if (gspectrum is None or len(gspectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
         return
@@ -183,9 +182,17 @@ def main(argv: Optional[List[str]] = None):
                         print("WARNING: overriding file", filename,
                               file=sys.stderr)
                         output_file = open(filename, 'w')
+            # copy spectrum
+            spectrum = copy.deepcopy(gspectrum)
+            # Check for spectrum refining
+            if (config.refiner is not None):
+                refiner_params = args.get_arg_group(config.refiner.name)
+                refiner_mthd = config.refiner.value(**refiner_params)
+                spectrum = refiner_mthd.refine(spectrum, args.method)
             # Check for clustering
             if (config.cluster is not None or
                 hasattr(ClusterType, metric.upper())):
+                # deal with clustering technique as metric
                 if (config.cluster is None):
                     cluster = ClusterType[metric.upper()]
                     # Set default metric for clustering

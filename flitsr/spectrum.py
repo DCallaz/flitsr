@@ -124,6 +124,9 @@ class Spectrum:
         def __hash__(self):
             return self._index
 
+        def semantic_eq(self, other):
+            return self.tup == other.tup
+
     class Group(Entity):
         """
         A spectral group is a collection of spectral elements which have
@@ -298,8 +301,8 @@ class Spectrum:
     def __len__(self):
         return len(self._tests)
 
-    # def elements(self) -> List[Spectrum.Element]:
-    #     return self._elements
+    def elements(self) -> List[Spectrum.Element]:
+        return self._elements
 
     def groups(self) -> List[Spectrum.Group]:
         return self._groups

@@ -3,7 +3,7 @@ from flitsr.spectrum import Spectrum
 from flitsr import advanced
 
 
-class SpectrumRefiner(ABC):
+class Refiner(ABC):
     @abstractmethod
     def refine(self, spectrum: Spectrum, method_lvl=False) -> Spectrum:
         pass
