@@ -6,8 +6,8 @@ from typing import List
 import tempfile
 from importlib import resources
 from flitsr.spectrum import Spectrum
-from flitsr.output import print_tcm
 from flitsr.advanced.cluster import Cluster
+from flitsr.input import InputType
 
 
 class Parallel(Cluster):
@@ -25,13 +25,11 @@ class Parallel(Cluster):
                 method_lvl=False) -> List[Spectrum]:
         # Check if Gzoltar or converted method level and if so, convert
         tmp_name = None
-        if (method_lvl or (os.path.isdir(inp_file) and
-                           os.path.isfile(os.path.join(inp_file, "matrix.txt")))):
+        # If method level, or not TCM format
+        if (method_lvl or not InputType['TCM'].value.check_format(inp_file)):
             tmp_fd, tmp_name = tempfile.mkstemp(text=True)
             inp_file = tmp_name
-            tmp = os.fdopen(tmp_fd, 'w')
-            print_tcm(spectrum, tmp)
-            tmp.close()
+            InputType['TCM'].value.write_spectrum(spectrum, tmp_name)
         # Run the parallel algorithm
         spectrums = self.partition_table(inp_file, spectrum)
         # remove temporary file if available

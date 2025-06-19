@@ -1,13 +1,11 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set, Sequence, Tuple, Callable
+from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, TYPE_CHECKING
 from bitarray import bitarray
 import numpy as np
 from enum import Enum
 from abc import ABC, abstractmethod
-from flitsr.const_iter import ConstIter
-from flitsr.input_type import InputType
-from flitsr.errors import error
-
+if TYPE_CHECKING:
+    from flitsr.input import InputType
 
 class Outcome(Enum):
     PASSED = 0
@@ -101,13 +99,8 @@ class Spectrum:
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
-        def output_str(self, type_: InputType, incl_faults=True) -> str:
-            if (type_ is InputType.TCM):
-                seps = ['.', ':', ':', ' | ']
-            elif (type_ is InputType.GZOLTAR):
-                seps = ['$', '#', ':', ':']
-            else:
-                error(f"Input type {type_} not supported for output string")
+        def output_str(self, type_: 'InputType', incl_faults=True) -> str:
+            seps = type_.value.get_elem_separators()
             gstring = ''
             path_part = self.path.rpartition('.')
             if (path_part[0] != '' and path_part[2] != ''):

@@ -1,6 +1,7 @@
 import sys
 from flitsr.spectrum import Spectrum
 from typing import Dict, List, Set, Tuple
+from flitsr.input.input_reader import Input
 
 
 def split(faults: Dict[float, List[Spectrum.Element]],
@@ -46,13 +47,10 @@ def split(faults: Dict[float, List[Spectrum.Element]],
 if __name__ == "__main__":
     d = sys.argv[1]
     i = 2
-    gzoltar = False
     num_only = False
     while (True):
         if (len(sys.argv) > i):
-            if (sys.argv[i] == "gzoltar"):
-                gzoltar = True
-            elif (sys.argv[i] == "num"):
+            if (sys.argv[i] == "num"):
                 num_only = True
             else:
                 print("Unknown option:", sys.argv[i])
@@ -60,11 +58,7 @@ if __name__ == "__main__":
             i += 1
         else:
             break
-    if (gzoltar):
-        from flitsr.input import read_spectrum
-    else:
-        from flitsr.tcm_input import read_spectrum
-    spectrum = read_spectrum(d, False)
+    spectrum = Input.read_in(d, False)
     faults = spectrum.get_faults()
     print("faults:", faults)
     # print(groups)
