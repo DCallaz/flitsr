@@ -23,18 +23,14 @@ class Parallel(Cluster):
 
     def cluster(self, inp_file: str, spectrum: Spectrum,
                 method_lvl=False) -> List[Spectrum]:
-        # Check if Gzoltar or converted method level and if so, convert
-        tmp_name = None
-        # If method level, or not TCM format
-        if (method_lvl or not InputType['TCM'].value.check_format(inp_file)):
-            tmp_fd, tmp_name = tempfile.mkstemp(text=True)
-            inp_file = tmp_name
-            InputType['TCM'].value.write_spectrum(spectrum, tmp_name)
+        # write the spectrum to a temporary file
+        tmp_fd, tmp_name = tempfile.mkstemp(text=True)
+        inp_file = tmp_name
+        InputType['TCM'].value.write_spectrum(spectrum, tmp_name)
         # Run the parallel algorithm
         spectrums = self.partition_table(inp_file, spectrum)
-        # remove temporary file if available
-        if (tmp_name):
-            os.remove(tmp_name)
+        # remove temporary file
+        os.remove(tmp_name)
         return spectrums
 
     def partition_table(self, d: str, spectrum: Spectrum) -> List[Spectrum]:
