@@ -4,6 +4,7 @@ from flitsr import advanced
 from enum import Enum
 import importlib
 from typing import Union
+import sys
 
 _rankers = {}
 _clusters = {}
@@ -26,9 +27,18 @@ def register_refiner(cls):
     all_types[cls.__name__.upper()] = cls
 
 
+# load local advanced types
 __all__ = [m[1] for m in pkgutil.iter_modules(advanced.__path__)]
 for module in __all__:
     importlib.import_module('.'+module, package=__name__)
+# load plugin advanced types
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+adv_entry_points = entry_points(group='flitsr.advanced')
+for adv_ep in adv_entry_points:
+    adv_ep.load()
 
 RefinerType = Enum('RefinerType', _refiners,  # type:ignore
                    module=advanced, qualname='advanced.RefinerType')

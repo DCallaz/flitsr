@@ -150,26 +150,33 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         primitives = (bool, str, int, float, Path)
         adv_required_args: Dict[str, Tuple[str, List[str]]] = dict()
 
-        refiners = parser.add_argument_group('Spectrum refiner techniques',
-            'One of the following spectrum refining techniques may be '
-            'specified, along with it\'s options')
+        advanced_groups: List[Tuple[str, Any, Any, Any]] = []
+
         refiner_enum = advanced.RefinerType
+        if (len(refiner_enum) != 0):
+            refiners = parser.add_argument_group('Spectrum refiner techniques',
+                'One of the following spectrum refining techniques may be '
+                'specified, along with it\'s options')
+            refiner_mu = refiners.add_mutually_exclusive_group()
+            advanced_groups.append(('refiner', refiner_enum, refiners,
+                                    refiner_mu))
 
-        clusters = parser.add_argument_group('Clustering techniques',
-            'One of the following clustering techniques may be specified, '
-            'along with it\'s options')
-        cluster_mu = clusters.add_mutually_exclusive_group()
         cluster_enum = advanced.ClusterType
+        if (len(cluster_enum) != 0):
+            clusters = parser.add_argument_group('Clustering techniques',
+                'One of the following clustering techniques may be specified, '
+                'along with it\'s options')
+            cluster_mu = clusters.add_mutually_exclusive_group()
+            advanced_groups.append(('cluster', cluster_enum, clusters,
+                                    cluster_mu))
 
-        rankers = parser.add_argument_group('Ranking techniques',
-            'One of the following advanced ranking techniques may be '
-            'specified, along with it\'s options (default: flitsr)')
-        ranker_mu = rankers.add_mutually_exclusive_group()
         ranker_enum = advanced.RankerType
-
-        advanced_groups = [('refiner', refiner_enum, refiners, refiners),
-                           ('cluster', cluster_enum, clusters, cluster_mu),
-                           ('ranker', ranker_enum, rankers, ranker_mu)]
+        if (len(ranker_enum) != 0):
+            rankers = parser.add_argument_group('Ranking techniques',
+                'One of the following advanced ranking techniques may be '
+                'specified, along with it\'s options (default: flitsr)')
+            ranker_mu = rankers.add_mutually_exclusive_group()
+            advanced_groups.append(('ranker', ranker_enum, rankers, ranker_mu))
 
         for adv_name, adv_enum, group, mu in advanced_groups:
             for type_ in list(adv_enum):
