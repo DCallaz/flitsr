@@ -1,6 +1,6 @@
 # PYTHON_ARGCOMPLETE_OK
 from multiprocessing import Pool
-from typing import List, Optional, Set, Any, Iterator, Callable, Optional
+from typing import List, Optional, Set, Any, Iterator, Callable, Iterable
 import importlib
 from importlib.util import find_spec
 import sys
@@ -22,8 +22,8 @@ from flitsr.errors import warning
 
 
 class InputType(Enum):
-    GZOLTAR = auto()
-    TCM = auto()
+    DIR = auto()
+    FILE = auto()
     DEPTH = auto()
 
 
@@ -59,10 +59,11 @@ def find(directory: str, type: Optional[str] = None,
                     yield path
 
 
-def removeprefix(string : str, prefix: str):
+def removeprefix(string: str, prefix: str):
     if (prefix and string.startswith(prefix)):
         return string[len(prefix):]
     return string
+
 
 def removesuffix(string: str, suffix: str):
     if (suffix and string.endswith(suffix)):
@@ -142,7 +143,7 @@ class Runall:
 
     def run(self, input_type: InputType, include: List[str] = [],
             exclude: List[str] = [], depth: Optional[int] = None,
-            ext: Optional[str] = None):
+            base: Optional[str] = None):
         def del_tell(file: str):
             os.remove(file)
             print(f'Deleting empty results file: {file}\n')
@@ -152,14 +153,15 @@ class Runall:
         find('.', type='f', name="*.run", empty=True, action=del_tell)
 
         # get inputs
-        if (input_type == InputType.GZOLTAR):
-            inputs_us = find('.', type='f', name="spectra.csv",
-                             excl_dirs=exclude, incl_dirs=include,
-                             depth=depth, action=osp.dirname)
-        elif (input_type == InputType.TCM):
-            if (ext is None):  # Sanity check
-                ext = '*'
-            inputs_us = find('.', type='f', name="*."+ext, excl_dirs=exclude,
+        if (base is None):  # Sanity check
+            base = '*'
+        inputs_us: Iterable
+        if (input_type == InputType.DIR):
+            inputs_us = set(find('.', type='f', name=base,
+                                 excl_dirs=exclude, incl_dirs=include,
+                                 depth=depth, action=osp.dirname))
+        elif (input_type == InputType.FILE):
+            inputs_us = find('.', type='f', name="*."+base, excl_dirs=exclude,
                              incl_dirs=include, depth=depth)
         else:
             inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
@@ -252,12 +254,22 @@ def main(argv: Optional[List[str]] = None):
                         'specified multiple times)')
 
     parser.add_argument('-d', '--depth', action='store', help='Specifies the '
-                        'depth at which to look for inputs', type=int)
-    parser.add_argument('-t', '--tcm', metavar='EXT', nargs='?',
+                        'depth at which to look for inputs (starting at 0 for '
+                        'the current directory)', type=int)
+    typ_mu = parser.add_mutually_exclusive_group()
+    typ_mu.add_argument('-f', '--file', metavar='EXT', nargs='?',
+                        default=None, const='*', help='Look only for single '
+                        'file inputs (with optional extension EXT)')
+    typ_mu.add_argument('-D', '--dir', metavar='PAT', nargs='?',
+                        default=None, const='*', help='Look only for '
+                        'directories as inputs (that optionally have a '
+                        'sub-file matching pattern PAT)')
+    typ_mu.add_argument('-t', '--tcm', metavar='EXT', nargs='?',
                         default=None, const='*', help='Look only for TCM type '
                         'inputs (with optional extension EXT)')
-    parser.add_argument('-g', '--gzoltar', action='store_true', help='Look '
-                        'only for GZoltar type inputs')
+    typ_mu.add_argument('-g', '--gzoltar', action='store_const',
+                        const='spectra.csv',
+                        help='Look only for GZoltar type inputs')
 
     parser.add_argument('-c', '--num-cpus', metavar='CPUS', type=int,
                         help='Sets the number of CPUs to run in parallel on '
@@ -299,12 +311,17 @@ def main(argv: Optional[List[str]] = None):
         args.exclude = [path.rstrip('/') for path in args.exclude]
 
     # Process input type
-    if (args.gzoltar):
-        inp_type = InputType.GZOLTAR
-    elif (args.tcm is not None):
-        inp_type = InputType.TCM
+    if (args.gzoltar or args.dir):
+        inp_type = InputType.DIR
+        base = args.gzoltar or args.dir
+        if (args.depth is not None):
+            args.depth += 1
+    elif (args.tcm or args.file):
+        inp_type = InputType.FILE
+        base = args.tcm or args.file
     elif (args.depth is not None):
         inp_type = InputType.DEPTH
+        base = None
     else:
         parser.error("Please specify a depth or input type")
 
@@ -319,7 +336,7 @@ def main(argv: Optional[List[str]] = None):
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver)
     run_all.run(inp_type, include=args.include, exclude=args.exclude,
-                depth=args.depth, ext=args.tcm)
+                depth=args.depth, base=base)
 
 
 if __name__ == '__main__':
