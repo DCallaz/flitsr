@@ -25,11 +25,13 @@ class SpectrumBuilder:
         return t
 
     def addElement(self, details: List[str],
-                   faults: List[Any]) -> Spectrum.Element:
+                   faults: List[Any], index: int = None) -> Spectrum.Element:
         """
         Add a new element to the spectrum, with the given details and faults.
         """
-        e = Spectrum.Element(details, len(self._elements), faults)
+        if (index is None):
+            index = len(self._elements)
+        e = Spectrum.Element(details, index, faults)
         self._elements.append(e)
         return e
 

@@ -12,6 +12,7 @@ from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
 import argcomplete
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
+from flitsr import advanced
 from typing import Set, Dict, List, Tuple, Collection, Optional
 
 PERC_N = "percentage at n"
@@ -108,8 +109,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           excl: List[Tuple[str, str]], rel: bool,
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
-          percs=None, incl_metrics=None, flitsrs=None, sign=None,
-          sign_less=[], base_type=None, thrs=[], keep_order=False):
+          percs=None, incl_metrics=None, incl_advs=None, adv_metrics=None,
+          sign=None, sign_less=[], base_type=None, thrs=[], keep_order=False):
     # Set up the include and exclude dir names dicts
     incl_dict: Dict[str, List[str]] = {}
     excl_dict: Dict[str, List[str]] = {}
@@ -121,7 +122,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     if (base_type is None):
         base_type = 'base'
     temp_metrics: Set[str] = set()
-    modes: Set[str] = set()
+    temp_modes: Set[str] = set()
     temp_calcs: Set[str] = set()
     #           dir       mode      metric
     files: Dict[str, Dict[str, Dict[str, File]]] = {}
@@ -145,7 +146,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
             m = results_check.match(file.name)
             if (m):
                 mode = m.group(1) or ""
-                modes.add(mode)
+                temp_modes.add(mode)
                 metric = m.group(2)
                 temp_metrics.add(metric)
                 files[d].setdefault(mode, {})[metric] = File(file)
@@ -155,7 +156,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
 
     # Collect all the results
     for d in dirs:
-        for mode in modes:
+        for mode in temp_modes:
             for metric in temp_metrics:
                 try:
                     block = readBlock(files[d][mode][metric])
@@ -185,7 +186,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     for thr in thrs:
         thr_key = str(thr).lower()
         temp_calcs.add(thr_key)
-        for mode in modes:
+        for mode in temp_modes:
             for metric in temp_metrics:
                 vals = avgs[mode][metric][thr.calc].all
                 count = 0.0
@@ -195,12 +196,25 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 avgs[mode][metric][thr_key] = Avg()
                 avgs[mode][metric][thr_key].adds = len(vals)
                 avgs[mode][metric][thr_key].all = [count]
+
+    def suffix_cmp(s1, s2):  # compare with common suffixes removed
+        i = 0
+        while (s1[-(i+1)] == s2[-(i+1)]):
+            i += 1
+        return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
+    k = cmp_to_key(suffix_cmp)
+
     # select only included calcs
     if (incl_calcs is not None):
         # preserves the order of calcs from cmd line
         calcs = [c for c in incl_calcs if ci_in(c, temp_calcs)]
     else:
         calcs = list(temp_calcs)
+    # select only included modes
+    if (incl_advs is not None):
+        modes = [m for m in incl_advs if ci_in(m, temp_modes)]
+    else:
+        modes = list(temp_modes)
     # select only included metrics
     if (incl_metrics is not None):
         # preserves the order of metrics from cmd line
@@ -211,6 +225,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     if (not keep_order):
         calcs = sorted(calcs)
         metrics = sorted(metrics)
+        modes = sorted(modes, key=k)
 
     def print_heading(name, tabs):
         name_disp = name.replace("_", " ").title()
@@ -278,20 +293,16 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                           end=end, file=tex_file)
 
     # Print out merged results
-    def suffix_cmp(s1, s2):  # compare with common suffixes removed
-        i = 0
-        while (s1[-(i+1)] == s2[-(i+1)]):
-            i += 1
-        return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
-    k = cmp_to_key(suffix_cmp)
     if (ci_eq(group, 'metric')):
-        zipped = [(mo, me) for me in metrics for mo in sorted(modes, key=k)]
+        zipped = [(mo, me) for me in metrics for mo in modes]
     else:
-        zipped = [(mo, me) for mo in sorted(modes, key=k) for me in metrics]
+        zipped = [(mo, me) for mo in modes for me in metrics]
     cur = None
     # Set up tex file
     if (tex_file):
         print("\\documentclass{standalone}", file=tex_file)
+        print("\\usepackage[table]{xcolor}", file=tex_file)
+        print("\\newcommand{\\tp}{\\cellcolor{yellow!50}}", file=tex_file)
         # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
         # print("\\begin{longtable}", file=tex_file)
@@ -302,7 +313,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
               file=tex_file)
     for (mode, metric) in zipped:
         # check if this mode should be displayed
-        if ((ci_eq(mode, 'base') or flitsrs is None or ci_in(metric, flitsrs))
+        if ((ci_eq(mode, 'base') or adv_metrics is None
+             or ci_in(metric, adv_metrics))
             and (ci_in(mode, avgs) and ci_in(metric, avgs[mode]))):
             if (ci_eq(group, 'metric')):
                 if (metric != cur):
@@ -396,6 +408,7 @@ def main(argv: Optional[List[str]] = None):
             d.append(Threshold(calc, comp, threshold))
 
     met_names = Suspicious.getNames(True)
+    adv_names = advanced.all_types_print
 
     parser = ArgumentParser(prog='merge', description='Merge .results files '
                             'produced by the run_all script')
@@ -455,6 +468,23 @@ def main(argv: Optional[List[str]] = None):
                         help='Specifies the way in which the output should be '
                         'grouped. "metric" groups first by metrics and then by '
                         'types, "type" does the opposite (default %(default)s)')
+    parser.add_argument('-m', '--metrics', nargs='+', metavar='METRIC',
+                        help='Specify the metrics to merge results for. By '
+                        'default all metrics that appear in filenames of found '
+                        'files will be merged. Note that this option only '
+                        'restricts the output, all files available are still '
+                        'read, however files not existing are not read.',
+                        choices=met_names)
+    parser.add_argument('-a', '--advanced-types', nargs='+', metavar='TYPE',
+                        help='Specify the list of advanced types to include '
+                        'when merging. By default all available advanced types '
+                        'that appear in filenames of found files are included.',
+                        choices=adv_names)
+    parser.add_argument('-A', '-f', '--advanced-metrics', '--flitsrs',
+                        nargs='+', metavar='METRIC',
+                        help='Specify the metrics for which to display '
+                        'advanced type values for. By default all metric\'s '
+                        'advanced type values are shown.', choices=met_names)
     parser.add_argument('-c', '--calcs', nargs='+', metavar='CALC',
                         help='Specify the list of calculations to include when '
                         'merging. By default all available calculations are '
@@ -467,7 +497,7 @@ def main(argv: Optional[List[str]] = None):
                         'where the given calculation is above or below the '
                         'given float threshold. The calculations are the same '
                         'as for the --calcs argument.')
-    parser.add_argument('--percentage', nargs='+', metavar='CALC',
+    parser.add_argument('-P', '--percentage', nargs='+', metavar='CALC',
                         help='Specify calculations that must be intepreted as '
                         'a percentage value. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
@@ -485,18 +515,6 @@ def main(argv: Optional[List[str]] = None):
                         'types significantly greater than their baselines '
                         '(see --base-type for changing the baseline, and '
                         '--less-significance for significantly less)')
-    parser.add_argument('-f', '--flitsrs', nargs='+', metavar='METRIC',
-                        help='Specify the metrics for which to display FLITSR '
-                        'and FLITSR* values for. By default all metric\'s '
-                        'FLITSR and FLITSR* values are shown.',
-                        choices=met_names)
-    parser.add_argument('-m', '--metrics', nargs='+', metavar='METRIC',
-                        help='Specify the metrics to merge results for. By '
-                        'default all metrics that appear in filenames of found '
-                        'files will be merged. Note that this option only '
-                        'restricts the output, all files available are still '
-                        'read, however files not existing are not read.',
-                        choices=met_names)
     parser.add_argument('-l', '--less-significance', nargs='+', metavar='CALC',
                         help='Intended for use with the --significance and '
                         '--tex options. Specify the calculations whose result '
@@ -526,7 +544,8 @@ def main(argv: Optional[List[str]] = None):
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
-          incl_metrics=args.metrics, flitsrs=args.flitsrs, sign=args.sign,
+          incl_metrics=args.metrics, incl_advs=args.advanced_types,
+          adv_metrics=args.advanced_metrics, sign=args.sign,
           sign_less=args.sign_less, base_type=args.base_type,
           thrs=args.threshold, keep_order=args.keep_order)
 

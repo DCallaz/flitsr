@@ -10,6 +10,7 @@ _rankers = {}
 _clusters = {}
 _refiners = {}
 all_types = {}
+all_types_print = []
 
 
 def register_ranker(cls):
@@ -46,6 +47,12 @@ ClusterType = Enum('ClusterType', _clusters,  # type:ignore
                    module=advanced, qualname='advanced.ClusterType')
 RankerType = Enum('RankerType', _rankers,  # type:ignore
                   module=advanced, qualname='advanced.RankerType')
+
+for cls in all_types.values():
+    if (hasattr(cls, '__print_name__')):
+        all_types_print.append(cls.__print_name__.lower())
+    else:
+        all_types_print.append(cls.__name__.lower())
 
 
 class Config:

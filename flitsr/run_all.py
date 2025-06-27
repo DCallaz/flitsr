@@ -161,7 +161,7 @@ class Runall:
                                  excl_dirs=exclude, incl_dirs=include,
                                  depth=depth, action=osp.dirname))
         elif (input_type == InputType.FILE):
-            inputs_us = find('.', type='f', name="*."+base, excl_dirs=exclude,
+            inputs_us = find('.', type='f', name=base, excl_dirs=exclude,
                              incl_dirs=include, depth=depth)
         else:
             inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
@@ -257,9 +257,9 @@ def main(argv: Optional[List[str]] = None):
                         'depth at which to look for inputs (starting at 0 for '
                         'the current directory)', type=int)
     typ_mu = parser.add_mutually_exclusive_group()
-    typ_mu.add_argument('-f', '--file', metavar='EXT', nargs='?',
+    typ_mu.add_argument('-f', '--file', metavar='PAT', nargs='?',
                         default=None, const='*', help='Look only for single '
-                        'file inputs (with optional extension EXT)')
+                        'file inputs (that optionally match pattern PAT)')
     typ_mu.add_argument('-D', '--dir', metavar='PAT', nargs='?',
                         default=None, const='*', help='Look only for '
                         'directories as inputs (that optionally have a '
@@ -318,7 +318,7 @@ def main(argv: Optional[List[str]] = None):
             args.depth += 1
     elif (args.tcm or args.file):
         inp_type = InputType.FILE
-        base = args.tcm or args.file
+        base = args.file or "*."+args.tcm
     elif (args.depth is not None):
         inp_type = InputType.DEPTH
         base = None
