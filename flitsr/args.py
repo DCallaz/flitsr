@@ -448,9 +448,9 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         if (args.all is True):
             if (args.types is None):
                 ts = {}
-                if (args.refiner is not None):
+                if (getattr(args, 'refiner', None) is not None):
                     ts['refiner'] = args.refiner
-                if (args.cluster is not None):
+                if (getattr(args, 'cluster', None) is not None):
                     ts['cluster'] = args.cluster
                 args.types = [Config(**ts),
                               Config(advanced.RankerType['FLITSR'], **ts),
@@ -463,7 +463,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
         elif (args.types is None):
-            args.types = [Config(args.ranker, args.cluster, args.refiner)]
+            args.types = [Config(args.ranker, getattr(args, 'cluster', None),
+                                 getattr(args, 'refiner', None))]
         if (args.cutoff_strategy and args.cutoff_strategy.startswith('basis')):
             args.sbfl = False
             args.multi = 1
