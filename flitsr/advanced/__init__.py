@@ -14,16 +14,22 @@ all_types_print = []
 
 
 def register_ranker(cls):
+    if (cls.__name__.upper() in all_types):
+        raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _rankers[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
 def register_cluster(cls):
+    if (cls.__name__.upper() in all_types):
+        raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _clusters[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
 def register_refiner(cls):
+    if (cls.__name__.upper() in all_types):
+        raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _refiners[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 

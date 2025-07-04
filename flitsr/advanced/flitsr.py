@@ -1,9 +1,9 @@
-import sys
 import copy
 from typing import List, Set, TYPE_CHECKING
 if TYPE_CHECKING:
     from flitsr.args import Args
 from flitsr.spectrum import Spectrum
+from flitsr.errors import warning
 from flitsr.ranking import Ranking, Tiebrk, set_orig, unset_orig
 from flitsr.advanced.ranker import Ranker
 from flitsr.advanced.sbfl import SBFL
@@ -61,9 +61,8 @@ class Flitsr(Ranker):
         while (len(tests_removed) == 0):  # sanity check
             if ((s2 := next(r_iter, None)) is None):
                 count_non_removed = len(spectrum.failing())
-                print("WARNING: flitsr found", count_non_removed,
-                      "failing test(s) that it could not explain",
-                      file=sys.stderr)
+                warning("flitsr found", count_non_removed,
+                        "failing test(s) that it could not explain")
                 return []
             # continue trying the next element if available
             group = s2.group
@@ -214,6 +213,8 @@ class Multi(Flitsr):
                     if (x.group in basis):
                         x.score = val - ordered_basis.index(x.group)
                 val = val-len(basis)
+            else:  # (fall-back) finish FLITSR* if basis is empty
+                break
             # Reset the coverage matrix and counts
             newSpectrum.reset()
             # Next iteration can be either multi-fault, or multi-explanation

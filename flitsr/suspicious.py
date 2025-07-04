@@ -257,6 +257,11 @@ class Suspicious():
         denominator = self.tf + self.tp
         return self.ef/denominator
 
+    def sbi(self) -> float:
+        if (self.ef == 0):
+            return 0.0
+        return self.ef / (self.ef + self.ep)
+
     def scott(self) -> float:
         nominator = 4*self.ef*self.np - 4*self.nf*self.ep - (self.nf - self.ep)**2
         denominator = (2*self.ef + self.nf + self.ep)*(2*self.np + self.nf + self.ep)
