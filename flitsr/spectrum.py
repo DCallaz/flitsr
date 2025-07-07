@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, TYPE_CHECKING
+from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, \
+        Union, Iterable, TYPE_CHECKING
 from bitarray import bitarray
 import numpy as np
 from enum import Enum
@@ -260,7 +261,8 @@ class Spectrum:
                 elem.set_group(group)
         self._elements: List[Spectrum.Element] = elements
         # Initialize test related properties
-        self._removed: List[Spectrum.Test] = []
+        self._removed_tests: Dict[str, List[Spectrum.Test]] = {}
+        self._removed_groups: Dict[str, List[Spectrum.Group]] = {}
         self._tests: List[Spectrum.Test] = tests
         self._failing: List[Spectrum.Test] = []
         self.tp: int = 0
@@ -316,7 +318,16 @@ class Spectrum:
     def locs(self) -> int:
         return len(self._groups)
 
-    def remove(self, test: Spectrum.Test, hard=False):
+    def remove_test(self, test: Spectrum.Test, bucket='default'):
+        """
+        Remove the given test from this spectrum.
+        All removed tests are stored so that they may be added back to the
+        spectrum at a later point. By default, removed tests are stored in the
+        'default' bucket, but a different bucket name may be optionally given.
+        Setting the bucket to be None will completely remove the test from the
+        spectrum (NOTE: this does not save much memory, but only prevents the
+        test from being restored by subsequent calls to reset).
+        """
         self._tests.remove(test)
         if (test.outcome is Outcome.PASSED):
             self.tp -= 1
@@ -325,8 +336,8 @@ class Spectrum:
             self.tf -= 1
         for group in self.groups():
             self.remove_execution(test, group, hard=False)
-        if (not hard):
-            self._removed.append(test)
+        if (bucket is not None):
+            self._removed_tests.setdefault(bucket, []).append(test)
 
     def remove_execution(self, test: Spectrum.Test, ent: Spectrum.Entity,
                          hard=True):
@@ -342,22 +353,51 @@ class Spectrum:
             else:
                 self.f[group] -= 1
 
-    def remove_group(self, group: Spectrum.Group):
+    def remove_group(self, group: Spectrum.Group, bucket='default'):
         try:
             self._groups.remove(group)  # remove if there
+            self._removed_groups.setdefault(bucket, []).append(group)
         except ValueError:
             # Ignore if the element is not in the list
             pass
         self.p.pop(group, None)  # remove if there
         self.f.pop(group, None)  # remove if there
-        # No need to remove execution (bitarray)
-        # for test in self.tests():
-        #     self.spectrum[test].remove_exec(rem)  # remove if there
-        return group
 
-    def reset(self):
-        """Re-activates all the tests and recomputes counts"""
-        for test in self._removed:
+    def reset(self, bucket: Union[None, str, List[str]] = None):
+        """
+        Re-activates removed tests and recomputes counts.
+        By default, or if bucket is None, all buckets are emptied and their
+        removed tests reactivated. A bucket name (or Iterable of bucket names)
+        may optionally be given to only reset the given name(s).
+        """
+        # first get the groups to add back
+        groups_add_back = []
+        group_keys_remove = []
+        for key in self._removed_groups:
+            if (bucket is None or (isinstance(bucket, str) and key == bucket)
+               or (isinstance(bucket, Iterable) and key in bucket)):
+                groups_add_back.extend(self._removed_groups[key])
+                group_keys_remove.append(key)
+        for key in group_keys_remove:
+            del self._removed_groups[key]
+        # then add back the groups, re-computing counts
+        for group in groups_add_back:
+            self._groups.insert(group.index(), group)
+            self.p[group] = len([t for t in self.tests() if t.outcome ==
+                                Outcome.PASS and self[t][group]])
+            self.f[group] = len([t for t in self.failing() if self[t][group]])
+        # next get the tests to add back
+        tests_add_back = []
+        test_keys_remove = []
+        for key in self._removed_tests:
+            if (bucket is None or (isinstance(bucket, str) and key == bucket)
+               or (isinstance(bucket, Iterable) and key in bucket)):
+                tests_add_back.extend(self._removed_tests[key])
+                test_keys_remove.append(key)
+        for key in test_keys_remove:
+            del self._removed_tests[key]
+        # then add back the tests, re-computing counts
+        for test in tests_add_back:
             self._tests.append(test)
             if (test.outcome is Outcome.PASSED):
                 self.tp += 1
@@ -370,7 +410,6 @@ class Spectrum:
                         self.p[group] += 1
                     else:
                         self.f[group] += 1
-        self._removed.clear()
 
     def get_group(self, elem: Spectrum.Element) -> Spectrum.Group:
         """
@@ -391,10 +430,11 @@ class Spectrum:
         return actual_faults
 
     def get_tests(self, entity: Spectrum.Entity, only_failing=False,
-                  remove=False) -> Set[Spectrum.Test]:
+                  remove=False, bucket='default') -> Set[Spectrum.Test]:
         """
         Finds all the test cases executing the given element, and (optionally)
-        removes them from the spectrum.
+        removes them from the spectrum. If removing tests from the spectrum, an
+        optional bucket name may also be given.
         """
         executing = set()
         tests = self.failing() if only_failing else self.tests()
@@ -403,7 +443,7 @@ class Spectrum:
                 executing.add(test)
         if (remove):
             for test in executing:
-                self.remove(test)
+                self.remove_test(test, bucket=bucket)
         return executing
 
     def get_executed_groups(self, test: Spectrum.Test) -> Set[Spectrum.Group]:
@@ -427,6 +467,12 @@ class Spectrum:
             if (self[test][ent]):
                 executed.add(ent)
         return executed
+
+    def _all_removed_tests(self) -> List[Spectrum.Test]:
+        all_removed = []
+        for key in self._removed_tests:
+            all_removed.extend(self._removed_tests[key])
+        return all_removed
 
     def to_matrix(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -465,7 +511,7 @@ class Spectrum:
         """
         results = [t for t in self.tests() if t.name.find(name_part) != -1]
         if (incl_removed):
-            results.extend([t for t in self._removed
+            results.extend([t for t in self._all_removed_tests()
                             if t.name.find(name_part) != -1])
         return results
 

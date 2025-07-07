@@ -57,7 +57,7 @@ class Flitsr(Ranker):
         r_iter = iter(ranking)
         group = next(r_iter).group
         tests_removed = spectrum.get_tests(group, only_failing=True,
-                                           remove=True)
+                                           remove=True, bucket='flitsr')
         while (len(tests_removed) == 0):  # sanity check
             if ((s2 := next(r_iter, None)) is None):
                 count_non_removed = len(spectrum.failing())
@@ -67,7 +67,7 @@ class Flitsr(Ranker):
             # continue trying the next element if available
             group = s2.group
             tests_removed = spectrum.get_tests(group, only_failing=True,
-                                               remove=True)
+                                               remove=True, bucket='flitsr')
         faulty = self.flitsr(spectrum, formula)
         self.remove_faulty_elements(spectrum, tests_removed, faulty)
         if (len(tests_removed) > 0):
@@ -149,7 +149,7 @@ class Flitsr(Ranker):
         set_orig(ranking)
         val = 2**64
         basis = self.flitsr(spectrum, formula)
-        spectrum.reset()
+        spectrum.reset(bucket='flitsr')
         if (not basis == []):
             ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
                                                  self.order_method)
@@ -187,7 +187,7 @@ class Multi(Flitsr):
 
         # Remove all elements in faulty set
         for group in faulty:
-            spectrum.remove_group(group)
+            spectrum.remove_group(group, bucket='multi')
 
         multiFault = False
         for test in executing:
@@ -196,7 +196,7 @@ class Multi(Flitsr):
                     break
             else:
                 multiFault = True
-                spectrum.remove(test, hard=True)
+                spectrum.remove_test(test, bucket='multi')
         return multiFault
 
     def rank(self, spectrum: Spectrum, formula: str) -> Ranking:
@@ -216,7 +216,7 @@ class Multi(Flitsr):
             else:  # (fall-back) finish FLITSR* if basis is empty
                 break
             # Reset the coverage matrix and counts
-            newSpectrum.reset()
+            newSpectrum.reset(bucket='flitsr')
             # Next iteration can be either multi-fault, or multi-explanation
             # multi-fault -> we assume multiple faults exist
             # multi-explanation -> we assume there are multiple explanations
