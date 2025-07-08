@@ -12,18 +12,13 @@ from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
 
 
-def getBumps(ties: Ties, spectrum: Spectrum, worst_effort=False,
-             collapse=False) -> List[float]:
+def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
     if (len(ties.faults) == 0):
         return [0.0]
     tie_iter = iter(ties)
     total = 0
     size = 0
-    if (collapse):
-        size = len(spectrum.groups())
-    else:
-        for group in spectrum.groups():
-            size += len(group.get_elements())
+    size = ties.size(collapse)
     bumps = [float(size)]
     try:
         while (True):

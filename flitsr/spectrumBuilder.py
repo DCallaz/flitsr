@@ -100,7 +100,7 @@ class SpectrumUpdater(SpectrumBuilder):
             for group in spectrum.groups():
                 # Only copy over actually executed elements
                 if (spectrum[test][group]):
-                    for elem in group.get_elements():
+                    for elem in group:
                         new_exe.add(elem)
 
     def remove_test_with_executions(self, test: Spectrum.Test):
@@ -113,7 +113,7 @@ class SpectrumUpdater(SpectrumBuilder):
         for group in spectrum.groups():
             # Only copy over actually executed elements
             if (spectrum[test][group]):
-                for other in group.get_elements():
+                for other in group:
                     # get this spectrum's element
                     elem = self._get_element(other)
                     new_exe.add(elem)

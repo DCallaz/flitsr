@@ -1,37 +1,10 @@
 import re
-from typing import Tuple, List, Union, Any
+from typing import Tuple, List, Set, Union, Any, Dict
 from flitsr.spectrum import Spectrum
-from flitsr.ranking import Ranking
+from flitsr.ranking import Ranking, Rankings
 
 
-class RankingSpectrumBuilder:
-    def __init__(self):
-        self._elements: List[Spectrum.Element] = []
-        self._groups: List[Spectrum.Group] = []
-
-    def addElement(self, details: List[str],
-                   faults: List[Any]) -> Spectrum.Element:
-        e = Spectrum.Element(details, len(self._elements), faults)
-        self._elements.append(e)
-        return e
-
-    def createGroup(self, elems: List[Spectrum.Element]) -> Spectrum.Group:
-        """
-        Hard-code the groups for a pre-determined spectrum
-        """
-        i = len(self._groups)
-        g = Spectrum.Group(elems, i)
-        self._groups.append(g)
-        for e in elems:
-            e.set_group(g)
-        return g
-
-    def get_spectrum(self):
-        return Spectrum(self._elements, self._groups, [], {})
-
-
-def read_any_ranking(ranking_file: str,
-                     method_level=False) -> Tuple[Ranking, Spectrum]:
+def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
     f = open(ranking_file)
     if (f.readline().startswith("Faulty grouping")):
         return read_flitsr_ranking(ranking_file)
@@ -39,17 +12,15 @@ def read_any_ranking(ranking_file: str,
         return read_ranking(ranking_file, method_level)
 
 
-def read_ranking(ranking_file: str,
-                 method_level=False) -> Tuple[Ranking, Spectrum]:
+def read_ranking(ranking_file: str, method_level=False) -> Rankings:
     f = open(ranking_file)
-    spectrumBuilder = RankingSpectrumBuilder()
     ranking = Ranking()
-    i = 0  # number of actual lines
     bugs = 0
-    method_map = {}
-    methods = {}
+    methods: Dict[Tuple[str, str], Spectrum.Element] = {}
+    all_faults: Dict[Any, Set[Spectrum.Element]] = {}
+    elements: List[Spectrum.Element] = []
     f.readline()
-    for line in f:
+    for i, line in enumerate(f):
         line = line.strip()
         score = float(line[line.index(";")+1:])
         name = line[:line.index(";")]
@@ -67,43 +38,36 @@ def read_ranking(ranking_file: str,
                 for b in l[2:]:
                     faults.append(int(b))
             bugs += 1
-        if (method_level):
-            # Add the method to the spectrum
-            details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
-            if ((details[0], details[1]) not in methods):
-                # add with first line number
-                elem = spectrumBuilder.addElement(details, faults)
-                spectrumBuilder.createGroup([elem])
+        details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
+        # Create or fetch the element
+        if (not method_level or (details[0], details[1]) not in methods):
+            elem = Spectrum.Element(details, len(elements), faults)
+            elements.append(elem)
+            if (method_level):
                 methods[(details[0], details[1])] = elem
-                method_map[i] = elem
-            else:
-                elem = method_map[i] = methods[(details[0], details[1])]
-                for fault in faults:
-                    if (fault not in elem.faults):
-                        elem.faults.append(fault)
-            # Add/Update the method's score
-            elem = method_map[i]
-            group = elem.group()
-            if (ranking.has_group(group)):
-                rank_elem = ranking.get_rank(group)
-                rank_elem.score = max(rank_elem.score, score)
-            else:
-                ranking.append(group, score, 0)
         else:
-            details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
-            elem = spectrumBuilder.addElement(details, faults)
-            spectrumBuilder.createGroup([elem])
-            method_map[i] = elem
-            ranking.append(elem.group(), score, 0)
-        i += 1
-    spectrum = spectrumBuilder.get_spectrum()
-    return ranking, spectrum
+            elem = methods[(details[0], details[1])]
+            for fault in faults:
+                if (fault not in elem.faults):
+                    elem.faults.append(fault)
+        # Add/Update the method's score
+        if (ranking.has_entity(elem)):
+            rank_elem = ranking.get_rank(elem)
+            rank_elem.score = max(rank_elem.score, score)
+        else:
+            ranking.append(elem, score, 0)
+        # Update faults
+        if (elem.faults):
+            for fault in elem.faults:
+                all_faults.setdefault(fault, set()).add(elem)
+    return Rankings(all_faults, elements, [ranking])
 
 
-def read_flitsr_ranking(ranking_file: str) -> Tuple[Ranking, Spectrum]:
+def read_flitsr_ranking(ranking_file: str) -> Rankings:
     f = open(ranking_file)
-    spectrumBuilder = RankingSpectrumBuilder()
     ranking = Ranking()
+    all_faults: Dict[Any, Set[Spectrum.Element]] = {}
+    elements: List[Spectrum.Element] = []
     num_locs = 0  # number of reported locations (methods/lines)
     i = 0  # number of actual lines
     line = f.readline()
@@ -132,13 +96,16 @@ def read_flitsr_ranking(ranking_file: str) -> Tuple[Ranking, Spectrum]:
                           for i in m.group(2).split(',')]
             else:
                 faults = []
-            elem = spectrumBuilder.addElement(details, faults)
+            elem = Spectrum.Element(details, len(elements), faults)
+            elements.append(elem)
+            for fault in faults:
+                all_faults.setdefault(fault, set()).add(elem)
             group_elems.append(elem)
             i += 1
             line = f.readline().strip()
-        group = spectrumBuilder.createGroup(group_elems)
+        group = Spectrum.Group(group_elems)
         ranking.append(group, score, 0)
         num_locs += 1
         line = f.readline().strip()
-    spectrum = spectrumBuilder.get_spectrum()
-    return ranking, spectrum
+    rankings = Rankings(all_faults, elements, [ranking])
+    return rankings

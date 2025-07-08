@@ -55,8 +55,8 @@ class Flitsr(Ranker):
             return []
         ranking = self.run_metric(spectrum, formula)
         r_iter = iter(ranking)
-        group = next(r_iter).group
-        tests_removed = spectrum.get_tests(group, only_failing=True,
+        entity = next(r_iter).entity
+        tests_removed = spectrum.get_tests(entity, only_failing=True,
                                            remove=True, bucket='flitsr')
         while (len(tests_removed) == 0):  # sanity check
             if ((s2 := next(r_iter, None)) is None):
@@ -65,13 +65,13 @@ class Flitsr(Ranker):
                         "failing test(s) that it could not explain")
                 return []
             # continue trying the next element if available
-            group = s2.group
-            tests_removed = spectrum.get_tests(group, only_failing=True,
+            entity = s2.entity
+            tests_removed = spectrum.get_tests(entity, only_failing=True,
                                                remove=True, bucket='flitsr')
         faulty = self.flitsr(spectrum, formula)
         self.remove_faulty_elements(spectrum, tests_removed, faulty)
         if (len(tests_removed) > 0):
-            faulty.append(group)
+            faulty.append(entity)
         return faulty
 
     def get_inverse_confidence_scores(self, spectrum: Spectrum,
@@ -82,8 +82,8 @@ class Flitsr(Ranker):
         of the actual confidence scores.
         """
         confs: List[int] = []
-        for group in basis:
-            ts = list(spectrum.get_tests(group, only_failing=True))
+        for entity in basis:
+            ts = list(spectrum.get_tests(entity, only_failing=True))
             possibles: Set[Spectrum.Group] = set()
             possibles.update(spectrum.get_executed_groups(ts[0]))
             for test in ts[1:]:
@@ -120,11 +120,11 @@ class Flitsr(Ranker):
                 flitsr_order = 'conf'
             # check for big groups
             big, small = [], []
-            for group in basis:
-                if (len(group.get_elements()) > 5):
-                    big.append(group)
+            for entity in basis:
+                if (len(entity) > 5):
+                    big.append(entity)
                 else:
-                    small.append(group)
+                    small.append(entity)
             if (len(big) != 0 and len(small) != 0):
                 return self.flitsr_ordering(spectrum, small, ranking,
                                             flitsr_order) + \
@@ -135,7 +135,7 @@ class Flitsr(Ranker):
         elif (flitsr_order == 'reverse'):
             ordered_basis = list(reversed(basis))
         elif (flitsr_order == 'original'):
-            ordered_basis = [x.group for x in ranking if x.group in basis]
+            ordered_basis = [x.entity for x in ranking if x.entity in basis]
             # add any missing elements
             if (len(ordered_basis) < len(basis)):
                 ordered_basis.extend([e for e in basis if e not in ordered_basis])
@@ -154,8 +154,8 @@ class Flitsr(Ranker):
             ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
                                                  self.order_method)
             for x in ranking:
-                if (x.group in basis):
-                    x.score = val - ordered_basis.index(x.group)
+                if (x.entity in basis):
+                    x.score = val - ordered_basis.index(x.entity)
             val = val-len(basis)
         # Reset the coverage matrix and counts
         ranking.sort(True)
@@ -210,8 +210,8 @@ class Multi(Flitsr):
                 ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
                                                      self.order_method)
                 for x in ranking:
-                    if (x.group in basis):
-                        x.score = val - ordered_basis.index(x.group)
+                    if (x.entity in basis):
+                        x.score = val - ordered_basis.index(x.entity)
                 val = val-len(basis)
             else:  # (fall-back) finish FLITSR* if basis is empty
                 break

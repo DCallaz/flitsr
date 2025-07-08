@@ -17,10 +17,11 @@ from os import path as osp
 from typing import List
 from flitsr.args import Args
 from flitsr.main import output, compute_cutoff
-from flitsr.ranking import Ranking
+from flitsr.ranking import Ranking, Rankings
 from flitsr.input.input_reader import Input
 from flitsr.errors import error
 from flitsr.advanced import Config, RankerType, ClusterType
+from flitsr.output import print_spectrum_csv
 
 
 def main(argv: List[str]):
@@ -28,11 +29,10 @@ def main(argv: List[str]):
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
-        ranking, spectrum = read_any_ranking(args.input,
-                                             method_level=args.method)
-        output([ranking], spectrum, args.weff, args.top1, args.perc_at_n,
+        rankings = read_any_ranking(args.input,
+                                    method_level=args.method)
+        output(rankings, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               specCsv=args.spectrum_csv,
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
@@ -46,6 +46,9 @@ def main(argv: List[str]):
     if (spectrum is None or len(spectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
+        return
+    if (args.spectrum_csv):
+        print_spectrum_csv(spectrum, file=args.output)
         return
     # Execute techniques
     for config in [Config(RankerType['FLITSR']),
@@ -87,7 +90,8 @@ def main(argv: List[str]):
                                                      args.method)
                 else:
                     spectrums = [spectrum]
-                rankings: List[Ranking] = []
+                rankings = Rankings(spectrum.get_faults(),
+                                    spectrum.elements())
                 # Run each sub-spectrum
                 for subspectrum in spectrums:
                     # Run techniques
@@ -110,9 +114,9 @@ def main(argv: List[str]):
                                                  args.cutoff_eval)
                     rankings.append(ranking)
                 # Compute and print output
-                output(rankings, spectrum, args.weff, args.top1, args.perc_at_n,
+                output(rankings, args.weff, args.top1, args.perc_at_n,
                        args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                       specCsv=args.spectrum_csv, decimals=args.decimals, file=output_file)
+                       decimals=args.decimals, file=output_file)
                 spectrum.reset()
 
 

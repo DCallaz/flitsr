@@ -5,30 +5,25 @@ from flitsr.spectrum import Spectrum
 from flitsr.tie import Ties
 
 
-def precision(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
-              worst_effort=False, collapse=False) -> float:
+def precision(n: Any, ties: Ties, perc=False, worst_effort=False,
+              collapse=False) -> float:
     if (len(ties.faults) == 0):
         return 0.0
-    fault_num, total = method(n, ties, spectrum, perc, worst_effort, collapse)
+    fault_num, total = method(n, ties, perc, worst_effort, collapse)
     return fault_num/total
 
 
-def recall(n: Any, ties: Ties, spectrum: Spectrum, perc=False,
-           worst_effort=False, collapse=False) -> float:
+def recall(n: Any, ties: Ties, perc=False, worst_effort=False,
+           collapse=False) -> float:
     if (len(ties.faults) == 0):
         return 0.0
-    fault_num, total = method(n, ties, spectrum, perc, worst_effort, collapse)
+    fault_num, total = method(n, ties, perc, worst_effort, collapse)
     return fault_num/len(ties.faults)
 
 
-def method(n: Any, ties: Ties, spectrum: Spectrum, perc: bool,
-           worst_effort: bool, collapse: bool) -> Tuple[float, int]:
-    size = 0
-    if (collapse):
-        size = len(spectrum.groups())
-    else:
-        for group in spectrum.groups():
-            size += len(group.get_elements())
+def method(n: Any, ties: Ties, perc: bool, worst_effort: bool,
+           collapse: bool) -> Tuple[float, int]:
+    size = ties.size(collapse)
     if (n == "b"):
         n = -1
     elif (n == "f"):

@@ -1,11 +1,11 @@
 from flitsr.suspicious import Suspicious
 from flitsr.ranking import Ranking, Rank
 from flitsr.spectrum import Spectrum
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 
 
 def basis(basis_num: int, spectrum: Spectrum,
-          faults: Dict[int, List[Spectrum.Element]], ranking: Ranking,
+          faults: Dict[Any, Set[Spectrum.Element]], ranking: Ranking,
           formula: str, effort: str) -> Ranking:
     new_ranking: Ranking = Ranking()
     r_iter = iter(ranking)
@@ -34,46 +34,46 @@ def basis(basis_num: int, spectrum: Spectrum,
     return new_ranking
 
 
-def oba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def oba(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
         ranking: Ranking, formula: str, effort: str):
     return method(float('inf'), spectrum, faults, ranking, effort)
 
 
-def mba_dominator(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_dominator(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                   ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(spectrum.tf, spectrum.tf, spectrum.tp, spectrum.tp)
     score = sus.execute(formula)
     return method(score, spectrum, faults, ranking, effort)
 
 
-def mba_zombie(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_zombie(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     score = sus.execute(formula)
     return method(score, spectrum, faults, ranking, effort)
 
 
-def mba_5_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_5_perc(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                ranking: Ranking, formula: str, effort: str):
     size = 0
     for group in spectrum.groups():
-        size += len(group.get_elements())
+        size += len(group)
     return method(int(size*0.05), spectrum, faults, ranking, effort, True)
 
 
-def mba_10_perc(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_10_perc(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                 ranking: Ranking, formula: str, effort: str):
     size = 0
     for group in spectrum.groups():
-        size += len(group.get_elements())
+        size += len(group)
     return method(int(size*0.1), spectrum, faults, ranking, effort, True)
 
 
-def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_const_add(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                   ranking: Ranking, formula: str, effort: str):
     tot_size = 0
     for group in spectrum.groups():
-        tot_size += len(group.get_elements())
+        tot_size += len(group)
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     zero = sus.execute(formula)
     new_ranking = Ranking()
@@ -91,7 +91,7 @@ def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                     faults.values())):
                 fault_num += 1
             new_ranking.extend([next_rank])
-            size += len(next_rank.group.get_elements())
+            size += len(next_rank.entity)
             next_rank = next(r_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
@@ -101,7 +101,7 @@ def mba_const_add(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
     return new_ranking
 
 
-def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def mba_optimal(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
                 ranking: Ranking, formula: str, effort: str):
     sus = Suspicious(0, spectrum.tf, 0, spectrum.tp)
     zero = sus.execute(formula)
@@ -120,7 +120,7 @@ def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
                     faults.values())):
                 fault_num += 1
             new_ranking.extend([next_rank])
-            size += len(next_rank.group.get_elements())
+            size += len(next_rank.entity)
             next_rank = next(r_iter, None)
         if (fault_num != 0):  # should've stopped already: size <= stop_i
             # recalculate stop amount
@@ -130,7 +130,7 @@ def mba_optimal(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
     return new_ranking
 
 
-def aba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
+def aba(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
         ranking: Ranking, formula: str, effort: str):
     new_ranking = Ranking()
     r_iter = iter(ranking)
@@ -153,7 +153,7 @@ def aba(spectrum: Spectrum, faults: Dict[int, List[Spectrum.Element]],
 
 
 def method(stop_score: float, spectrum: Spectrum,
-           faults: Dict[int, List[Spectrum.Element]], ranking: Ranking,
+           faults: Dict[Any, Set[Spectrum.Element]], ranking: Ranking,
            effort: str, by_rank=False):
     new_ranking = Ranking()
     r_iter = iter(ranking)
@@ -170,7 +170,7 @@ def method(stop_score: float, spectrum: Spectrum,
                                           fault_locs in faults.values())):
                 first_fault = len(temp_ranking)
             temp_ranking.append(next_rank)
-            size += len(next_rank.group.get_elements())
+            size += len(next_rank.entity)
             next_rank = next(r_iter, None)
         if (effort == 'worst' or rank.score > stop_score or first_fault == -1):
             new_ranking.extend(temp_ranking)
@@ -195,7 +195,7 @@ def getNames():
     return names
 
 
-def cut(cutoff, spectrum, faults: Dict[int, List[Spectrum.Element]],
+def cut(cutoff, spectrum, faults: Dict[Any, Set[Spectrum.Element]],
         ranking: Ranking, formula: str, effort: str):
     # get the function
     func = funcs[cutoff]

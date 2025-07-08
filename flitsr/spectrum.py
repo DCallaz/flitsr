@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, \
-        Union, Iterable, TYPE_CHECKING
+        Union, Iterable, Iterator, Optional, TYPE_CHECKING
 from bitarray import bitarray
 import numpy as np
 from enum import Enum
@@ -40,13 +40,25 @@ class Spectrum:
         def __hash__(self):
             return hash(self.name)
 
-    class Entity(ABC):
+    class Entity(ABC, Iterable):
         @abstractmethod
         def isFaulty(self) -> bool:
             pass
 
         @abstractmethod
         def index(self) -> int:
+            pass
+
+        @abstractmethod
+        def __len__(self) -> int:
+            pass
+
+        @abstractmethod
+        def __iter__(self) -> Iterator:
+            pass
+
+        @abstractmethod
+        def __getitem__(self, index: int) -> Spectrum.Element:
             pass
 
     class Element(Entity):
@@ -57,12 +69,10 @@ class Spectrum:
         __slots__ = ('_index', '_group', 'path', 'method', 'line', 'faults',
                      'tup')
 
-        def __init__(self, details: List[str], index: int, faults: List[Any],
-                     group: Spectrum.Group = None):
+        def __init__(self, details: List[str], index: int, faults: List[Any]):
             if (len(details) < 1):
                 raise ValueError("Unnamed element: ", *details)
             self._index = index
-            self._group = group
             self.path = details[0]
             self.method = None
             self.line = None
@@ -87,13 +97,17 @@ class Spectrum:
         def index(self) -> int:
             return self._index
 
-        def set_group(self, group: Spectrum.Group):
-            self._group = group
+        def __getitem__(self, index: int):
+            if (index == 0):
+                return self
+            else:
+                raise IndexError("list index out of range")
 
-        def group(self) -> Spectrum.Group:
-            if (self._group is None):
-                raise UnboundLocalError("Element group has not been set")
-            return self._group
+        def __iter__(self) -> Iterator:
+            return iter((self,))
+
+        def __len__(self) -> int:
+            return 1
 
         def __str__(self):
             return "|".join(str(i) for i in self.tup if i) + \
@@ -120,7 +134,8 @@ class Spectrum:
             return str(self)
 
         def __eq__(self, other):
-            return self._index == other._index
+            return (isinstance(other, Spectrum.Element) and
+                    self._index == other._index)
 
         def __hash__(self):
             return self._index
@@ -135,8 +150,8 @@ class Spectrum:
         """
         __slots__ = ('_elems', '_is_faulty', '_index')
 
-        def __init__(self, elems: List[Spectrum.Element] = None,
-                     index: int = None):
+        def __init__(self, elems: Optional[List[Spectrum.Element]] = None,
+                     index: Optional[int] = None):
             """
             Create a group object. If elems is given, the group is initialized
             with the elements within, otherwise an empty group is initialized.
@@ -159,11 +174,17 @@ class Spectrum:
         def isFaulty(self) -> bool:
             return self._is_faulty
 
-        def get_elements(self) -> List[Spectrum.Element]:
-            return self._elems
-
         def is_in(self, element):
             return element in self._elems
+
+        def __getitem__(self, index: int) -> Spectrum.Element:
+            return self._elems[index]
+
+        def __len__(self):
+            return len(self._elems)
+
+        def __iter__(self):
+            return iter(self._elems)
 
         def __str__(self) -> str:
             return f"G{self._index} ({self._elems})"
@@ -172,7 +193,8 @@ class Spectrum:
             return str(self)
 
         def __eq__(self, other):
-            return self._index == other._index
+            return (isinstance(other, Spectrum.Group) and
+                    self._index == other._index)
 
         def __hash__(self):
             return self._index
@@ -182,11 +204,12 @@ class Spectrum:
         The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
-        __slots__ = ('_groups', 'exec', 'test', '_iter')
+        __slots__ = ('_groups', '_spectrum', 'exec', 'test', '_iter')
 
         def __init__(self, test: Spectrum.Test,
-                     groups: List[Spectrum.Group]):
-            self._groups = groups
+                     spectrum: Spectrum):
+            self._groups = spectrum.groups()
+            self._spectrum = spectrum
             self.exec = bitarray(len(self._groups))
             self.test = test
 
@@ -238,13 +261,13 @@ class Spectrum:
             """
             # Get the element's group
             try:
-                return bool(self.exec[elem.group().index()])
+                return bool(self.exec[self._spectrum.get_group(elem).index()])
             except (KeyError, IndexError):
                 return default
 
     def __init__(self, elements: List[Spectrum.Element],
                  groups: List[Spectrum.Group], tests: List[Spectrum.Test],
-                 executions: Dict[Test, Set[Element]]):
+                 executions: Dict[Test, Set[Spectrum.Element]]):
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self.p: Dict[Spectrum.Group, int] = dict()
         self.f: Dict[Spectrum.Group, int] = dict()
@@ -252,13 +275,14 @@ class Spectrum:
         edict = {e: i for i, e in enumerate(elements)}
         for group in groups:
             group.sort_elems(key=lambda x: edict[x])
-        self._groups = sorted(groups, key=lambda g: edict[g.get_elements()[0]])
+        self._groups = sorted(groups, key=lambda g: edict[g[0]])
+        self._group_map: Dict[Spectrum.Element, Spectrum.Group] = {}
         for i, group in enumerate(self._groups):
             group.set_index(i)
             self.p[group] = 0
             self.f[group] = 0
-            for elem in group.get_elements():
-                elem.set_group(group)
+            for elem in group:
+                self._group_map[elem] = group
         self._elements: List[Spectrum.Element] = elements
         # Initialize test related properties
         self._removed_tests: Dict[str, List[Spectrum.Test]] = {}
@@ -275,13 +299,13 @@ class Spectrum:
                 self._failing.append(test)
                 self.tf += 1
             # Add test execution
-            self.spectrum[test] = self.Execution(test, self._groups)
+            self.spectrum[test] = self.Execution(test, self)
         # Initialize execution information
         for test in self._tests:
             test_exe = executions[test]
             seen: Set[Spectrum.Group] = set()
             for elem in test_exe:
-                group = elem.group()
+                group = self._group_map[elem]
                 if (group not in seen):
                     seen.add(group)
                     self.spectrum[test].update(group, True)
@@ -304,18 +328,25 @@ class Spectrum:
         return len(self._tests)
 
     def elements(self) -> List[Spectrum.Element]:
+        """ Get a list of a all the elements in this spectrum """
         return self._elements
 
     def groups(self) -> List[Spectrum.Group]:
+        """ Get a list of a all the groups in this spectrum """
         return self._groups
 
     def tests(self) -> List[Spectrum.Test]:
+        """
+        Get a list of a all the tests (passing and failing) in this spectrum
+        """
         return self._tests
 
     def failing(self) -> List[Spectrum.Test]:
+        """ Get a list of a all the failing tests in this spectrum """
         return self._failing
 
     def locs(self) -> int:
+        """ Get the number of groups in this spectrum """
         return len(self._groups)
 
     def remove_test(self, test: Spectrum.Test, bucket='default'):
@@ -343,7 +374,7 @@ class Spectrum:
                          hard=True):
         if (self.spectrum[test][ent]):
             if (isinstance(ent, Spectrum.Element)):
-                group = ent.group()
+                group = self._group_map[ent]
             elif (isinstance(ent, Spectrum.Group)):
                 group = ent
             if (hard):
@@ -411,22 +442,21 @@ class Spectrum:
                     else:
                         self.f[group] += 1
 
-    def get_group(self, elem: Spectrum.Element) -> Spectrum.Group:
+    def get_group(self, element: Spectrum.Element) -> Spectrum.Group:
         """
         Given an element, return the group of elements with identical coverage
-        that this element is apart of.
+        from this spectrum that this element is apart of. Raises KeyError if
+        the element does not belong to any group in this spectrum.
         """
-        return elem.group()
+        return self._group_map[element]
 
-    def get_faults(self) -> Dict[Any, List[Spectrum.Element]]:
-        actual_faults: Dict[Any, List[Spectrum.Element]] = dict()
+    def get_faults(self) -> Dict[Any, Set[Spectrum.Element]]:
+        actual_faults: Dict[Any, Set[Spectrum.Element]] = dict()
         for group in self.groups():
-            for elem in group.get_elements():
+            for elem in group:
                 if (elem.faults):
                     for fault in elem.faults:
-                        if (fault not in actual_faults):
-                            actual_faults[fault] = []
-                        actual_faults[fault].append(elem)
+                        actual_faults.setdefault(fault, set()).add(elem)
         return actual_faults
 
     def get_tests(self, entity: Spectrum.Entity, only_failing=False,
