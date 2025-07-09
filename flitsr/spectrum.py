@@ -359,6 +359,8 @@ class Spectrum:
         spectrum (NOTE: this does not save much memory, but only prevents the
         test from being restored by subsequent calls to reset).
         """
+        if (test not in self._tests):
+            return
         self._tests.remove(test)
         if (test.outcome is Outcome.PASSED):
             self.tp -= 1
@@ -429,18 +431,36 @@ class Spectrum:
             del self._removed_tests[key]
         # then add back the tests, re-computing counts
         for test in tests_add_back:
-            self._tests.append(test)
-            if (test.outcome is Outcome.PASSED):
-                self.tp += 1
-            else:
-                self._failing.append(test)
-                self.tf += 1
-            for group in self.groups():
-                if (self.spectrum[test][group]):
-                    if (test.outcome is Outcome.PASSED):
-                        self.p[group] += 1
-                    else:
-                        self.f[group] += 1
+            self._add_back_removed_test(test)
+
+    def _add_back_removed_test(self, test: Spectrum.Test):
+        self._tests.append(test)
+        if (test.outcome is Outcome.PASSED):
+            self.tp += 1
+        else:
+            self._failing.append(test)
+            self.tf += 1
+        for group in self.groups():
+            if (self.spectrum[test][group]):
+                if (test.outcome is Outcome.PASSED):
+                    self.p[group] += 1
+                else:
+                    self.f[group] += 1
+
+    def reset_single_test(self, test: Spectrum.Test,
+                          bucket: Optional[str] = None):
+        if (bucket is None):
+            for key in self._removed_tests:
+                if (test in self._removed_tests[key]):
+                    bucket = key
+                    break
+        if (bucket is None or test not in self._removed_tests[bucket]):
+            raise KeyError(f"Could not find removed test {test} in "
+                           f"{bucket or 'any'} bucket")
+        self._removed_tests[bucket].remove(test)
+        self._add_back_removed_test(test)
+
+
 
     def get_group(self, element: Spectrum.Element) -> Spectrum.Group:
         """
@@ -481,6 +501,12 @@ class Spectrum:
 
     def get_executed_elements(self, test: Spectrum.Test) -> Set[Spectrum.Element]:
         return self._get_executed_entities(test, groups=False)
+
+    def get_removed_tests(self, bucket='default') -> List[Spectrum.Test]:
+        if (bucket == None):
+            return self._all_removed_tests()
+        else:
+            return self._removed_tests[bucket]
 
     def _get_executed_entities(self, test: Spectrum.Test, groups=True):
         """
