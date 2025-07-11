@@ -159,6 +159,7 @@ class Spectrum:
             self._elems = elems if elems is not None else []
             self._is_faulty = any(e.isFaulty() for e in self._elems)
             self._index = index
+            self._hash = hash(frozenset(self._elems))
 
         def sort_elems(self, key: Callable):
             self._elems.sort(key=key)
@@ -174,8 +175,11 @@ class Spectrum:
         def isFaulty(self) -> bool:
             return self._is_faulty
 
-        def is_in(self, element):
-            return element in self._elems
+        def is_subgroup(self, group: Spectrum.Group) -> bool:
+            for elem in group._elems:
+                if (elem not in self):
+                    return False
+            return True
 
         def __getitem__(self, index: int) -> Spectrum.Element:
             return self._elems[index]
@@ -194,10 +198,10 @@ class Spectrum:
 
         def __eq__(self, other):
             return (isinstance(other, Spectrum.Group) and
-                    self._index == other._index)
+                    self._hash == other._hash)
 
         def __hash__(self):
-            return self._index
+            return self._hash
 
     class Execution():
         """
@@ -460,8 +464,6 @@ class Spectrum:
         self._removed_tests[bucket].remove(test)
         self._add_back_removed_test(test)
 
-
-
     def get_group(self, element: Spectrum.Element) -> Spectrum.Group:
         """
         Given an element, return the group of elements with identical coverage
@@ -503,10 +505,14 @@ class Spectrum:
         return self._get_executed_entities(test, groups=False)
 
     def get_removed_tests(self, bucket='default') -> List[Spectrum.Test]:
-        if (bucket == None):
+        """
+        Return a copy of all the removed tests in a particular bucket. If
+        bucket is None, all removed tests from all buckets are returned.
+        """
+        if (bucket is None):
             return self._all_removed_tests()
         else:
-            return self._removed_tests[bucket]
+            return self._removed_tests[bucket][:]
 
     def _get_executed_entities(self, test: Spectrum.Test, groups=True):
         """

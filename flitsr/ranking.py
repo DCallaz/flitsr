@@ -38,8 +38,29 @@ class Ranking:
     def __getitem__(self, index: int):
         return self._ranks[index]
 
-    def get_rank(self, entity: Spectrum.Entity) -> Rank:
-        return self.entity_map[entity]
+    def get_rank(self, entity: Spectrum.Entity, check_sub_group=False) -> Rank:
+        """
+        Return the rank of the given entity. If the check_sub_group option is
+        given, try to find if the given entity is contained within another
+        group in the ranking (either as a sub-group or as an element).
+        """
+        try:
+            return self.entity_map[entity]
+        except KeyError as keyerror:
+            if (check_sub_group):
+                # Before exiting, first check if we can find a super-group
+                is_group = isinstance(entity, Spectrum.Group)
+                for key in self.entity_map:
+                    # If a group, check if it is a sub-group
+                    if (is_group):
+                        if (isinstance(key, Spectrum.Group) and
+                            key.is_subgroup(entity)):  # type:ignore
+                            return self.entity_map[key]
+                    # If an element, check if in any group
+                    elif (entity in key):
+                        return self.entity_map[key]
+            # if no super-group can be found, raise the KeyError
+            raise keyerror
 
     def sort(self, reverse: bool):
         if (self._tiebrk == Tiebrk.EXEC):  # Sorted by execution counts
@@ -48,9 +69,9 @@ class Ranking:
             random.shuffle(self._ranks)
         elif (self._tiebrk == Tiebrk.ORIG):  # original ranking tie break
             if (orig is not None):  # sort by original rank then exec count
-                self._ranks.sort(key=lambda x: orig.get_rank(x.entity).exec,
+                self._ranks.sort(key=lambda x: orig.get_rank(x.entity, True).exec,
                                  reverse=reverse)
-                self._ranks.sort(key=lambda x: orig.get_rank(x.entity).score,
+                self._ranks.sort(key=lambda x: orig.get_rank(x.entity, True).score,
                                  reverse=reverse)
             else:  # if no orig, still sort by current execution count
                 self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
