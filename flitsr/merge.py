@@ -105,6 +105,14 @@ def ci_in(str1: str, col: Collection[str]):
     return str1.casefold() in map(str.casefold, col)
 
 
+def get_tex_heading_len(zipped: List[Tuple[str, str]]) -> int:
+    max_len = 10  # default is 10
+    for (mode, metric) in zipped:
+        cur_len = len(metric) + len(mode) + 1
+        max_len = max(max_len, cur_len)
+    return max_len
+
+
 def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           excl: List[Tuple[str, str]], rel: bool,
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
@@ -139,7 +147,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     # Read in all results
     if (rel):
         sizes = {}
-    results_check = re.compile("^(?:([\\w_]*)_)?(\\w+)\\.results$")
+    results_check = re.compile("^(?:([\\w_-]*)_)?(\\w+)\\.results$")
     for d in dirs:
         files.setdefault(d, {})
         for file in os.scandir(osp.normpath(d)):
@@ -234,11 +242,11 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 perc_file != output_file):
             print('\t'*tabs, name_disp, sep='', file=perc_file)
 
-    def print_tex_heading(mode, metric):
+    def print_tex_heading(mode: str, metric: str, tex_heading_len: int):
         metric_disp = metric.replace("_", " ").title()
         mode_disp = mode.replace("_", " ").title()
-        print('%25s' % (metric_disp + " " + mode_disp), end=" & ",
-              file=tex_file)
+        print(f'%{tex_heading_len}s' % (metric_disp + " " + mode_disp),
+              end=" & ", file=tex_file)
 
     def print_results(mode, metric):
         for j, calc in enumerate(calcs):
@@ -298,6 +306,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     else:
         zipped = [(mo, me) for mo in modes for me in metrics]
     cur = None
+    tex_len = get_tex_heading_len(zipped)
     # Set up tex file
     if (tex_file):
         print("\\documentclass{standalone}", file=tex_file)
@@ -327,7 +336,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                     cur = mode
                 print_heading(metric, 1)
             if (tex_file):
-                print_tex_heading(mode, metric)
+                print_tex_heading(mode, metric, tex_len)
             print_results(mode, metric)
     if (tex_file):
         print("\\end{tabular}", file=tex_file)
@@ -478,8 +487,7 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument('-a', '--advanced-types', nargs='+', metavar='TYPE',
                         help='Specify the list of advanced types to include '
                         'when merging. By default all available advanced types '
-                        'that appear in filenames of found files are included.',
-                        choices=adv_names)
+                        'that appear in filenames of found files are included.')
     parser.add_argument('-A', '-f', '--advanced-metrics', '--flitsrs',
                         nargs='+', metavar='METRIC',
                         help='Specify the metrics for which to display '

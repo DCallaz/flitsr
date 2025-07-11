@@ -46,6 +46,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             type_sep = type_comb.split('+')
             cluster = None
             ranker = None
+            refiner = None
             for t in type_sep:
                 t = t.upper()
                 if (hasattr(advanced.ClusterType, t)):
@@ -53,6 +54,11 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         raise argparse.ArgumentTypeError('Cannot have two '
                             f'cluster types: {cluster.name} and {t}')
                     cluster = advanced.ClusterType[t]
+                elif (hasattr(advanced.RefinerType, t)):
+                    if (refiner is not None):
+                        raise argparse.ArgumentTypeError('Cannot have two '
+                            f'refiner types: {refiner.name} and {t}')
+                    refiner = advanced.RefinerType[t]
                 elif (hasattr(advanced.RankerType, t)):
                     if (ranker is not None):
                         raise argparse.ArgumentTypeError('Cannot have two '
@@ -61,7 +67,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 else:
                     raise argparse.ArgumentTypeError('Invalid type for '
                                                      f'--all-types: \"{t}\"')
-            adv_type = Config(ranker, cluster)
+            adv_type = Config(ranker, cluster, refiner)
             return adv_type
 
         # General options
@@ -452,9 +458,13 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     ts['refiner'] = args.refiner
                 if (getattr(args, 'cluster', None) is not None):
                     ts['cluster'] = args.cluster
-                args.types = [Config(**ts),
-                              Config(advanced.RankerType['FLITSR'], **ts),
-                              Config(advanced.RankerType['MULTI'], **ts)]
+                if (getattr(args, 'ranker', None) is not None):
+                    ts['ranker'] = args.ranker
+                    args.types = [Config(**ts)]
+                else:
+                    args.types = [Config(**ts),
+                                  Config(advanced.RankerType['FLITSR'], **ts),
+                                  Config(advanced.RankerType['MULTI'], **ts)]
             if (len(args.weff) == 0 and len(args.top1) == 0 and
                     len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
                 args.weff = ["first", "avg", "med", "last", 2, 3, 5]
