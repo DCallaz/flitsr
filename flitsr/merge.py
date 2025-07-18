@@ -13,7 +13,7 @@ import argcomplete
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
-from typing import Set, Dict, List, Tuple, Collection, Optional
+from typing import Set, Dict, List, Tuple, Collection, Optional, Union
 
 PERC_N = "percentage at n"
 
@@ -23,11 +23,15 @@ class Avg:
     def __init__(self, size=None, percn=False):
         self.all = []
         self.adds = 0
+        self.top = False
         self.percn = percn
         self.rel = False
         if (size is not None):
             self.rel = True
             self.size = size
+
+    def set_top(self):
+        self.top = True
 
     def add(self, val):
         self.all.append(val)
@@ -118,7 +122,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
           percs=None, incl_metrics=None, incl_advs=None, adv_metrics=None,
-          sign=None, sign_less=[], base_type=None, thrs=[], keep_order=False):
+          sign=None, sign_type=[], base_types: Optional[List] = None,
+          thrs=[], keep_order=False, find_top=False):
     # Set up the include and exclude dir names dicts
     incl_dict: Dict[str, List[str]] = {}
     excl_dict: Dict[str, List[str]] = {}
@@ -127,8 +132,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     for d, n in excl:
         excl_dict.setdefault(d, []).append(n)
     # set up other variables
-    if (base_type is None):
-        base_type = 'base'
+    if (base_types is None):
+        base_types = ['base']
     temp_metrics: Set[str] = set()
     temp_modes: Set[str] = set()
     temp_calcs: Set[str] = set()
@@ -207,7 +212,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
 
     def suffix_cmp(s1, s2):  # compare with common suffixes removed
         i = 0
-        while (s1[-(i+1)] == s2[-(i+1)]):
+        while ((i < len(s1) and i < len(s2)) and s1[-(i+1)] == s2[-(i+1)]):
             i += 1
         return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
     k = cmp_to_key(suffix_cmp)
@@ -280,38 +285,73 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                             r, p = avg.significance(avgs[mode][m_alt][calc])
                             signis.setdefault(r, []).append((m_alt, p))
                     sign_disp = f" (significantly {signis})"
-                print("\t\t", calc+": ", result, sign_disp, sep='',
-                      file=output_file)
+                print("\t\t", calc+": ", result, " (Top)" if avg.top else "",
+                      sign_disp, sep='', file=output_file)
                 if (tex_file):
                     # process TeX significance only for advanced types
-                    sign_disp = ''
-                    base = base_type.format(re.sub('_[^_]*$', '', mode))
-                    if (sign == 'type' and not ci_eq(mode, base)):
-                        try:
-                            r, p = avg.significance(
-                                    avgs[base][metric][calc])
-                            if ((calc in sign_less and r == 'less') or
-                                (calc not in sign_less and r == 'greater')):
-                                sign_disp = '\\tp'
-                        except KeyError:
-                            pass
+                    sign_color = 0
+                    for i, base_type in enumerate(base_types):
+                        base = base_type.format(re.sub('_[^_]*$', '', mode))
+                        if (sign == 'type' and not ci_eq(mode, base)):
+                            try:
+                                r, p = avg.significance(
+                                        avgs[base][metric][calc])
+                                if ((calc in sign_type and sign_type[calc] == r) or
+                                    (calc not in sign_type and r == 'greater')):
+                                    sign_color += 2**i
+                            except KeyError:
+                                pass
+                    if (sign_color == 0):
+                        sign_disp = ''
+                    elif (sign_color == 1):
+                        sign_disp = '\\tp'
+                    else:
+                        sign_disp = f'\\tp[{sign_color}]'
                     end = (" & " if j+1 != len(calcs) else " \\\\\n")
-                    print('{: <3}'.format(sign_disp),
+                    top_disp = "\\bf" if avg.top else ""
+                    print('{: <9}'.format(sign_disp+top_disp),
                           '{: >10.{}f}'.format(result, min(dec, 8)),
                           end=end, file=tex_file)
 
-    # Print out merged results
+    # Get the metric and mode order
     if (ci_eq(group, 'metric')):
         zipped = [(mo, me) for me in metrics for mo in modes]
     else:
         zipped = [(mo, me) for mo in modes for me in metrics]
+
+    # Determine and set top results
+    if (find_top):
+        for calc in calcs:
+            top: Optional[Avg] = None
+            top_avgs = []
+            for (mode, metric) in zipped:
+                avg = avgs[mode][metric][calc].eval()
+                if (top is None or
+                    (calc in sign_type and sign_type[calc] == 'less' and avg < top) or
+                    ((calc not in sign_type or sign_type[calc] == 'greater') and avg > top)):
+                    top = avg
+                    top_avgs = [avgs[mode][metric][calc]]
+                elif (avg == top):
+                    top_avgs.append(avgs[mode][metric][calc])
+            for top_avg in top_avgs:
+                top_avg.set_top()
+
+    # Print out merged results
     cur = None
     tex_len = get_tex_heading_len(zipped)
     # Set up tex file
     if (tex_file):
         print("\\documentclass{standalone}", file=tex_file)
         print("\\usepackage[table]{xcolor}", file=tex_file)
-        print("\\newcommand{\\tp}{\\cellcolor{yellow!50}}", file=tex_file)
+
+        print("\\colorlet{tpc1}{yellow!50}", file=tex_file)
+        print("\\colorlet{tpc2}{blue!30}", file=tex_file)
+        print("\\colorlet{tpc3}{green!40}", file=tex_file)
+        print("\\colorlet{tpc4}{red!50}", file=tex_file)
+        print("\\colorlet{tpc5}{orange!50}", file=tex_file)
+        print("\\colorlet{tpc6}{purple!60}", file=tex_file)
+        print("\\colorlet{tpc7}{brown!60}", file=tex_file)
+        print("\\newcommand{\\tp}[1][1]{\\cellcolor{tpc#1}}", file=tex_file)
         # print("\\usepackage{longtable}", file=tex_file)
         print("\\begin{document}", file=tex_file)
         # print("\\begin{longtable}", file=tex_file)
@@ -483,13 +523,14 @@ def main(argv: Optional[List[str]] = None):
                         'files will be merged. Note that this option only '
                         'restricts the output, all files available are still '
                         'read, however files not existing are not read.',
-                        choices=met_names)
+                        choices=met_names, action='extend')
     parser.add_argument('-a', '--advanced-types', nargs='+', metavar='TYPE',
                         help='Specify the list of advanced types to include '
                         'when merging. By default all available advanced types '
-                        'that appear in filenames of found files are included.')
+                        'that appear in filenames of found files are included.',
+                        action='extend')
     parser.add_argument('-A', '-f', '--advanced-metrics', '--flitsrs',
-                        nargs='+', metavar='METRIC',
+                        nargs='+', metavar='METRIC', action='extend',
                         help='Specify the metrics for which to display '
                         'advanced type values for. By default all metric\'s '
                         'advanced type values are shown.', choices=met_names)
@@ -497,7 +538,8 @@ def main(argv: Optional[List[str]] = None):
                         help='Specify the list of calculations to include when '
                         'merging. By default all available calculations are '
                         'included. NOTE: the names of the calculations need to '
-                        'be found in the corresponding .results files')
+                        'be found in the corresponding .results files',
+                        action='extend')
     parser.add_argument('--threshold', nargs=3, action=ThresholdAction, default=[],
                         help='Format: --threshold <calculation> {above, below} '
                         '<float>. Specifies that an additional calculation '
@@ -509,7 +551,7 @@ def main(argv: Optional[List[str]] = None):
                         help='Specify calculations that must be intepreted as '
                         'a percentage value. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
-                        '.results files')
+                        '.results files', action='extend')
     parser.add_argument('-s', '--significance', nargs='?', const='type',
                         choices=['metric', 'type'], dest='sign',
                         help='Specifies that additional significance tests '
@@ -531,8 +573,20 @@ def main(argv: Optional[List[str]] = None):
                         'the default. Affects the significance indicators '
                         'for the TeX output. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
-                        '.results files', dest='sign_less', default=[])
-    parser.add_argument('-b', '--base-type', help='Intended for use with '
+                        '.results files', dest='sign_less', action='extend',
+                        default=[])
+    parser.add_argument('-E', '--equal-significance', nargs='+', metavar='CALC',
+                        help='Intended for use with the --significance and '
+                        '--tex options. Specify the calculations whose result '
+                        'is to be tested for significantly equal to the '
+                        'baseline instead of significantly greater, which is '
+                        'the default. Affects the significance indicators '
+                        'for the TeX output. NOTE: the names of the '
+                        'calculations need to be found in the corresponding '
+                        '.results files', dest='sign_eq', action='extend',
+                        default=[])
+    parser.add_argument('-b', '--base-types', nargs='+', action='extend',
+                        help='Intended for use with '
                         '--significance and --tex options. Specify the base '
                         'type that will be compared against for all other '
                         'types when adding significance test annotations to '
@@ -545,17 +599,30 @@ def main(argv: Optional[List[str]] = None):
                         'options. This option does nothing to the '
                         'corresponding order if either of those options are '
                         'unspecified')
+    parser.add_argument('-T', '--top-results', action='store_true',
+                        help='Additionally print out which technique performed '
+                        'the best for each calculation. Indicators are added '
+                        'to both the normal output, as well as the TeX output '
+                        'in the form of boldfacing.')
     argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
     if ('max' not in args):
         args.max = None
+    # create significance dict
+    sign_type = {}
+    for calc in args.sign_less:
+        sign_type[calc] = 'less'
+    for calc in args.sign_eq:
+        sign_type[calc] = 'equal'
+
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
           incl_metrics=args.metrics, incl_advs=args.advanced_types,
           adv_metrics=args.advanced_metrics, sign=args.sign,
-          sign_less=args.sign_less, base_type=args.base_type,
-          thrs=args.threshold, keep_order=args.keep_order)
+          sign_type=sign_type, base_types=args.base_types,
+          thrs=args.threshold, keep_order=args.keep_order,
+          find_top=args.top_results)
 
 
 if __name__ == "__main__":
