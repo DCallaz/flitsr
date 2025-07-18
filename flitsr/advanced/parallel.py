@@ -52,7 +52,7 @@ class Parallel(Cluster):
                 if (ind not in tests):
                     toRemove.add(test)
             for test in toRemove:
-                new_spectrum.remove(test, hard=True)
+                new_spectrum.remove_test(test, bucket=None)  # hard remove test
             self.trim_groups(new_spectrum)
             spectrums.append(new_spectrum)
         return spectrums

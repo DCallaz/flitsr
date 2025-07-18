@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, TYPE_CHECKING
+from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, \
+        Union, Iterable, Iterator, Optional, TYPE_CHECKING
 from bitarray import bitarray
 import numpy as np
 from enum import Enum
@@ -39,13 +40,25 @@ class Spectrum:
         def __hash__(self):
             return hash(self.name)
 
-    class Entity(ABC):
+    class Entity(ABC, Iterable):
         @abstractmethod
         def isFaulty(self) -> bool:
             pass
 
         @abstractmethod
         def index(self) -> int:
+            pass
+
+        @abstractmethod
+        def __len__(self) -> int:
+            pass
+
+        @abstractmethod
+        def __iter__(self) -> Iterator:
+            pass
+
+        @abstractmethod
+        def __getitem__(self, index: int) -> Spectrum.Element:
             pass
 
     class Element(Entity):
@@ -56,12 +69,10 @@ class Spectrum:
         __slots__ = ('_index', '_group', 'path', 'method', 'line', 'faults',
                      'tup')
 
-        def __init__(self, details: List[str], index: int, faults: List[Any],
-                     group: Spectrum.Group = None):
+        def __init__(self, details: List[str], index: int, faults: List[Any]):
             if (len(details) < 1):
                 raise ValueError("Unnamed element: ", *details)
             self._index = index
-            self._group = group
             self.path = details[0]
             self.method = None
             self.line = None
@@ -86,13 +97,17 @@ class Spectrum:
         def index(self) -> int:
             return self._index
 
-        def set_group(self, group: Spectrum.Group):
-            self._group = group
+        def __getitem__(self, index: int):
+            if (index == 0):
+                return self
+            else:
+                raise IndexError("list index out of range")
 
-        def group(self) -> Spectrum.Group:
-            if (self._group is None):
-                raise UnboundLocalError("Element group has not been set")
-            return self._group
+        def __iter__(self) -> Iterator:
+            return iter((self,))
+
+        def __len__(self) -> int:
+            return 1
 
         def __str__(self):
             return "|".join(str(i) for i in self.tup if i) + \
@@ -119,7 +134,8 @@ class Spectrum:
             return str(self)
 
         def __eq__(self, other):
-            return self._index == other._index
+            return (isinstance(other, Spectrum.Element) and
+                    self._index == other._index)
 
         def __hash__(self):
             return self._index
@@ -134,8 +150,8 @@ class Spectrum:
         """
         __slots__ = ('_elems', '_is_faulty', '_index')
 
-        def __init__(self, elems: List[Spectrum.Element] = None,
-                     index: int = None):
+        def __init__(self, elems: Optional[List[Spectrum.Element]] = None,
+                     index: Optional[int] = None):
             """
             Create a group object. If elems is given, the group is initialized
             with the elements within, otherwise an empty group is initialized.
@@ -143,6 +159,7 @@ class Spectrum:
             self._elems = elems if elems is not None else []
             self._is_faulty = any(e.isFaulty() for e in self._elems)
             self._index = index
+            self._hash = hash(frozenset(self._elems))
 
         def sort_elems(self, key: Callable):
             self._elems.sort(key=key)
@@ -158,11 +175,20 @@ class Spectrum:
         def isFaulty(self) -> bool:
             return self._is_faulty
 
-        def get_elements(self) -> List[Spectrum.Element]:
-            return self._elems
+        def is_subgroup(self, group: Spectrum.Group) -> bool:
+            for elem in group._elems:
+                if (elem not in self):
+                    return False
+            return True
 
-        def is_in(self, element):
-            return element in self._elems
+        def __getitem__(self, index: int) -> Spectrum.Element:
+            return self._elems[index]
+
+        def __len__(self):
+            return len(self._elems)
+
+        def __iter__(self):
+            return iter(self._elems)
 
         def __str__(self) -> str:
             return f"G{self._index} ({self._elems})"
@@ -171,21 +197,23 @@ class Spectrum:
             return str(self)
 
         def __eq__(self, other):
-            return self._index == other._index
+            return (isinstance(other, Spectrum.Group) and
+                    self._hash == other._hash)
 
         def __hash__(self):
-            return self._index
+            return self._hash
 
     class Execution():
         """
         The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
-        __slots__ = ('_groups', 'exec', 'test', '_iter')
+        __slots__ = ('_groups', '_spectrum', 'exec', 'test', '_iter')
 
         def __init__(self, test: Spectrum.Test,
-                     groups: List[Spectrum.Group]):
-            self._groups = groups
+                     spectrum: Spectrum):
+            self._groups = spectrum.groups()
+            self._spectrum = spectrum
             self.exec = bitarray(len(self._groups))
             self.test = test
 
@@ -237,13 +265,13 @@ class Spectrum:
             """
             # Get the element's group
             try:
-                return bool(self.exec[elem.group().index()])
+                return bool(self.exec[self._spectrum.get_group(elem).index()])
             except (KeyError, IndexError):
                 return default
 
     def __init__(self, elements: List[Spectrum.Element],
                  groups: List[Spectrum.Group], tests: List[Spectrum.Test],
-                 executions: Dict[Test, Set[Element]]):
+                 executions: Dict[Test, Set[Spectrum.Element]]):
         self.spectrum: Dict[Spectrum.Test, Spectrum.Execution] = {}
         self.p: Dict[Spectrum.Group, int] = dict()
         self.f: Dict[Spectrum.Group, int] = dict()
@@ -251,16 +279,18 @@ class Spectrum:
         edict = {e: i for i, e in enumerate(elements)}
         for group in groups:
             group.sort_elems(key=lambda x: edict[x])
-        self._groups = sorted(groups, key=lambda g: edict[g.get_elements()[0]])
+        self._groups = sorted(groups, key=lambda g: edict[g[0]])
+        self._group_map: Dict[Spectrum.Element, Spectrum.Group] = {}
         for i, group in enumerate(self._groups):
             group.set_index(i)
             self.p[group] = 0
             self.f[group] = 0
-            for elem in group.get_elements():
-                elem.set_group(group)
+            for elem in group:
+                self._group_map[elem] = group
         self._elements: List[Spectrum.Element] = elements
         # Initialize test related properties
-        self._removed: List[Spectrum.Test] = []
+        self._removed_tests: Dict[str, List[Spectrum.Test]] = {}
+        self._removed_groups: Dict[str, List[Spectrum.Group]] = {}
         self._tests: List[Spectrum.Test] = tests
         self._failing: List[Spectrum.Test] = []
         self.tp: int = 0
@@ -273,13 +303,13 @@ class Spectrum:
                 self._failing.append(test)
                 self.tf += 1
             # Add test execution
-            self.spectrum[test] = self.Execution(test, self._groups)
+            self.spectrum[test] = self.Execution(test, self)
         # Initialize execution information
         for test in self._tests:
             test_exe = executions[test]
             seen: Set[Spectrum.Group] = set()
             for elem in test_exe:
-                group = elem.group()
+                group = self._group_map[elem]
                 if (group not in seen):
                     seen.add(group)
                     self.spectrum[test].update(group, True)
@@ -302,21 +332,39 @@ class Spectrum:
         return len(self._tests)
 
     def elements(self) -> List[Spectrum.Element]:
+        """ Get a list of a all the elements in this spectrum """
         return self._elements
 
     def groups(self) -> List[Spectrum.Group]:
+        """ Get a list of a all the groups in this spectrum """
         return self._groups
 
     def tests(self) -> List[Spectrum.Test]:
+        """
+        Get a list of a all the tests (passing and failing) in this spectrum
+        """
         return self._tests
 
     def failing(self) -> List[Spectrum.Test]:
+        """ Get a list of a all the failing tests in this spectrum """
         return self._failing
 
     def locs(self) -> int:
+        """ Get the number of groups in this spectrum """
         return len(self._groups)
 
-    def remove(self, test: Spectrum.Test, hard=False):
+    def remove_test(self, test: Spectrum.Test, bucket='default'):
+        """
+        Remove the given test from this spectrum.
+        All removed tests are stored so that they may be added back to the
+        spectrum at a later point. By default, removed tests are stored in the
+        'default' bucket, but a different bucket name may be optionally given.
+        Setting the bucket to be None will completely remove the test from the
+        spectrum (NOTE: this does not save much memory, but only prevents the
+        test from being restored by subsequent calls to reset).
+        """
+        if (test not in self._tests):
+            return
         self._tests.remove(test)
         if (test.outcome is Outcome.PASSED):
             self.tp -= 1
@@ -325,14 +373,14 @@ class Spectrum:
             self.tf -= 1
         for group in self.groups():
             self.remove_execution(test, group, hard=False)
-        if (not hard):
-            self._removed.append(test)
+        if (bucket is not None):
+            self._removed_tests.setdefault(bucket, []).append(test)
 
     def remove_execution(self, test: Spectrum.Test, ent: Spectrum.Entity,
                          hard=True):
         if (self.spectrum[test][ent]):
             if (isinstance(ent, Spectrum.Element)):
-                group = ent.group()
+                group = self._group_map[ent]
             elif (isinstance(ent, Spectrum.Group)):
                 group = ent
             if (hard):
@@ -342,59 +390,103 @@ class Spectrum:
             else:
                 self.f[group] -= 1
 
-    def remove_group(self, group: Spectrum.Group):
+    def remove_group(self, group: Spectrum.Group, bucket='default'):
         try:
             self._groups.remove(group)  # remove if there
+            self._removed_groups.setdefault(bucket, []).append(group)
         except ValueError:
             # Ignore if the element is not in the list
             pass
         self.p.pop(group, None)  # remove if there
         self.f.pop(group, None)  # remove if there
-        # No need to remove execution (bitarray)
-        # for test in self.tests():
-        #     self.spectrum[test].remove_exec(rem)  # remove if there
-        return group
 
-    def reset(self):
-        """Re-activates all the tests and recomputes counts"""
-        for test in self._removed:
-            self._tests.append(test)
-            if (test.outcome is Outcome.PASSED):
-                self.tp += 1
-            else:
-                self._failing.append(test)
-                self.tf += 1
-            for group in self.groups():
-                if (self.spectrum[test][group]):
-                    if (test.outcome is Outcome.PASSED):
-                        self.p[group] += 1
-                    else:
-                        self.f[group] += 1
-        self._removed.clear()
+    def reset(self, bucket: Union[None, str, List[str]] = None):
+        """
+        Re-activates removed tests and recomputes counts.
+        By default, or if bucket is None, all buckets are emptied and their
+        removed tests reactivated. A bucket name (or Iterable of bucket names)
+        may optionally be given to only reset the given name(s).
+        """
+        # first get the groups to add back
+        groups_add_back = []
+        group_keys_remove = []
+        for key in self._removed_groups:
+            if (bucket is None or (isinstance(bucket, str) and key == bucket)
+               or (isinstance(bucket, Iterable) and key in bucket)):
+                groups_add_back.extend(self._removed_groups[key])
+                group_keys_remove.append(key)
+        for key in group_keys_remove:
+            del self._removed_groups[key]
+        # then add back the groups, re-computing counts
+        for group in groups_add_back:
+            self._groups.insert(group.index(), group)
+            self.p[group] = len([t for t in self.tests() if t.outcome ==
+                                Outcome.PASS and self[t][group]])
+            self.f[group] = len([t for t in self.failing() if self[t][group]])
+        # next get the tests to add back
+        tests_add_back = []
+        test_keys_remove = []
+        for key in self._removed_tests:
+            if (bucket is None or (isinstance(bucket, str) and key == bucket)
+               or (isinstance(bucket, Iterable) and key in bucket)):
+                tests_add_back.extend(self._removed_tests[key])
+                test_keys_remove.append(key)
+        for key in test_keys_remove:
+            del self._removed_tests[key]
+        # then add back the tests, re-computing counts
+        for test in tests_add_back:
+            self._add_back_removed_test(test)
 
-    def get_group(self, elem: Spectrum.Element) -> Spectrum.Group:
+    def _add_back_removed_test(self, test: Spectrum.Test):
+        self._tests.append(test)
+        if (test.outcome is Outcome.PASSED):
+            self.tp += 1
+        else:
+            self._failing.append(test)
+            self.tf += 1
+        for group in self.groups():
+            if (self.spectrum[test][group]):
+                if (test.outcome is Outcome.PASSED):
+                    self.p[group] += 1
+                else:
+                    self.f[group] += 1
+
+    def reset_single_test(self, test: Spectrum.Test,
+                          bucket: Optional[str] = None):
+        if (bucket is None):
+            for key in self._removed_tests:
+                if (test in self._removed_tests[key]):
+                    bucket = key
+                    break
+        if (bucket is None or test not in self._removed_tests[bucket]):
+            raise KeyError(f"Could not find removed test {test} in "
+                           f"{bucket or 'any'} bucket")
+        self._removed_tests[bucket].remove(test)
+        self._add_back_removed_test(test)
+
+    def get_group(self, element: Spectrum.Element) -> Spectrum.Group:
         """
         Given an element, return the group of elements with identical coverage
-        that this element is apart of.
+        from this spectrum that this element is apart of. Raises KeyError if
+        the element does not belong to any group in this spectrum.
         """
-        return elem.group()
+        return self._group_map[element]
 
-    def get_faults(self) -> Dict[Any, List[Spectrum.Element]]:
-        actual_faults: Dict[Any, List[Spectrum.Element]] = dict()
+    def get_faults(self) -> Dict[Any, Set[Spectrum.Element]]:
+        actual_faults: Dict[Any, Set[Spectrum.Element]] = dict()
         for group in self.groups():
-            for elem in group.get_elements():
+            for elem in group:
                 if (elem.faults):
                     for fault in elem.faults:
-                        if (fault not in actual_faults):
-                            actual_faults[fault] = []
-                        actual_faults[fault].append(elem)
+                        actual_faults.setdefault(fault, set()).add(elem)
         return actual_faults
 
     def get_tests(self, entity: Spectrum.Entity, only_failing=False,
-                  remove=False) -> Set[Spectrum.Test]:
+                  remove=False, bucket='default') -> Set[Spectrum.Test]:
         """
         Finds all the test cases executing the given element, and (optionally)
-        removes them from the spectrum.
+        removes them from the spectrum. If removing tests from the spectrum, an
+        optional bucket name may also be given.
         """
         executing = set()
         tests = self.failing() if only_failing else self.tests()
@@ -403,7 +495,7 @@ class Spectrum:
                 executing.add(test)
         if (remove):
             for test in executing:
-                self.remove(test)
+                self.remove_test(test, bucket=bucket)
         return executing
 
     def get_executed_groups(self, test: Spectrum.Test) -> Set[Spectrum.Group]:
@@ -411,6 +503,16 @@ class Spectrum:
 
     def get_executed_elements(self, test: Spectrum.Test) -> Set[Spectrum.Element]:
         return self._get_executed_entities(test, groups=False)
+
+    def get_removed_tests(self, bucket='default') -> List[Spectrum.Test]:
+        """
+        Return a copy of all the removed tests in a particular bucket. If
+        bucket is None, all removed tests from all buckets are returned.
+        """
+        if (bucket is None):
+            return self._all_removed_tests()
+        else:
+            return self._removed_tests[bucket][:]
 
     def _get_executed_entities(self, test: Spectrum.Test, groups=True):
         """
@@ -427,6 +529,12 @@ class Spectrum:
             if (self[test][ent]):
                 executed.add(ent)
         return executed
+
+    def _all_removed_tests(self) -> List[Spectrum.Test]:
+        all_removed = []
+        for key in self._removed_tests:
+            all_removed.extend(self._removed_tests[key])
+        return all_removed
 
     def to_matrix(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -465,7 +573,7 @@ class Spectrum:
         """
         results = [t for t in self.tests() if t.name.find(name_part) != -1]
         if (incl_removed):
-            results.extend([t for t in self._removed
+            results.extend([t for t in self._all_removed_tests()
                             if t.name.find(name_part) != -1])
         return results
 

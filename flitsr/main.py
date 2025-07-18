@@ -9,10 +9,10 @@ from flitsr import weffort
 from flitsr import top
 from flitsr import percent_at_n
 from flitsr import precision_recall
-from flitsr.output import print_csv, print_spectrum_csv, print_names
+from flitsr.output import print_rankings, print_spectrum_csv
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
-from flitsr.ranking import Ranking
+from flitsr.ranking import Ranking, Rankings
 from flitsr.tie import Ties
 from flitsr.args import Args
 from flitsr.advanced import ClusterType, RankerType
@@ -36,11 +36,11 @@ def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
     return ranking
 
 
-def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
+def output(rankings: Rankings, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
-           csv=False, specCsv=False, decimals=2, file=sys.stdout):
+           csv=False, decimals=2, file=sys.stdout):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: Ties = Ties(spectrum, rankings)
+        ties: Ties = Ties(rankings)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(
@@ -80,7 +80,7 @@ def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
                     top.size_top1(ties),
                     decimals), file=file)
         if (perc_at_n):
-            bumps = percent_at_n.getBumps(ties, spectrum, collapse=collapse)
+            bumps = percent_at_n.getBumps(ties, collapse=collapse)
             if ('perc' in perc_at_n):
                 form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
                 print("percentage at n:", form.format(*bumps), file=file)
@@ -100,13 +100,11 @@ def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], ties, spectrum,
-                                                   collapse)
+                    p = precision_recall.precision(entry[1], ties, collapse)
                     print("precision at {}: {:.{}f}".format(entry[1], p,
                                                             decimals), file=file)
                 elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], ties, spectrum,
-                                                collapse)
+                    r = precision_recall.recall(entry[1], ties, collapse)
                     print("recall at {}: {:.{}f}".format(entry[1], r,
                                                          decimals), file=file)
         if (faults):
@@ -120,20 +118,8 @@ def output(rankings: List[Ranking], spectrum: Spectrum, weff=[], top1=[],
                                                    for e in es]), file=file)
             if ("all" in faults):
                 print("fault info: {}".format(ties.faults), file=file)
-    elif (csv):
-        for (i, s) in enumerate(rankings):
-            if (i > 0):
-                print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
-                      file=file)
-            print_csv(spectrum, s, file)
-    elif (specCsv):
-        print_spectrum_csv(spectrum, file)
     else:
-        for (i, s) in enumerate(rankings):
-            if (i > 0):
-                print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
-                      file=file)
-            print_names(spectrum, s, file)
+        print_rankings(rankings, csv, file=file)
 
 
 def main(argv: Optional[List[str]] = None):
@@ -141,11 +127,9 @@ def main(argv: Optional[List[str]] = None):
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
-        ranking, spectrum = read_any_ranking(args.input,
-                                             method_level=args.method)
-        output([ranking], spectrum, args.weff, args.top1, args.perc_at_n,
+        rankings = read_any_ranking(args.input, method_level=args.method)
+        output(rankings, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               specCsv=args.spectrum_csv,
                decimals=args.decimals, file=args.output)
         return
     # Else, run the full process
@@ -159,6 +143,9 @@ def main(argv: Optional[List[str]] = None):
     if (gspectrum is None or len(gspectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)
+        return
+    if (args.spectrum_csv):
+        print_spectrum_csv(gspectrum, file=args.output)
         return
     # Execute techniques
     for config in args.types:
@@ -205,7 +192,8 @@ def main(argv: Optional[List[str]] = None):
                                                  args.method)
             else:
                 spectrums = [spectrum]
-            rankings: List[Ranking] = []
+            rankings = Rankings(spectrum.get_faults(),
+                                spectrum.elements())
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
@@ -226,9 +214,9 @@ def main(argv: Optional[List[str]] = None):
                                              args.cutoff_eval)
                 rankings.append(ranking)
             # Compute and print output
-            output(rankings, spectrum, args.weff, args.top1, args.perc_at_n,
+            output(rankings, args.weff, args.top1, args.perc_at_n,
                    args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                   specCsv=args.spectrum_csv, decimals=args.decimals, file=output_file)
+                   decimals=args.decimals, file=output_file)
             spectrum.reset()
 
 

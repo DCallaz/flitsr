@@ -4,7 +4,7 @@ from itertools import permutations, chain
 from math import factorial, ceil
 from typing import List, Any, Optional, Set, Dict
 from flitsr.spectrum import Spectrum
-from flitsr.ranking import Ranking, Rank
+from flitsr.ranking import Rankings, Ranking, Rank
 
 class Tie:
     def __init__(self):
@@ -13,8 +13,8 @@ class Tie:
         self._num_faults = 0
         self._fault_locs = 0
         self._fault_groups = 0
-        self._all_fault_locs: Dict[Spectrum.Element, Set[int]] = {}
-        self._all_fault_groups: Dict[Spectrum.Element, Set[int]] = {}
+        self._all_fault_locs: Dict[Spectrum.Element, Set[Any]] = {}
+        self._all_fault_groups: Dict[Spectrum.Element, Set[Any]] = {}
 
     def len(self, collapse=False) -> int:
         """
@@ -47,7 +47,7 @@ class Tie:
         else:
             return self._fault_locs
 
-    def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[int]]:
+    def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[Any]]:
         """
         Return all fault locations (either groups or elements) in
         this tie, with the faults they contain.
@@ -102,16 +102,16 @@ class Tie:
             return float(expval*frac)
 
 
-    def _add_group(self, group: List[Spectrum.Element],
-                   faults: Dict[int, List[Spectrum.Element]],
-                   seen_faults: Set[int]):
-        self._elems.update(group)
+    def _add_entity(self, entity: Spectrum.Entity,
+                   faults: Dict[Any, Set[Spectrum.Element]],
+                   seen_faults: Set[Any]):
+        self._elems.update(entity)
         self._group_len += 1
         # Check if fault is in group
         faulty_group = False
         seen_fault_locs: Set[Spectrum.Element] = set()
         for (fault_num, fault_locs) in faults.items():
-            for fault_loc in set(fault_locs).intersection(group):
+            for fault_loc in set(fault_locs).intersection(entity):
                 # Check & update fault number
                 if (fault_num not in seen_faults):
                     self._num_faults += 1
@@ -126,17 +126,15 @@ class Tie:
                 if (not faulty_group):
                     self._fault_groups += 1
                     faulty_group = True
-                    self._all_fault_groups.setdefault(group[0],
+                    self._all_fault_groups.setdefault(entity[0],
                                                       set()).add(fault_num)
 
 
 class Ties:
-    def __init__(self, spectrum: Spectrum, rankings: List[Ranking]):
-        self.faults: Dict[int, List[Spectrum.Element]] = spectrum.get_faults()
-        # needed to remove groups of fault locations
-        faults = copy.deepcopy(self.faults)
-        seen_faults: Set[int] = set()
-        seen_groups: Set[Spectrum.Group] = set()
+    def __init__(self, rankings: Rankings):
+        self.faults = rankings.faults()
+        seen_faults: Set[Any] = set()
+        seen_entities: Set[Spectrum.Entity] = set()
         self.ties: List[Tie] = []
         class RankingIter:
             def __init__(self, ranking: Ranking):
@@ -157,34 +155,44 @@ class Ties:
                     raise StopIteration()
         r_iters = [RankingIter(r) for r in rankings]
         # Populate this Ties object
-        def get_tie_groups(ri: RankingIter) -> Set[Spectrum.Group]:
-            groups: Set[Spectrum.Group] = set()
+        def get_tie_entities(ri: RankingIter) -> Set[Spectrum.Entity]:
+            entities: Set[Spectrum.Entity] = set()
             # sanity check
             if (not ri.is_active()):
-                return groups
+                return entities
             # Get all UUTs with same score
             score = ri.cur_score()
             while (ri.is_active() and ri.cur_score() == score):
                 r = ri.consume()
-                groups.add(r.group)
-            return groups
+                entities.add(r.entity)
+            return entities
         while (any(ri.is_active() for ri in r_iters)):
-            all_groups: Set[Spectrum.Group] = set()
+            all_entities: Set[Spectrum.Entity] = set()
             for ri in r_iters:
                 if (ri.is_active()):
-                    groups = get_tie_groups(ri)
-                    all_groups.update(groups)
+                    entities = get_tie_entities(ri)
+                    all_entities.update(entities)
             tie = Tie()
-            for group in all_groups.difference(seen_groups):
-                tie._add_group(group.get_elements(), faults, seen_faults)
-            seen_groups.update(all_groups)
+            for entity in all_entities.difference(seen_entities):
+                tie._add_entity(entity, self.faults, seen_faults)
+            seen_entities.update(all_entities)
             self.ties.append(tie)
-        # Add groups not seen to bottom of tie
-        not_seen = [g for g in spectrum.groups() if g not in seen_groups]
+        # Add elements not seen to bottom of tie
+        not_seen: Set[Spectrum.Element] = set(rankings.elements())
+        for entity in seen_entities:
+            not_seen.difference(entity)
         tie = Tie()
-        for group in not_seen:
-            tie._add_group(group.get_elements(), faults, seen_faults)
+        for entity in not_seen:
+            tie._add_entity(entity, self.faults, seen_faults)
         self.ties.append(tie)
+        self._num_entities = len(seen_entities)
+        self._num_elems = len(rankings.elements())
 
     def __iter__(self):
         return iter(self.ties)
+
+    def size(self, collapse=False):
+        if (collapse):
+            return self._num_entities
+        else:
+            return self._num_elems
