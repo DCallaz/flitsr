@@ -6,10 +6,15 @@ import numpy as np
 from argparse import ArgumentParser
 import argcomplete
 from enum import Enum
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Collection
 from flitsr.spectrum import Spectrum
 from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
+
+
+def ci_in(str1: str, col: Collection[str]):
+    """ Case insensitive check for strings in a list """
+    return str1.casefold() in map(str.casefold, col)
 
 
 def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
@@ -96,14 +101,14 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
 
 
 def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
-         metrics=None, flitsrs=None):
+         incl_metrics=None, flitsrs=None, incl_advs=None):
     from matplotlib import pyplot as plt
-    modes: List[str] = []
     comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
-    if (metrics is None):
-        metrics, modes, comb_points = read_comb_file(plot_file)
-    else:
-        _, modes, comb_points = read_comb_file(plot_file)
+    metrics, modes, comb_points = read_comb_file(plot_file)
+    if (incl_metrics is not None):
+        metrics = [m for m in metrics if ci_in(m, incl_metrics)]
+    if (incl_advs is not None):
+        modes = [m for m in modes if ci_in(m, incl_advs)]
     points = {}
     for item in comb_points.items():
         key = item[0]
@@ -220,7 +225,7 @@ def main(argv: Optional[List[str]] = None):
     combine_parser = subparsers.add_parser('combine')
     combine_parser.add_argument('input_file')
 
-    met_names = list(map(str.capitalize, Suspicious.getNames(True)))
+    met_names = Suspicious.getNames(True)
     plot_parser = subparsers.add_parser('plot', help='Plots the percentage at '
                                         'n graph for the given input file '
                                         'produced by the merge script')
@@ -236,6 +241,12 @@ def main(argv: Optional[List[str]] = None):
                              help='Specifies the metrics to plot for the --all '
                              'plotting style. Allowed values are: '
                              f'[{", ".join(met_names)}]', metavar='METRIC')
+    plot_parser.add_argument('-A', '--advanced-types', nargs='+',
+                             metavar='TYPE', help='Specify the list of '
+                             'advanced types to include when merging. By '
+                             'default all available advanced types that '
+                             'appear in filenames of found files are included',
+                             action='extend')
     plot_parser.add_argument('-t', '--types', nargs='+', choices=met_names,
                              help='Specifies the metrics for which to plot '
                              'advanced types for using the --all plotting '
@@ -270,7 +281,8 @@ def main(argv: Optional[List[str]] = None):
         lines = open(infile).readlines()
     elif (args.mode == "plot"):
         plot(args.plot_file, log=args.log, all=args.all, type=args.split_type,
-             metrics=args.metrics, flitsrs=args.types)
+             incl_metrics=args.metrics, flitsrs=args.types,
+             incl_advs=args.advanced_types)
     elif (args.mode == "auc"):
         comb_file = args.comb_file
         metrics, modes, points = read_comb_file(comb_file)
