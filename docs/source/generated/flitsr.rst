@@ -1,0 +1,6 @@
+﻿flitsr
+======
+
+.. automodule:: flitsr
+
+   
