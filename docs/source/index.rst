@@ -45,6 +45,8 @@ For researchers
 
 .. toctree::
    eval_framework
+   merging
+   plotting
    :hidden:
    :caption: For researchers
 
