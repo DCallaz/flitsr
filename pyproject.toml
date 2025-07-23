@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flitsr"
-version = "2.2.0"
+version = "2.2.1"
 authors = [
   {name="Dylan Callaghan", email="dcallaghan@acm.org"}
 ]
@@ -20,11 +20,15 @@ classifiers = [
   "Intended Audience :: Developers",
 ]
 dependencies = [
+  'importlib_metadata; python_version < "3.10"',
   'argcomplete',
   'numpy',
   'bitarray',
   'scipy'
 ]
+
+[project.optional-dependencies]
+plot = [ 'matplotlib' ]
 
 [project.urls]
 Homepage = "https://github.com/DCallaz/flitsr"

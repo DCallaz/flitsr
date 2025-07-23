@@ -261,9 +261,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     # finalize option
                     group.add_argument(paramName, **parser_args)
 
-        # manually set flitsr as the default
-        parser.set_defaults(ranker=advanced.RankerType['FLITSR'])
-
         # parser.add_argument('--multi', action='store_true',
         #         help='Runs the FLITSR* (i.e. multi-round) algorithm')
         # parser.add_argument('-i', '--internal-ranking', action='store',
@@ -434,6 +431,13 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         argcomplete.autocomplete(parser)
 
         args = parser.parse_args(argv)
+
+        # manually set flitsr as the default
+        default_ranker_used = False
+        if (not hasattr(args, 'ranker') or args.ranker is None):
+            args.ranker = advanced.RankerType['FLITSR']
+            default_ranker_used = True
+
         # check "required" advanced type arguments
         for adv_name, (adv_type, adv_args) in adv_required_args.items():
             if (getattr(args, adv_type) is not None and
@@ -458,7 +462,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     ts['refiner'] = args.refiner
                 if (getattr(args, 'cluster', None) is not None):
                     ts['cluster'] = args.cluster
-                if (getattr(args, 'ranker', None) is not None):
+                if (getattr(args, 'ranker', None) is not None and
+                    not default_ranker_used):
                     ts['ranker'] = args.ranker
                     args.types = [Config(**ts)]
                 else:

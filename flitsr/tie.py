@@ -180,7 +180,7 @@ class Ties:
         # Add elements not seen to bottom of tie
         not_seen: Set[Spectrum.Element] = set(rankings.elements())
         for entity in seen_entities:
-            not_seen.difference(entity)
+            not_seen.difference_update(entity)
         tie = Tie()
         for entity in not_seen:
             tie._add_entity(entity, self.faults, seen_faults)

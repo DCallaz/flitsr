@@ -16,6 +16,8 @@ pip install flitsr
 
 (Optional) See [Activate argument completion](#optional-activate-argument-completion-using-argcomplete).
 
+(Optional) See [Installing plotting features](#optional-installing-plotting-features).
+
 #### Isolated installation (`pipx`)
 If you have too many dependencies in your main python installation, and would
 rather prefer to have flitsr set up as a standalone tool instead of a python
@@ -31,6 +33,8 @@ pipx install flitsr
 ```
 
 (Optional) See [Activate argument completion](#optional-activate-argument-completion-using-argcomplete).
+
+(Optional) See [Installing plotting features](#optional-installing-plotting-features).
 
 #### Install from source
 
@@ -78,6 +82,16 @@ to get autocompletion on the flitsr commands:
 ```
 activate-global-python-argcomplete
 ```
+
+#### (Optional) Installing plotting features
+
+If you would like to use the flitsr framework to plot the percentage-at-n
+figures, you will need to install the flitsr `plot` packaging extra. To do this,
+use the following command:
+```
+pip install flitsr[plot]
+```
+You may also use `flitsr[plot]` to install the packaging extra using pipx.
 
 ## Basic usage
 ### Running FLITSR
