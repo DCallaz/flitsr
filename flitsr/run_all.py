@@ -195,7 +195,7 @@ class Runall:
                     print('Skipping done inputs:')
                     print(*done_inp, sep=", ")
             proj_inp = list(map(osp.basename, [i for i in inputs if
-                                               i.startswith(dir_+"/")]))
+                re.fullmatch(f"{re.escape(dir_)}/[^//]*", i)]))
             self.num_inputs = len(proj_inp)
             # Remove done inputs
             proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)

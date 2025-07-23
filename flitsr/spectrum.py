@@ -544,7 +544,8 @@ class Spectrum:
         if (not hasattr(self, '_matrix')):
             # Use all test cases and most elements
             self._matrix_tests = np.array(list(self.spectrum.keys()))
-            self._matrix_elems = np.array(list(self._groups))
+            self._matrix_elems = np.array(list(self._groups),
+                                          dtype=Spectrum.Group)
             self._matrix = np.zeros((len(self._matrix_tests),
                                      len(self._matrix_elems)),
                                     dtype=bool)
