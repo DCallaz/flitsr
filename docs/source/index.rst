@@ -19,6 +19,19 @@ The ``flitsr`` tool integrates with test suite information from both
 Quick start
 -------------------------------------------------------------------------------
 
+To install FLITSR, simply install as a python package using the following command:
+
+.. code-block:: bash
+
+  pip install flitsr
+
+For more detailed instructions, see :doc:`install`.
+
+.. toctree::
+   install
+   :hidden:
+   :caption: General
+
 For developers
 -------------------------------------------------------------------------------
 
