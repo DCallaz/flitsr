@@ -2,6 +2,11 @@ API
 ===
 
 .. autosummary::
+   :recursive:
    :toctree: generated
+   :template: custom-module-template.rst
 
-   flitsr.spectrum.Spectrum
+   flitsr.spectrumBuilder
+   flitsr.spectrum
+   flitsr.ranking
+   flitsr.tie

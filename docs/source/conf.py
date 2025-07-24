@@ -22,7 +22,12 @@ extensions = [
     'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinxarg.ext',
+    'sphinx.ext.napoleon',
 ]
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+
+default_role = 'autolink'
 
 templates_path = ['_templates']
 exclude_patterns = []

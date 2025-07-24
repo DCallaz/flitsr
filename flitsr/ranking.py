@@ -6,14 +6,22 @@ import copy
 
 
 class Tiebrk(Enum):
+    """ An `Enum` for the tie-breaking method to be used. """
+
     EXEC = auto()
+    """ Tie break only using execution counts. """
+
     RNDM = auto()
+    """ Tie break randomly. Note, this will cause non-deterministic output. """
+
     ORIG = auto()
+    """ Tie break using the original SBFL ranking, then execution counts. """
 
 
 class Rank:
     """
-    A group from a spectrum, together with its scores.
+    An `Entity <flitsr.spectrum.Spectrum.Entity>` from a spectrum, together
+    with its score and execution count.
     """
     def __init__(self, entity: Spectrum.Entity, score: float,
                  exec_count: int):
@@ -29,6 +37,11 @@ class Rank:
 
 
 class Ranking:
+    """
+    A singular ranking, containing ranked `Spectrum.Entity
+    <flitsr.spectrum.Spectrum.Entity>`.
+    """
+
     def __init__(self, tiebrk: Tiebrk = Tiebrk.ORIG):
         self._ranks: List[Rank] = []
         self._tiebrk = tiebrk
@@ -40,9 +53,19 @@ class Ranking:
 
     def get_rank(self, entity: Spectrum.Entity, check_sub_group=False) -> Rank:
         """
-        Return the rank of the given entity. If the check_sub_group option is
-        given, try to find if the given entity is contained within another
-        group in the ranking (either as a sub-group or as an element).
+        Return the `Rank` of the given `Spectrum.Entity
+        <flitsr.spectrum.Spectrum.Entity>`. If the `check_sub_group`
+        option is given, try to find if the given entity is contained within
+        another group in the ranking (either as a sub-group or as an element).
+
+        Args:
+          entity: Spectrum.Entity: The entity to return the rank for
+          check_sub_group:  (Default value = False) Whether to check for the
+          `entity` as a subgroup of entities in the ranking.
+
+        Returns:
+          The `Rank` of the given entity.
+
         """
         try:
             return self.entity_map[entity]
@@ -63,6 +86,13 @@ class Ranking:
             raise keyerror
 
     def sort(self, reverse: bool):
+        """
+        Re-sort this `Ranking` in-place by their scores, using the `Tiebrk`
+        method set.
+
+        Args:
+          reverse: bool: Whether to sort by reverse order of scores.
+        """
         if (self._tiebrk == Tiebrk.EXEC):  # Sorted by execution counts
             self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
         elif (self._tiebrk == Tiebrk.RNDM):  # random ordering
@@ -78,16 +108,41 @@ class Ranking:
         self._ranks.sort(key=lambda x: x.score, reverse=reverse)
 
     def append(self, entity: Spectrum.Entity, score: float, exec_count: int):
+        """
+        Append the given `entity` to the ranking, with the given `score` and
+        execution count `exec_count`.
+
+        Args:
+          entity: Spectrum.Entity: The entity to append to this `Ranking`.
+          score: float: The score of the given `entity`.
+          exec_count: int: The execution count of the given `entity`.
+        """
         created = Rank(entity, score, exec_count)
         self._ranks.append(created)
         self.entity_map[entity] = created
 
     def extend(self, ranks: List[Rank]):
+        """
+        Extend this `Ranking` by adding all `Rank` in the `List` `ranks`.
+
+        Args:
+          ranks: List[Rank]: The `List` of ranks to add to this `Ranking`.
+        """
         self._ranks.extend(ranks)
         for rank in ranks:
             self.entity_map[rank.entity] = rank
 
     def has_entity(self, entity: Spectrum.Entity) -> bool:
+        """
+        Return whether this `Ranking` contains the given `entity`. Does not
+        check if the entity is a subgroup.
+
+        Args:
+          entity: Spectrum.Entity: The entity to check for.
+
+        Returns:
+          True if `entity` is directly in this `Ranking`, False otherwise.
+        """
         return entity in self.entity_map
 
     def __iter__(self):
@@ -97,6 +152,10 @@ class Ranking:
         return len(self._ranks)
 
 class Rankings:
+    """
+    A collection of `Ranking` objects, which share a non-overlapping set of
+    elements from a `Spectrum <flitsr.spectrum.Spectrum>`.
+    """
     def __init__(self, faults: Dict[Any, Set[Spectrum.Element]],
                  elements: List[Spectrum.Element],
                  rankings: Optional[Iterable[Ranking]] = None):
@@ -107,15 +166,28 @@ class Rankings:
             self._rankings.extend(rankings)
 
     def faults(self) -> Dict[Any, Set[Spectrum.Element]]:
+        """
+        Return a dictionary of all faults in these rankings. See
+        `Spectrum.get_faults <flitsr.spectrum.Spectrum.get_faults>` for a
+        description of the return value.
+        """
         return copy.deepcopy(self._faults)
 
     def elements(self) -> List[Spectrum.Element]:
+        """ Return the global list of elements for all rankings. """
         return self._all_elems
 
     def rankings(self) -> List[Ranking]:
+        """ Return a list of all the `Ranking`. """
         return self._rankings
 
     def append(self, ranking: Ranking):
+        """
+        Append the given `ranking` to this collection.
+
+        Args:
+          ranking: Ranking: The ranking to add.
+        """
         self._rankings.append(ranking)
 
     def __iter__(self) -> Iterator:
@@ -129,10 +201,19 @@ orig: Optional[Ranking] = None
 
 
 def set_orig(ranking: Ranking):
+    """
+    Set the original SBFL `Ranking` to be used in tie-breaking (see `Tiebrk`).
+    Args:
+      ranking: Ranking:
+
+    Returns:
+
+    """
     global orig
     orig = copy.deepcopy(ranking)
 
 
 def unset_orig():
+    """ """
     global orig
     orig = None

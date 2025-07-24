@@ -35,24 +35,43 @@ For more detailed instructions, see :doc:`install`.
 For developers
 -------------------------------------------------------------------------------
 
+``flitsr`` is primarily a debugging tool to assist developers in finding faults
+in their code. If you are looking for information on using ``flitsr`` as a
+debugging tool, the following sections are for you:
+
 .. toctree::
    base_tool
-   :hidden:
+   input_types
+   adv_types
+   api
    :caption: For developers
+   :maxdepth: 1
 
 For researchers
 -------------------------------------------------------------------------------
+
+Included in ``flitsr`` is also the ``flitsr`` *evaluation framework*, which
+contains functionality necessary to run large-scale SBFL experiments for
+researchers. If you are looking on how to use the ``flitsr`` evaluation
+framework to run experiments, see the following sections:
 
 .. toctree::
    eval_framework
    merging
    plotting
-   :hidden:
    :caption: For researchers
+   :maxdepth: 1
 
 Extending ``flitsr``
 -------------------------------------------------------------------------------
 
+``flitsr`` has been designed to be as versatile as possible, allowing changes
+and additions to almost every aspect of its functionality. The following
+sections provide information on what can be extended in ``flitsr`` and how:
+
 .. toctree::
-   :hidden:
+   flitsr_plugins
+   input_ext
+   adv_type_ext
    :caption: Extending flitsr
+   :maxdepth: 1

@@ -233,7 +233,7 @@ class Runall:
             os.remove(results_fl)
 
 
-def main(argv: Optional[List[str]] = None):
+def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog='run_all', description='Run large '
                                      'experiments automatically')
 
@@ -291,6 +291,11 @@ def main(argv: Optional[List[str]] = None):
                         '-M).')
 
     argcomplete.autocomplete(parser)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None):
+    parser = get_parser()
     args = parser.parse_args(argv)
 
     # Process metrics
