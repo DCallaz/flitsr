@@ -73,5 +73,6 @@ sections provide information on what can be extended in ``flitsr`` and how:
    flitsr_plugins
    input_ext
    adv_type_ext
+   driver
    :caption: Extending flitsr
    :maxdepth: 1
