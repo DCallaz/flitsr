@@ -12,6 +12,10 @@ from fnmatch import fnmatch
 import re
 from contextlib import redirect_stderr, redirect_stdout
 from enum import Enum, auto
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
 
 import argparse
 import argcomplete
@@ -101,7 +105,14 @@ class Runall:
         args = self.args + [input_cov]
         with open(input_cov+".err", 'w') as errfile:
             with redirect_stderr(errfile):
-                driver = importlib.import_module('flitsr.'+self.driver)
+                # import from flitsr or plugin
+                if (importlib.util.find_spec('flitsr.'+self.driver)):
+                    driver = importlib.import_module('flitsr.'+self.driver)
+                else:
+                    adv_entry_points = entry_points(group='flitsr.driver')
+                    for adv_ep in adv_entry_points:
+                        if (adv_ep.value.endswith(self.driver)):
+                            driver = adv_ep.load()
                 try:
                     driver.main(args)
                 except SystemExit:
@@ -328,7 +339,9 @@ def main(argv: Optional[List[str]] = None):
     # check if driver exists
     if (args.driver is not None):
         spec = find_spec('flitsr.'+args.driver)
-        if (spec is None):
+        plugin = next((x for x in entry_points(group='flitsr.driver') if
+                       x.value.endswith(args.driver)), None)
+        if (spec is None and plugin is None):
             print("ERROR")
             parser.error(f"Driver {args.driver} is not a valid flitsr driver")
             quit()
