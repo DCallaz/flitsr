@@ -1,18 +1,27 @@
 from flitsr.tie import Ties
+from flitsr.calculations import calculation
 
 
+@calculation("wasted effort (first)",
+             "Display the wasted effort to the first fault", "first")
 def first(ties: Ties, c: bool):
     if (len(ties.faults) == 0):
         return 0
     return method(ties, 1, collapse=c)
 
 
+@calculation("wasted effort (average)",
+             "Display the wasted effort to the average fault",
+             "average", "avg")
 def average(ties: Ties, c: bool):
     if (len(ties.faults) == 0):
         return 0
     return method(ties, len(ties.faults), avg=True, collapse=c)
 
 
+@calculation("wasted effort (median)",
+             "Display the wasted effort to the median fault",
+             "median", "med")
 def median(ties: Ties, c: bool):
     if (len(ties.faults) == 0):
         return 0
@@ -24,12 +33,22 @@ def median(ties: Ties, c: bool):
         return (m1+m2)/2
 
 
+@calculation("wasted effort (last)",
+             "Display the wasted effort to the last fault",
+             "last")
 def last(ties: Ties, c: bool):
     if (len(ties.faults) == 0):
         return 0
     return method(ties, len(ties.faults), collapse=c)
 
 
+def nth_print_name(ties: Ties, n: int, c: bool):
+    return f"wasted effort ({n})"
+
+
+@calculation(nth_print_name,
+             "Display the wasted effort to the Nth fault",
+             "weffort")
 def nth(ties: Ties, n: int, c: bool):
     if (len(ties.faults) == 0):
         return 0
