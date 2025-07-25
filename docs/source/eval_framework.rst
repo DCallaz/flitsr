@@ -12,3 +12,6 @@ This section describes usage instructions for researchers wishing to use
    :func: get_parser
    :prog: run_all
    :nodescription:
+
+   -p --driver : @after
+     See :doc:`driver` for a description of creating your own driver.

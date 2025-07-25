@@ -101,3 +101,15 @@ To create an :doc:`input type <adv_types>` plugin, use the ``flitsr.input``
 
   [project.entry-points.'flitsr.input']
   test_inp = "my_flitsr_plugin.plugin:CustomInput"
+
+Drivers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create a :doc:`driver <driver>` plugin, use the ``flitsr.driver``
+*entry point*:
+
+.. code-block:: toml
+  :caption: pyproject.toml
+
+  [project.entry-points.'flitsr.driver']
+  dummy_driver = "my_flitsr_plugin.custom_driver"

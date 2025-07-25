@@ -9,8 +9,8 @@ extend ``flitsr`` to support this format as well.
 To extend ``flitsr`` to support a different output format, you must create an
 :class:`Input <flitsr.input.input_reader.Input>` class.
 
-This class may either be created in the ``flitsr`` tools ``input`` package, or you
-may create a ``flitsr`` *pluin* using *entry points*. For details on how to
+This class may either be created in the ``flitsr`` tool's ``input`` package, or
+you may create a ``flitsr`` *pluin* using *entry points*. For details on how to
 create a ``flitsr`` *plugin*, see :doc:`flitsr_plugins`. If creating a
 ``flitsr`` plugin, you may use the ``flitsr.input`` *entry point*, for example:
 
