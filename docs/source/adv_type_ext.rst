@@ -113,7 +113,7 @@ to the ``__init__`` method, similar to the `existing
 <flitsr.advanced.attributes.existing>` decorator. The `choices
 <flitsr.advanced.attributes.choices>` decorator has the following usage:
 
-.. autofunction:: flitsr.advanced.attributes.existing
+.. autofunction:: flitsr.advanced.attributes.choices
 
 As an example, the ``parType`` parameter of our ``--parallel`` example has four
 pre-defined strings that it accepts: ``bdm``, ``msp``, ``hwk``, and ``vwk``. To

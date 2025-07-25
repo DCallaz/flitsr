@@ -9,6 +9,7 @@ For more information on the API functionality provided by ``flitsr``, see the
 ``flitsr`` as a Python package.
 
 .. _api:
+
 API
 -------------------------------------------------------------------------------
 
@@ -23,6 +24,7 @@ API
    flitsr.tie
 
 .. _example:
+
 Example
 -------------------------------------------------------------------------------
 
