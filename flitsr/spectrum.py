@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from flitsr.input import InputType
 
 class Outcome(Enum):
+    """ The outcome of a `Spectrum.Test` """
     PASSED = 0
     PASS = 0
     FAILED = 1
@@ -41,12 +42,17 @@ class Spectrum:
             return hash(self.name)
 
     class Entity(ABC, Iterable):
+        """A generic spectrum `Spectrum.Entity`. This is the base class for `Spectrum.Element`
+        and `Spectrum.Group` in the spectrum.
+        """
         @abstractmethod
         def isFaulty(self) -> bool:
+            """Returns whether or not this `Spectrum.Entity` pertains to a fault"""
             pass
 
         @abstractmethod
         def index(self) -> int:
+            """The index of this `Spectrum.Entity`"""
             pass
 
         @abstractmethod
@@ -92,9 +98,11 @@ class Spectrum:
             # self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:
+            """Returns whether or not this `Spectrum.Element` pertains to a fault"""
             return len(self.faults) > 0
 
         def index(self) -> int:
+            """Returns the index of this `Spectrum.Element`"""
             return self._index
 
         def __getitem__(self, index: int):
@@ -115,6 +123,19 @@ class Spectrum:
                     if self.faults else "")
 
         def output_str(self, type_: 'InputType', incl_faults=True) -> str:
+            """
+            Returns the string representation of this `Spectrum.Element` that can be
+            used when writing out the spectrum in the given input type.
+
+            Args:
+              type_: 'InputType': The input type to render the output string for.
+              incl_faults:  (Default value = True) Whether to include fault
+                indicators in the output string
+
+            Returns:
+                The string representation of this `Spectrum.Element`
+
+            """
             seps = type_.value.get_elem_separators()
             gstring = ''
             path_part = self.path.rpartition('.')
@@ -140,7 +161,18 @@ class Spectrum:
         def __hash__(self):
             return self._index
 
-        def semantic_eq(self, other):
+        def semantic_eq(self, other) -> bool:
+            """
+            Variant of the __eq__ method for an `Spectrum.Element` that checks whether
+            two elements are semantically equivalent.
+
+            Args:
+              other: The element to compare to
+
+            Returns:
+              True if this `Spectrum.Element` is equal to `other`, False otherwise.
+
+            """
             return self.tup == other.tup
 
     class Group(Entity):
@@ -162,20 +194,48 @@ class Spectrum:
             self._hash = hash(frozenset(self._elems))
 
         def sort_elems(self, key: Callable):
+            """
+            Sort the elements in this group by the given `key`.
+            Args:
+              key: Callable: The key to sort by
+            """
             self._elems.sort(key=key)
 
         def set_index(self, index: int):
+            """
+            Set the index of this group. Used for spectrum execution lookup.
+            NOTE: the group index MUST be unique for each group in a given
+            spectrum.
+            Args:
+              index: int: The integer
+            """
             self._index = index
 
         def index(self) -> int:
+            """
+            Get the index of this Group if available, otherwise raise an
+            ``UnboundLocalError``.
+            """
             if (self._index is None):
                 raise UnboundLocalError("Group index has not been set")
             return self._index
 
         def isFaulty(self) -> bool:
+            """
+            Returns whether or not an element in this `Spectrum.Group` pertains to a
+            fault
+            """
             return self._is_faulty
 
         def is_subgroup(self, group: Spectrum.Group) -> bool:
+            """
+            Return whether the given `group` is a subgroup of this `Spectrum.Group`.
+            Args:
+              group: Spectrum.Group: The group to check.
+
+            Returns:
+              True if `group` is a subgroup of this `Spectrum.Group`, False otherwise.
+            """
             for elem in group._elems:
                 if (elem not in self):
                     return False
@@ -204,8 +264,7 @@ class Spectrum:
             return self._hash
 
     class Execution():
-        """
-        The Execution object holds all of the spectral information pertaining
+        """The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
         __slots__ = ('_groups', '_spectrum', 'exec', 'test', '_iter')
@@ -218,8 +277,12 @@ class Spectrum:
             self.test = test
 
         def update(self, group: Spectrum.Group, executed: bool):
-            """
-            Update the execution information of a particular group
+            """Update the execution information of a particular group
+
+            Args:
+              group: Spectrum.Group: The group to update information for
+              executed: bool: The updated execution information; whether this
+                  group is executed or not.
             """
             self.exec[group.index()] = executed
 
@@ -249,8 +312,17 @@ class Spectrum:
 
         def get(self, group: Spectrum.Group, default: bool = False) -> bool:
             """
-            Return the execution information for the given ambiguity group. If
-            the element is not present in the execution, default is given.
+            Return the execution for the given `group` if it is available, else
+            default.
+
+            Args:
+              group: Spectrum.Group: The `Spectrum.Group` to lookup.
+              default: bool:  (Default value = False) The default value if
+                `group` has no execution information in this `Spectrum.Execution`.
+
+            Returns:
+              The execution information for `group` if `group` is found,
+              `default` otherwise.
             """
             try:
                 return bool(self.exec[group.index()])
@@ -260,8 +332,17 @@ class Spectrum:
         def element_get(self, elem: Spectrum.Element,
                         default: bool = False) -> bool:
             """
-            Return the execution information for the given element. If the
-            element is not present in the execution, default is given.
+            Similar to the `get` method, but takes an `Spectrum.Element` instead of a
+            `Spectrum.Group`.
+
+            Args:
+              elem: Spectrum.Element: The `Spectrum.Element` to lookup.
+              default: bool:  (Default value = False) The default value if
+              `elem` has no execution information in this `Spectrum.Execution`.
+
+            Returns:
+              The execution information for `elem` if the `Spectrum.Group` of `elem` is
+              found, `default` otherwise.
             """
             # Get the element's group
             try:
@@ -332,25 +413,23 @@ class Spectrum:
         return len(self._tests)
 
     def elements(self) -> List[Spectrum.Element]:
-        """ Get a list of a all the elements in this spectrum """
+        """Get a list of a all the elements in this spectrum"""
         return self._elements
 
     def groups(self) -> List[Spectrum.Group]:
-        """ Get a list of a all the groups in this spectrum """
+        """Get a list of a all the groups in this spectrum"""
         return self._groups
 
     def tests(self) -> List[Spectrum.Test]:
-        """
-        Get a list of a all the tests (passing and failing) in this spectrum
-        """
+        """Get a list of a all the tests (passing and failing) in this spectrum"""
         return self._tests
 
     def failing(self) -> List[Spectrum.Test]:
-        """ Get a list of a all the failing tests in this spectrum """
+        """Get a list of a all the failing tests in this spectrum"""
         return self._failing
 
     def locs(self) -> int:
-        """ Get the number of groups in this spectrum """
+        """Get the number of groups in this spectrum"""
         return len(self._groups)
 
     def remove_test(self, test: Spectrum.Test, bucket='default'):
@@ -362,6 +441,11 @@ class Spectrum:
         Setting the bucket to be None will completely remove the test from the
         spectrum (NOTE: this does not save much memory, but only prevents the
         test from being restored by subsequent calls to reset).
+
+        Args:
+          test: Spectrum.Test: The `Spectrum.Test` to remove.
+          bucket:  (Default value = 'default') The bucket to store the removed
+            tests in.
         """
         if (test not in self._tests):
             return
@@ -378,6 +462,15 @@ class Spectrum:
 
     def remove_execution(self, test: Spectrum.Test, ent: Spectrum.Entity,
                          hard=True):
+        """
+        Remove the execution of the given `Spectrum.Entity` in `test`.
+
+        Args:
+          test: Spectrum.Test: The test to remove the execution of `ent` from.
+          ent: Spectrum.Entity: The `Spectrum.Entity` whose execution to remove.
+          hard:  (Default value = True) Whether to remove this execution fully,
+            i.e. even from the underlying spectrum
+        """
         if (self.spectrum[test][ent]):
             if (isinstance(ent, Spectrum.Element)):
                 group = self._group_map[ent]
@@ -391,6 +484,15 @@ class Spectrum:
                 self.f[group] -= 1
 
     def remove_group(self, group: Spectrum.Group, bucket='default'):
+        """
+        Remove the given `group` from the spectrum, and store it in the
+        given `bucket`. See `Spectrum.remove_test` for a description of buckets.
+
+        Args:
+          group: Spectrum.Group: The `Spectrum.Group` to remove.
+          bucket:  (Default value = 'default') The bucket to store the group in
+            for later retrieval.
+        """
         try:
             self._groups.remove(group)  # remove if there
             self._removed_groups.setdefault(bucket, []).append(group)
@@ -406,6 +508,10 @@ class Spectrum:
         By default, or if bucket is None, all buckets are emptied and their
         removed tests reactivated. A bucket name (or Iterable of bucket names)
         may optionally be given to only reset the given name(s).
+
+        Args:
+          bucket: Union[None: str: List[str]]:  (Default value = None) The
+              bucket to reset.
         """
         # first get the groups to add back
         groups_add_back = []
@@ -438,6 +544,10 @@ class Spectrum:
             self._add_back_removed_test(test)
 
     def _add_back_removed_test(self, test: Spectrum.Test):
+        """
+        Helper method to add back tests that have been removed from the
+        spectrum.
+        """
         self._tests.append(test)
         if (test.outcome is Outcome.PASSED):
             self.tp += 1
@@ -453,6 +563,18 @@ class Spectrum:
 
     def reset_single_test(self, test: Spectrum.Test,
                           bucket: Optional[str] = None):
+        """
+        Reset a single test that was stored in the given bucket. See the
+        `Spectrum.reset` method, which is the iterative form of this one.
+
+        Args:
+          test: Spectrum.Test: The `Spectrum.Test` to reset.
+          bucket: Optional[str]:  (Default value = None) The bucket that `test`
+            is in, or ``None`` to check all buckets.
+
+        Raises:
+          KeyError: If the test could not be found in the given bucket.
+        """
         if (bucket is None):
             for key in self._removed_tests:
                 if (test in self._removed_tests[key]):
@@ -466,13 +588,27 @@ class Spectrum:
 
     def get_group(self, element: Spectrum.Element) -> Spectrum.Group:
         """
-        Given an element, return the group of elements with identical coverage
-        from this spectrum that this element is apart of. Raises KeyError if
-        the element does not belong to any group in this spectrum.
+        Given an element, return the `Spectrum.Group` with identical coverage
+        from this spectrum that this element is apart of.
+
+        Args:
+          element: Spectrum.Element: The `Spectrum.Element` to find the
+            `Spectrum.Group` of.
+
+        Returns:
+          The group that the `element` belongs to.
+
+        Raises:
+          KeyError: If the element does not belong to any group in this
+            spectrum.
         """
         return self._group_map[element]
 
     def get_faults(self) -> Dict[Any, Set[Spectrum.Element]]:
+        """
+        Returns a dictionary of all the faults in this spectrum, with the
+        values being all the locations of each fault.
+        """
         actual_faults: Dict[Any, Set[Spectrum.Element]] = dict()
         for group in self.groups():
             for elem in group:
@@ -487,6 +623,19 @@ class Spectrum:
         Finds all the test cases executing the given element, and (optionally)
         removes them from the spectrum. If removing tests from the spectrum, an
         optional bucket name may also be given.
+
+        Args:
+          entity: Spectrum.Entity: The entity to find tests for.
+          only_failing:  (Default value = False) Whether to return only tests
+              that are failing.
+          remove:  (Default value = False) Whether to remove the found tests
+              from the spectrum before returning them.
+          bucket:  (Default value = 'default') The bucket to add the tests to
+              if they are removed from the spectrum.
+
+        Returns:
+            The set of `Spectrum.Test` that `entity` is executed in.
+
         """
         executing = set()
         tests = self.failing() if only_failing else self.tests()
@@ -499,15 +648,43 @@ class Spectrum:
         return executing
 
     def get_executed_groups(self, test: Spectrum.Test) -> Set[Spectrum.Group]:
+        """
+        Return the set of groups that are executed in the given `test`.
+
+        Args:
+          test: Spectrum.Test: The test whose executed groups to return.
+
+        Returns:
+          The set of `Spectrum.Group` that are executed in the given `test`.
+
+        """
         return self._get_executed_entities(test, groups=True)
 
     def get_executed_elements(self, test: Spectrum.Test) -> Set[Spectrum.Element]:
+        """
+        Return the set of elements that are executed in the given `test`.
+
+        Args:
+          test: Spectrum.Test: The test whose executed elements to return.
+
+        Returns:
+          The set of `Spectrum.Element` that are executed in the given `test`.
+
+        """
         return self._get_executed_entities(test, groups=False)
 
     def get_removed_tests(self, bucket='default') -> List[Spectrum.Test]:
         """
         Return a copy of all the removed tests in a particular bucket. If
         bucket is None, all removed tests from all buckets are returned.
+
+        Args:
+          bucket:  (Default value = 'default') The bucket to look for removed
+            tests to return.
+
+        Returns:
+          A `List` of all the `Spectrum.Test` that were in the given bucket, or
+          in all buckets if `bucket` is None.
         """
         if (bucket is None):
             return self._all_removed_tests()
@@ -531,6 +708,7 @@ class Spectrum:
         return executed
 
     def _all_removed_tests(self) -> List[Spectrum.Test]:
+        """ Get a list of the removed tests in all buckets """
         all_removed = []
         for key in self._removed_tests:
             all_removed.extend(self._removed_tests[key])
@@ -539,6 +717,10 @@ class Spectrum:
     def to_matrix(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Converts the current spectrum into a numpy matrix and error vector.
+
+        Returns:
+          A numpy matrix representing the spectrum, and numpy array
+          representing the error vector.
         """
         # If no matrix already, create one
         if (not hasattr(self, '_matrix')):
@@ -567,10 +749,19 @@ class Spectrum:
         errVector = self._errVector[tmask]
         return matrix, errVector
 
-    def search_tests(self, name_part, incl_removed=False):
+    def search_tests(self, name_part,
+                     incl_removed=False) -> List[Spectrum.Test]:
         """
         Searches for any test that matches the partial test name `name_part`.
         Returns a list of all the matches.
+
+        Args:
+          name_part: The partial name of a test to search for.
+          incl_removed:  (Default value = False) Whether to include tests that
+            have been removed.
+
+        Returns:
+          A list of all the tests that match `name_part`.
         """
         results = [t for t in self.tests() if t.name.find(name_part) != -1]
         if (incl_removed):
@@ -578,10 +769,19 @@ class Spectrum:
                             if t.name.find(name_part) != -1])
         return results
 
-    def search_elements(self, name_part, groups=False):
+    def search_elements(self, name_part, groups=False) \
+            -> List[Union[Spectrum.Element, Spectrum.Group]]:
         """
         Searches for any element that matches the partial element name
         `name_part`. Returns a list of all the matches.
+
+        Args:
+          name_part: The partial name of an entity to search for.
+          groups:  (Default value = False) Whether to search for
+            `Spectrum.Group` or `Spectrum.Element`.
+
+        Returns:
+          A list of all the entitied that match `name_part`.
         """
         elems = self._groups if groups else self._elements
         results = [e for e in elems if str(e).find(name_part) != -1]

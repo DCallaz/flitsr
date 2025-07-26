@@ -3,9 +3,10 @@ import argparse
 import argcomplete
 import inspect
 import sys
+import re
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple
+from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -16,6 +17,8 @@ from flitsr.advanced import Config
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
     def __init__(self):
+        self._default_metric = 'ochiai'
+        self._adv_required_args: Dict[str, Tuple[str, Set[str]]] = dict()
         self._advanced_params: Dict[str, List[str]] = {}
 
     def _add_params(self, params: argparse.Namespace):
@@ -23,57 +26,55 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         for key in dict_:
             setattr(self, key, dict_[key])
 
-    def parse_args(self, argv: Optional[List[str]]) -> Args:
-        """
-        Parse the arguments defined by args for the flitsr program with
-        python's argparse. The result is an argparse Namespace object which
-        includes all of the arguments parsed (or default values).
+    @staticmethod
+    def _check_file(filename):
+        """ Check file exists function """
+        if (osp.exists(filename)):
+            return filename
+        else:
+            raise argparse.ArgumentTypeError('Could not find input file:'
+                                             f' \"{filename}\"')
 
-        Args:
-          argv: The list of arguments to parse, usual taken from the command
-                line arguments given
-        """
-        # Check file exists function
-        def check_file(filename):
-            if (osp.exists(filename)):
-                return filename
+    @staticmethod
+    def _check_type(type_comb: str):
+        """ check FLITSR type combinations function """
+        type_sep = type_comb.split('+')
+        cluster = None
+        ranker = None
+        refiner = None
+        for t in type_sep:
+            t = t.upper()
+            if (hasattr(advanced.ClusterType, t)):
+                if (cluster is not None):
+                    raise argparse.ArgumentTypeError('Cannot have two '
+                        f'cluster types: {cluster.name} and {t}')
+                cluster = advanced.ClusterType[t]
+            elif (hasattr(advanced.RefinerType, t)):
+                if (refiner is not None):
+                    raise argparse.ArgumentTypeError('Cannot have two '
+                        f'refiner types: {refiner.name} and {t}')
+                refiner = advanced.RefinerType[t]
+            elif (hasattr(advanced.RankerType, t)):
+                if (ranker is not None):
+                    raise argparse.ArgumentTypeError('Cannot have two '
+                        f'ranker types: {ranker.name} and {t}')
+                ranker = advanced.RankerType[t]
             else:
-                raise argparse.ArgumentTypeError('Could not find input file:'
-                                                 f' \"{filename}\"')
+                raise argparse.ArgumentTypeError('Invalid type for '
+                                                 f'--all-types: \"{t}\"')
+        adv_type = Config(ranker, cluster, refiner)
+        return adv_type
 
-        # check FLITSR type combinations function
-        def check_type(type_comb: str):
-            type_sep = type_comb.split('+')
-            cluster = None
-            ranker = None
-            refiner = None
-            for t in type_sep:
-                t = t.upper()
-                if (hasattr(advanced.ClusterType, t)):
-                    if (cluster is not None):
-                        raise argparse.ArgumentTypeError('Cannot have two '
-                            f'cluster types: {cluster.name} and {t}')
-                    cluster = advanced.ClusterType[t]
-                elif (hasattr(advanced.RefinerType, t)):
-                    if (refiner is not None):
-                        raise argparse.ArgumentTypeError('Cannot have two '
-                            f'refiner types: {refiner.name} and {t}')
-                    refiner = advanced.RefinerType[t]
-                elif (hasattr(advanced.RankerType, t)):
-                    if (ranker is not None):
-                        raise argparse.ArgumentTypeError('Cannot have two '
-                            f'ranker types: {ranker.name} and {t}')
-                    ranker = advanced.RankerType[t]
-                else:
-                    raise argparse.ArgumentTypeError('Invalid type for '
-                                                     f'--all-types: \"{t}\"')
-            adv_type = Config(ranker, cluster, refiner)
-            return adv_type
-
+    def gen_parser(self) -> argparse.ArgumentParser:
+        """
+        Generate the ArgumentParser that will be used to parse arguments.
+        This function is used by the ``parse_args`` function, as well as to
+        generate documentation.
+        """
         # General options
         parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
                 'fault finding/localization tool for multiple faults.')
-        parser.add_argument('input', type=check_file,
+        parser.add_argument('input', type=Args._check_file,
                             help='The coverage file (TCM) or '
                             'directory (GZoltar) containing the coverage collected'
                             ' for the system over the test suite')
@@ -88,7 +89,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         parser.add_argument('--spectrum-csv', action='store_true',
                 help='Enabling this option will cause FLITSR to '
                 'output the spectrum in CSV format.')
-        default_metric = 'ochiai'
         parser.add_argument('-m', '--metric', dest='metrics', action='append',
                 choices=Suspicious.getNames(True), metavar='METRIC',
                 help='The underlying (SBFL) metric(s) to use when either ranking '
@@ -97,7 +97,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'Specifying multiple metrics will output the results of each '
                 'metric to a seperate file using the metric\'s name instead of '
                 'stdout. Allowed values are: ['+', '.join(Suspicious.getNames(True))+'] '
-                '(default: {})'.format(default_metric))
+                '(default: {})'.format(self._default_metric))
         parser.add_argument('-r', '--ranking', action='store_true',
                 help='Changes FLITSR\'s expected input to be an SBFL ranking in '
                 'Gzoltar or FLITSR format (determined automatically), instead of '
@@ -131,7 +131,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'named [<flitsr method>_]<metric>.run for each FLITSR method '
                 'and metric')
         adv_types = list(advanced.all_types.keys())
-        parser.add_argument('-t', '--types', action='append', type=check_type,
+        parser.add_argument('-t', '--types', action='append', type=Args._check_type,
                              help='Specify the advanced type combination to use '
                              'when running FLITSR. Note that this argument '
                              'overrides any of the individual advanced type '
@@ -154,7 +154,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
         # Advanced types options
         primitives = (bool, str, int, float, Path)
-        adv_required_args: Dict[str, Tuple[str, List[str]]] = dict()
 
         advanced_groups: List[Tuple[str, Any, Any, Any]] = []
 
@@ -192,7 +191,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 help_ = ''  # '(default: %(default)s)'
                 # add docstring
                 if (class_.__doc__ is not None and class_.__doc__ != ''):
-                    help_ = class_.__doc__ + ' ' + help_
+                    help_ = (re.sub("\\s+", " ", class_.__doc__.strip()) +
+                             ' ' + help_)
                 # add cmd line argument for this advanced type
                 mu.add_argument('--'+disp_name, dest=adv_name,
                                 action='store_const', const=adv_enum[name],
@@ -217,9 +217,9 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         parser_args['help'] = '(default: %(default)s)'
                     # else add param as conditionally "required" if not bool
                     elif (argspec.annotations[param] is not bool):
-                        if (name not in adv_required_args):
-                            adv_required_args[name] = (adv_name, list())
-                        adv_required_args[name][1].append(param)
+                        if (name not in self._adv_required_args):
+                            self._adv_required_args[name] = (adv_name, set())
+                        self._adv_required_args[name][1].add(param)
                         parser_args['help'] = '(required)'
                     # add choices
                     if (hasattr(init, '__choices__') and
@@ -429,7 +429,20 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'that determines the number of bases included before the cutoff')
 
         argcomplete.autocomplete(parser)
+        return parser
 
+    def parse_args(self, argv: Optional[List[str]]) -> Args:
+        """
+        Parse the arguments defined by args for the flitsr program with
+        python's argparse. The result is an argparse Namespace object which
+        includes all of the arguments parsed (or default values).
+
+        Args:
+          argv: The list of arguments to parse, usual taken from the command
+                line arguments given
+        """
+
+        parser = self.gen_parser()
         args = parser.parse_args(argv)
 
         # manually set flitsr as the default
@@ -439,7 +452,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             default_ranker_used = True
 
         # check "required" advanced type arguments
-        for adv_name, (adv_type, adv_args) in adv_required_args.items():
+        for adv_name, (adv_type, adv_args) in self._adv_required_args.items():
             if (getattr(args, adv_type) is not None and
                 getattr(args, adv_type).name == adv_name):
                 dname = adv_name.lower()
@@ -453,7 +466,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             if (args.all is True):
                 args.metrics = Suspicious.getNames()
             else:
-                args.metrics = [default_metric]
+                args.metrics = [self._default_metric]
         # Set the flitsr types based on 'all' or what is set
         if (args.all is True):
             if (args.types is None):
@@ -500,6 +513,10 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             else:
                 raise KeyError(f'Could not find {param} in args!')
         return group
+
+
+def get_parser() -> argparse.ArgumentParser:
+    return Args().gen_parser()
 
 
 if __name__ == "__main__":

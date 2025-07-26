@@ -216,7 +216,7 @@ def auc_calc(points: List[Tuple[float, float]],
     return auc
 
 
-def main(argv: Optional[List[str]] = None):
+def get_parser() -> ArgumentParser:
     parser = ArgumentParser(prog="percent_at_n")
     subparsers = parser.add_subparsers(title='Modes', description='The '
                                        'following modes are available '
@@ -275,6 +275,11 @@ def main(argv: Optional[List[str]] = None):
                             help='Specifies the percentage cut-off point to '
                             'use for the AUC calculations', default='101.0')
     argcomplete.autocomplete(parser)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None):
+    parser = get_parser()
     args = parser.parse_args(argv)
     if (args.mode == "combine"):
         infile = args.input_file
