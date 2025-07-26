@@ -20,11 +20,6 @@ Clusters
 on the spectrum, returning multiple spectra in return. They are the first
 advanced type to be run in the flow of ``flitsr``\s execution.
 
-The API for a `Cluster <flitsr.advanced.cluster.Cluster>` type is given below:
-
-.. autoclass:: flitsr.advanced.cluster.Cluster
-   :members:
-
 The `Cluster <flitsr.advanced.cluster.Cluster>` type is only required to define
 one method, `cluster <flitsr.advanced.cluster.Cluster.cluster>`, which takes the
 input `Spectrum <flitsr.spectrum.Spectrum>` (along with some other useful
@@ -39,6 +34,17 @@ spectrum according to the techniques described in `"More Debugging in Parallel"
 <https://doi.org/10.1109/ISSRE.2014.29>`__. See the :ref:`--parallel <flitsr-parallel>`
 command line option for usage of these techniques.
 
+The API for a `Cluster <flitsr.advanced.cluster.Cluster>` type, as well as any
+implemented ``Cluster``\s are given below:
+
+.. autosummary::
+   :recursive:
+   :toctree: generated
+   :template: custom-class-template.rst
+
+   flitsr.advanced.cluster.Cluster
+   flitsr.advanced.parallel.Parallel
+
 .. _adv-refiners:
 
 Refiners
@@ -51,11 +57,6 @@ spectrum. `Refiner <flitsr.advanced.refiner.Refiner>`\s are useful for extending
 a spectrum with additional information before using it to form a `Ranking
 <flitsr.ranking.Ranking>` with SBFL techniques.
 
-The API for a `Refiner <flitsr.advanced.refiner.Refiner>` type is given below:
-
-.. autoclass:: flitsr.advanced.refiner.Refiner
-   :members:
-
 Like the `Cluster <flitsr.advanced.cluster.Cluster>` type, `Refiner
 <flitsr.advanced.refiner.Refiner>` types need only implement one method: `refine
 <flitsr.advanced.refiner.Refiner.refine>`, which takes a spectrum and returns a
@@ -64,6 +65,15 @@ modified spectrum.
 Currently there are no `Refiner <flitsr.advanced.refiner.Refiner>`\s implemented
 directly in the ``flitsr`` framework. However you can still :doc:`create your
 own <adv_type_ext>`.
+
+The API for a `Refiner <flitsr.advanced.refiner.Refiner>` type is given below:
+
+.. autosummary::
+   :recursive:
+   :toctree: generated
+   :template: custom-class-template.rst
+
+   flitsr.advanced.refiner.Refiner
 
 .. _adv-rankers:
 
@@ -74,12 +84,6 @@ The last, and possibly most useful ``flitsr`` advanced type is a `Ranker
 <flitsr.advanced.ranker.Ranker>`. A `Ranker <flitsr.advanced.ranker.Ranker>`
 takes a `Spectrum <flitsr.spectrum.Spectrum>` and uses the information from the
 Spectrum to rank the elements, forming a `Ranking <flitsr.ranking.Ranking>`.
-
-The API for a `Ranker <flitsr.advanced.ranker.Ranker>` type is given below:
-
-.. autoclass:: flitsr.advanced.ranker.Ranker
-   :members:
-
 
 As before, there is only one method to implement, the `rank
 <flitsr.advanced.ranker.Ranker.rank>` method which takes a spectrum and SBFL base
@@ -107,3 +111,18 @@ algorithm, as described in `"Augmenting Automated Spectrum Based Fault
 Localization For Multiple Faults" <https://doi.org/10.24963/ijcai.2023/350>`__.
 The technique is also designed to improve SBFL effectiveness in the presence of
 multiple faults.
+
+The API for a `Ranker <flitsr.advanced.ranker.Ranker>` as well as all
+`Ranker <flitsr.advanced.ranker.Ranker>`\s in ``flitsr`` are given below:
+
+.. autosummary::
+   :recursive:
+   :toctree: generated
+   :template: custom-class-template.rst
+
+   flitsr.advanced.ranker.Ranker
+   flitsr.advanced.sbfl.SBFL
+   flitsr.advanced.flitsr.Flitsr
+   flitsr.advanced.flitsr.Multi
+   flitsr.advanced.artemis_wrapper.Artemis
+

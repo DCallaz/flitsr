@@ -3,6 +3,7 @@ import sys
 from os import path as osp
 from typing import List, Optional
 from argparse import ArgumentParser
+import argcomplete
 from enum import Enum
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
@@ -35,7 +36,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
     output_format.value.write_spectrum(spectrum, output_file)
 
 
-def main(argv: Optional[List[str]] = None):
+def get_parser() -> ArgumentParser:
     parser = ArgumentParser('transform', description='Transform a spectrum '
                             'from one format to another')
     parser.add_argument('input', help='The spectrum input file. The spectral '
@@ -50,6 +51,12 @@ def main(argv: Optional[List[str]] = None):
                         'from the name of the input file; for example, if the '
                         'input file is "input.tcm", and the output format is '
                         'Gzoltar, the output will be "input/".')
+    argcomplete.autocomplete(parser)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None):
+    parser = get_parser()
     args = parser.parse_args(argv)
     if (args.output_type is not None):
         args.output_type = InputType[args.output_type]

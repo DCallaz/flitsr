@@ -1,4 +1,4 @@
-Evaluation framework - ``run_all``
+Evaluation framework -- ``run_all``
 ===============================================================================
 
 This section describes usage instructions for researchers wishing to use

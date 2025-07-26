@@ -1,4 +1,4 @@
-Merging results - ``merge``
+Merging results -- ``merge``
 ===============================================================================
 
 Once ``.results`` files have been generated using the :doc:`run_all </eval_framework>`,

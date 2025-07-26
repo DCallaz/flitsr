@@ -20,10 +20,27 @@ class Parallel(Cluster):
 
     @choices('parType', ['bdm', 'msp', 'hwk', 'vwk'])
     def __init__(self, parType: str = 'msp'):
+        """
+        Constructs a Parallel `Cluster <flitsr.advanced.cluster.Cluster>`
+        object. Takes a partition type `parType`, which is the algorithm to run.
+        The choices are: 'bdm', 'msp', 'hwk', and 'vwk'.
+        """
         self.parType = parType
 
     def cluster(self, inp_file: str, spectrum: Spectrum,
                 method_lvl=False) -> List[Spectrum]:
+        """
+        Run one of the Parallel clustering algorithms over the given spectrum.
+
+        Args:
+          inp_file: str: The file path of the input file containing the spectrum.
+          spectrum: Spectrum: The input spectrum.
+          method_lvl:  (Default value = False) Whether the input spectrum is
+            method level.
+
+        Returns:
+          A collection of subspectra formed by decomposing the input spectrum.
+        """
         # write the spectrum to a temporary file
         tmp_fd, tmp_name = tempfile.mkstemp(text=True)
         inp_file = tmp_name
@@ -35,6 +52,18 @@ class Parallel(Cluster):
         return spectrums
 
     def partition_table(self, d: str, spectrum: Spectrum) -> List[Spectrum]:
+        """
+        Partitions the given `spectrum` using one of the parallel algorithms
+        into multiple decomposed spectra.
+
+        Args:
+          d: str: The location path for the input file containing the spectrum.
+          spectrum: Spectrum: The input spectrum.
+
+        Returns:
+          A collection of spectra which are decompositions of the input
+          spectrum.
+        """
         jar_name = 'parallel-1.0-SNAPSHOT-jar-with-dependencies.jar'
         with resources.path('flitsr.advanced', jar_name) as jar_file:
             output = subprocess.check_output(['java', '-jar', str(jar_file), d,
@@ -58,7 +87,13 @@ class Parallel(Cluster):
         return spectrums
 
     def trim_groups(self, spectrum):
-        """Remove groups that are not in this block (i.e. ef = 0)"""
+        """
+        Remove groups in the spectrum in place that are not in this block (i.e.
+        ef = 0).
+
+        Args:
+          spectrum: The spectrum for which to trim the groups.
+        """
         toRemove = set()
         for group in spectrum.groups():
             if (spectrum.f[group] == 0):

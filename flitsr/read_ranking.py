@@ -5,6 +5,18 @@ from flitsr.ranking import Ranking, Rankings
 
 
 def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
+    """
+    Guess the ranking from the contents of the `ranking_file` and read it in.
+
+    Args:
+      ranking_file: str: The ranking input file to read in.
+      method_level:  (Default value = False) Whether the ranking file is method
+        level.
+
+    Returns:
+      A `Rankings <flitsr.ranking.Rankings>` object containing the single
+      read-in ranking.
+    """
     f = open(ranking_file)
     if (f.readline().startswith("Faulty grouping")):
         return read_flitsr_ranking(ranking_file)
@@ -12,7 +24,10 @@ def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
         return read_ranking(ranking_file, method_level)
 
 
-def read_ranking(ranking_file: str, method_level=False) -> Rankings:
+def read_gzoltar_ranking(ranking_file: str, method_level=False) -> Rankings:
+    """
+    Read in a GZoltar formatted ranking.
+    """
     f = open(ranking_file)
     ranking = Ranking()
     bugs = 0
@@ -64,6 +79,9 @@ def read_ranking(ranking_file: str, method_level=False) -> Rankings:
 
 
 def read_flitsr_ranking(ranking_file: str) -> Rankings:
+    """
+    Read in a ``flitsr`` formatted ranking.
+    """
     f = open(ranking_file)
     ranking = Ranking()
     all_faults: Dict[Any, Set[Spectrum.Element]] = {}

@@ -1,4 +1,4 @@
-Plotting figures - ``percent_at_n``
+Plotting figures -- ``percent_at_n``
 ===============================================================================
 
 The ``flitsr`` evaluation framework supports automatic plotting of

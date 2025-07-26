@@ -30,13 +30,10 @@ Where ``CustomInput`` is a custom input type that inherits
 Abstract Input class
 -------------------------------------------------------------------------------
 
-The abstract :class:`Input <flitsr.input.input_reader.Input>` class that your
-custom input type must extend has the following structure.
+See the `Input <flitsr.input.input_reader.Input>` class for the structure that
+your custom input type must extend.
 
 .. note::
    Your custom input type must implement all abstract methods, and may optionally
    implement the :meth:`write_spectrum <flitsr.input.input_reader.Input.write_spectrum>`,
    and :meth:`get_elem_separators <flitsr.input.input_reader.Input.get_elem_separators>` methods.
-
-.. autoclass:: flitsr.input.input_reader.Input
-   :members:

@@ -59,6 +59,7 @@ framework to run experiments, see the following sections:
    eval_framework
    merging
    plotting
+   transform
    :caption: For researchers
    :maxdepth: 1
 

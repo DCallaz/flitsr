@@ -22,6 +22,7 @@ API
    flitsr.spectrum
    flitsr.ranking
    flitsr.tie
+   flitsr.errors
 
 .. _example:
 
@@ -31,7 +32,7 @@ Example
 Let's look at an example of using ``flitsr`` as a Python package. You can of
 course use ``flitsr`` in any way you wish, but we will focus on the main
 functionality here. In particular, this example will demonstrate a simple
-example of running the Ochiai SBFL technique over an example spectrum.
+example of running the Ochiai `flitsr.advanced.sbfl.SBFL` technique over an example spectrum.
 
 To start, let's read in the `Spectrum <flitsr.spectrum.Spectrum>`. We'll use the
 :doc:`example_spectrum`, which is located at ``./example_spectrum.tcm``.
