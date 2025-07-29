@@ -2,16 +2,52 @@ import sys
 from flitsr.spectrum import Spectrum
 from typing import Dict, List, Set, Tuple, Any
 from flitsr.input.input_reader import Input
+from flitsr.errors import warning
 
 
-def split(faults: Dict[Any, Set[Spectrum.Element]],
-          spectrum: Spectrum) -> Tuple[Dict[float, Set[Spectrum.Element]],
+class NoFaultsError(ValueError):
+    """
+    Exception class for when splitting the fauls causes there to be no
+    exposable faults left in the spectrum
+    """
+    pass
+
+
+def split_spectrum_faults(spectrum: Spectrum):
+    """
+    Splits fault groups that are a combination of two or more sub-faults in
+    mutually exclusive parts of the system into separate faults, as well as
+    removing faults that are not exposed. Operates on the spectrum in-place.
+
+    Raises:
+        NoFaultsError: When there are no exposed faults in the spectrum after
+            splitting. Note that the spectrum is still modified when this is
+            thrown, so this can be ignored in the client code.
+    """
+    faults, unexposed = split(spectrum)
+    for elem in unexposed:
+        elem.faults.clear()
+        warning(f"Dropped faulty UUT: {elem} due to unexposure")
+    # Get element's fault lists
+    fault_lists: Dict[Spectrum.Element, List[float]] = {}
+    for (f_num, f_locs) in faults.items():
+        for elem in f_locs:
+            fault_lists.setdefault(elem, []).append(f_num)
+    # Set element's fault lists
+    for (elem, f_list) in fault_lists.items():
+        elem.faults = f_list
+    if (len(faults) == 0):
+        raise NoFaultsError()
+
+
+def split(spectrum: Spectrum) -> Tuple[Dict[float, Set[Spectrum.Element]],
                                        Set[Spectrum.Element]]:
     """
     Splits fault groups that are a combination of two or more sub-faults in
     mutually exclusive parts of the system into separate faults. Also finds
     faults that are not exposed and returns them separately.
     """
+    faults = spectrum.get_faults()
     if (faults == {}):
         return {}, set()
     ftemp = [(set(elem), f[0], False) for f in faults.items() for elem in f[1]]
@@ -63,6 +99,6 @@ if __name__ == "__main__":
     print("faults:", faults)
     # print(groups)
     # print_spectrum(spectrum)
-    faults, unexposed = split(faults, spectrum)
+    faults, unexposed = split(spectrum)
     print("split faults:", faults)
     print("unexposed:", unexposed)
