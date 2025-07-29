@@ -68,7 +68,7 @@ class TCM(Input):
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t})',
                       'in input file, terminating...')
-            arr = line.rstrip().split(' ')
+            arr = line.rstrip().split()
             for i in range(0, len(arr), 2):
                 try:
                     sb.addExecution(t, int(arr[i]))
