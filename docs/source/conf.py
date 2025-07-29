@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 project = 'flitsr'
 copyright = '2025, Dylan Callaghan'
 author = 'Dylan Callaghan'
-release = '2.2.0'
+release = '2.3.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
