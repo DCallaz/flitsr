@@ -21,7 +21,7 @@ def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
     if (f.readline().startswith("Faulty grouping")):
         return read_flitsr_ranking(ranking_file)
     else:
-        return read_ranking(ranking_file, method_level)
+        return read_gzoltar_ranking(ranking_file, method_level)
 
 
 def read_gzoltar_ranking(ranking_file: str, method_level=False) -> Rankings:

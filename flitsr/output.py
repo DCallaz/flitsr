@@ -1,15 +1,12 @@
 import sys
-import os
-from os import path as osp
-from shutil import rmtree
-from typing import Dict, List, Set
+from typing import List, Optional
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.ranking import Ranking, Rankings
 from flitsr.input import InputType
 
 
-def print_flitsr_ranking(ranking: Ranking, elems: List[Spectrum.Element],
-                         file=sys.stdout):
+def print_flitsr_ranking(ranking: Optional[Ranking],
+                         elems: List[Spectrum.Element], file=sys.stdout):
     no_ranking = False
     if (ranking is None):  # make a tempoorary Scores object
         ranking = Ranking()
@@ -25,6 +22,7 @@ def print_flitsr_ranking(ranking: Ranking, elems: List[Spectrum.Element],
         for elem in entity:
             print(" ", elem, file=file)
         print("]", file=file)
+
 
 def print_rankings(rankings: Rankings, csv=False, file=sys.stdout):
     for (i, ranking) in enumerate(rankings):
