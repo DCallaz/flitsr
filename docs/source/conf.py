@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 project = 'flitsr'
 copyright = '2025, Dylan Callaghan'
 author = 'Dylan Callaghan'
-release = '2.3.0'
+release = '2.3.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -39,3 +39,17 @@ exclude_patterns = []
 
 html_theme = 'furo'
 # html_static_path = ['_static']
+
+
+def autodoc_skip_member(app, what, name, obj, skip, options):
+    exclusions = ('__weakref__',  'get_parser',  # special-members
+                  '__doc__', '__module__', '__dict__',  # undoc-members
+                  )
+    exclude = name in exclusions
+    # return True if (skip or exclude) else None
+    # Can interfere with subsequent skip functions.
+    return True if exclude else None
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', autodoc_skip_member)

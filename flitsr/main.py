@@ -123,7 +123,7 @@ def output(rankings: Rankings, weff=[], top1=[],
 
 
 def main(argv: Optional[List[str]] = None):
-    args: Args = Args().parse_args(argv)
+    args: Args = Args(argv, cmd_line=True)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking

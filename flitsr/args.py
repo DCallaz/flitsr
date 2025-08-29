@@ -16,10 +16,37 @@ from flitsr.advanced import Config
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
-    def __init__(self):
+    """
+    The global Singleton holding the specified/default arguments used across
+    the flitsr framework.
+    """
+    def __init__(self, argv: Optional[List[str]] = None, cmd_line=False,
+                 noparse=False):
+        """
+        Initialize the Args Singleton object. Note that this constructor is
+        only ever called once for each program run. Other attempts to construct
+        this object will return the pre-existing ``Args`` Singleton object.
+
+        Args:
+          argv: Optional[List[str]]: The optional list of command line
+              arguments to parse. If not given and the Args object is set to
+              read from the command line (see ``cmd_line``), sys.argv is used
+              instead.
+          cmd_line: bool: Whether to parse arguments given in command-line
+              style. When True, Args will either parse the arguments given in
+              ``argv``, or ``sys.argv`` if ``argv`` is ``None``. If False,
+              ``Args`` will just load the default values for each command line
+              option, and ignore required arguments. (Default value = False)
+          noparse: bool: When True, this ``Args`` object will not attempt to
+              parse any arguments. This is primarily used for generating
+              documentation for flitsr's command line. (Default value = False)
+        """
         self._default_metric = 'ochiai'
         self._adv_required_args: Dict[str, Tuple[str, Set[str]]] = dict()
         self._advanced_params: Dict[str, List[str]] = {}
+        self._parser = self._gen_parser(cmd_line)
+        if (not noparse):
+            self._parse_args(argv)
 
     def _add_params(self, params: argparse.Namespace):
         dict_ = vars(params)
@@ -65,19 +92,29 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         adv_type = Config(ranker, cluster, refiner)
         return adv_type
 
-    def gen_parser(self) -> argparse.ArgumentParser:
+    def _gen_parser(self, cmd_line: bool = True) -> argparse.ArgumentParser:
         """
         Generate the ArgumentParser that will be used to parse arguments.
         This function is used by the ``parse_args`` function, as well as to
-        generate documentation.
+        initialize the Args object and generate documentation. Setting
+        ``cmd_line`` to False will disable required arguments, allowing the
+        default values to be retrived.
+
+        Args:
+          cmd_line: bool: Whether to generate the parser for the command line,
+              or just for the default arguments. (Default value = True)
+
+        Returns:
+            The argparse ArgumentParser that was generated.
         """
         # General options
         parser = argparse.ArgumentParser(prog='flitsr', description='An automatic '
                 'fault finding/localization tool for multiple faults.')
-        parser.add_argument('input', type=Args._check_file,
-                            help='The coverage file (TCM) or '
-                            'directory (GZoltar) containing the coverage collected'
-                            ' for the system over the test suite')
+        if (cmd_line):
+            parser.add_argument('input', type=Args._check_file,
+                                help='The coverage file (TCM) or directory '
+                                '(GZoltar) containing the coverage collected '
+                                'for the system over the test suite')
         parser.add_argument('-o', '--output', action='store', default=sys.stdout,
                 type=argparse.FileType('w'), help='Specify the output file to use '
                 'for all output (default: STDOUT).')
@@ -431,19 +468,22 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         argcomplete.autocomplete(parser)
         return parser
 
-    def parse_args(self, argv: Optional[List[str]]) -> Args:
+    def _parse_args(self, argv: Optional[List[str]] = None) -> Args:
         """
         Parse the arguments defined by args for the flitsr program with
         python's argparse. The result is an argparse Namespace object which
         includes all of the arguments parsed (or default values).
 
         Args:
-          argv: The list of arguments to parse, usual taken from the command
-                line arguments given
+          argv: Optional[List[str]]: (Default value = None) The list of
+              arguments to parse, usual taken from the command line arguments
+              given
+
+        Returns:
+          The constructed Args object
         """
 
-        parser = self.gen_parser()
-        args = parser.parse_args(argv)
+        args = self._parser.parse_args(argv)
 
         # manually set flitsr as the default
         default_ranker_used = False
@@ -460,7 +500,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     if (getattr(args, dname+'_'+adv_arg) is None):
                         err = (f'--{dname}-{adv_arg} is required when '
                                f'--{dname} is used')
-                        parser.error(err)
+                        self._parser.error(err)
         # Set the metrics based on 'all' or the default metric
         if (args.metrics is None):
             if (args.all is True):
@@ -499,7 +539,21 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         self._add_params(args)
         return self
 
-    def get_arg_group(self, group_name):
+    def get_arg_group(self, group_name) -> Dict[str, Any]:
+        """
+        Return the arguments for the given argument group.
+
+        Args:
+          group_name: The name of the argument group to get arguments for. For
+              example, for the SBFL advanced type, the argument name would be
+              "sbfl", and would return any arguments that SBFL needs.
+
+        Returns:
+          A dictionary with all the arguments in this group as key-value pairs.
+          This can be used when calling a function that requires these
+          arguments using python dictionary unpacking (e.g.
+          ``function_to_call(**get_arg_group(...))``).
+        """
         group = {}
         params = self._advanced_params[group_name.upper()]
         prefix = group_name.lower()+'_'
@@ -516,7 +570,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
 
 def get_parser() -> argparse.ArgumentParser:
-    return Args().gen_parser()
+    """ Return the parser for ``flitsr``. Used for the documentation """
+    return Args(cmd_line=True, noparse=True)._parser
 
 
 if __name__ == "__main__":

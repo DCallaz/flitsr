@@ -23,6 +23,7 @@ API
    flitsr.ranking
    flitsr.tie
    flitsr.errors
+   flitsr.args
 
 .. _example:
 

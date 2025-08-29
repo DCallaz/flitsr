@@ -1,5 +1,5 @@
 import copy
-from typing import List, Set, TYPE_CHECKING
+from typing import List, Set, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from flitsr.args import Args
 from flitsr.spectrum import Spectrum
@@ -19,10 +19,14 @@ class Flitsr(Ranker):
     @existing('args')
     @choices('internal_ranking', ['auto', 'conf', 'original', 'reverse',
                                   'flitsr'])
-    def __init__(self, args: 'Args', internal_ranking: str = 'auto',
-                 tiebrk: Tiebrk = Tiebrk.ORIG):
+    def __init__(self, args: Optional['Args'] = None,
+                 internal_ranking: str = 'auto', tiebrk: Tiebrk = Tiebrk.ORIG):
         self.tiebrk = tiebrk
-        self.args = args
+        if (args is None):
+            from flitsr.args import Args
+            self.args = Args()
+        else:
+            self.args = args
         self.order_method = internal_ranking
 
     def remove_faulty_elements(self, spectrum: Spectrum,
@@ -169,7 +173,10 @@ class Multi(Flitsr):
     Run the FLITSR* algorithm over the spectrum to produce ranked lists.
     """
     @existing('args')
-    def __init__(self, args: 'Args'):
+    def __init__(self, args: Optional['Args'] = None):
+        if (args is None):
+            from flitsr.args import Args
+            args = Args()
         flitsr_opts = args.get_arg_group('FLITSR')
         super().__init__(**flitsr_opts)
 
