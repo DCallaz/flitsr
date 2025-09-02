@@ -45,7 +45,8 @@ class Flitsr(Ranker):
         if (hasattr(advanced.RankerType, formula.upper())):
             ranker_args = self.args.get_arg_group(formula)
             ranker = advanced.RankerType[formula.upper()].value(**ranker_args)
-            ranking = ranker.rank(spectrum, formula)
+            # set the default metric
+            ranking = ranker.rank(spectrum, self.args._default_metric)
         else:
             sbfl_args = self.args.get_arg_group('SBFL')
             ranking = SBFL(**sbfl_args).rank(spectrum, formula)

@@ -3,7 +3,7 @@ import pkgutil
 from flitsr import advanced
 from enum import Enum
 import importlib
-from typing import Union
+from typing import Union, Optional, Any, Dict
 import sys
 
 _rankers = {}
@@ -62,11 +62,17 @@ for cls in all_types.values():
 
 
 class Config:
-    def __init__(self, ranker: RankerType = None, cluster: ClusterType = None,
-                 refiner: RefinerType = None):
+    def __init__(self, ranker: Optional[RankerType] = None,
+                 cluster: Optional[ClusterType] = None,
+                 refiner: Optional[RefinerType] = None,
+                 args: Optional[Dict[Any, Optional[Dict[str, Any]]]] = None):
         self.cluster = cluster
         self.ranker = ranker
         self.refiner = refiner
+        if (args is None):
+            self.args = {}
+        else:
+            self.args = args
 
     def __str__(self):
         return self._get_str()
@@ -79,14 +85,29 @@ class Config:
                         if c is not None)
         return string
 
+    def get_args(self, adv_type: Union[RefinerType, ClusterType, RankerType]):
+        return self.args.get(adv_type, None)
+
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:
-        if (printed and hasattr(typ.value, '__print_name__')):
-            return typ.value.__print_name__.lower()
-        elif (printed):
-            return typ.name.lower()
+        # first get args
+        args = self.args.get(typ, None)
+        if (args is not None):
+            if (printed):
+                a = ''
+            else:
+                print(args.items())
+                a = '(' + ','.join(f'{k}={v}' for k,v in args.items()) + ')'
         else:
-            return typ.name.upper()
+            a = ''
+        # then get name
+        if (printed and hasattr(typ.value, '__print_name__')):
+            name = typ.value.__print_name__.lower()
+        elif (printed):
+            name = typ.name.lower()
+        else:
+            name = typ.name.upper()
+        return name + a
 
     def __repr__(self):
         return self._get_str()
