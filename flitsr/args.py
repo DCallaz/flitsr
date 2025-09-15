@@ -6,7 +6,7 @@ import sys
 import re
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set
+from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set, Union, Generic
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -113,6 +113,20 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             args[t] = params
         adv_type = Config(ranker, cluster, refiner, args)
         return adv_type
+
+    @staticmethod
+    def _get_base_type(typ) -> List[type]:
+        """ function to extract the base type from a typing.Union, etc."""
+        if (hasattr(typ, '__origin__')):
+            if (typ.__origin__ is Union):
+                ret = list(typ.__args__)
+                # remove NoneType from Optionals
+                if (type(None) in ret):
+                    ret.remove(type(None))
+                return ret
+            elif (typ.__origin__ is Generic):
+                return [typ.__args__[0]]
+        return [typ]
 
     def _gen_parser(self, cmd_line: bool = True) -> argparse.ArgumentParser:
         """
@@ -270,12 +284,15 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
                     parser_args: Dict[str, Any] = {}
+                    # get the parameter type(s) (if any)
+                    paramTypes = (self._get_base_type(argspec.annotations[param])
+                                  if param in argspec.annotations else None)
                     # add default arguments if param has
                     if (argspec.defaults is not None and p_index >= def_diff):
                         parser_args['default'] = argspec.defaults[p_index-def_diff]
                         parser_args['help'] = '(default: %(default)s)'
                     # else add param as conditionally "required" if not bool
-                    elif (argspec.annotations[param] is not bool):
+                    elif (paramTypes is None or paramTypes != [bool]):
                         if (name not in self._adv_required_args):
                             self._adv_required_args[name] = (adv_name, set())
                         self._adv_required_args[name][1].add(param)
@@ -285,38 +302,51 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         param in init.__choices__):
                         parser_args['choices'] = init.__choices__[param]
                     # add types
-                    if (param in argspec.annotations):
-                        paramType = argspec.annotations[param]
-                        # specially handle bools
-                        if (paramType is bool):
-                            if ('default' in parser_args):
-                                # check if default is True
-                                if (parser_args['default']):
-                                    parser_args['dest'] = disp_name+'_'+param
-                                    paramName = ('--' + disp_name + '-no-' +
-                                                 param.replace('_', '-'))
-                                    parser_args['action'] = 'store_false'
+                    if (paramTypes is not None):
+                        # function to deal with non-primitives
+                        def non_primitive(name, param):
+                            if (not hasattr(class_, f'_{param}')):
+                                err = ('Could not find type conversion '
+                                       f'for {param} in {name}')
+                                raise NameError(err)
+                            return getattr(class_, f'_{param}')
+
+                        # only add automatic type conversion for single types
+                        if (len(paramTypes) == 1):
+                            paramType = paramTypes[0]
+                            # specially handle bools
+                            if (paramType is bool):
+                                if ('default' in parser_args):
+                                    # check if default is True
+                                    if (parser_args['default']):
+                                        parser_args['dest'] = disp_name+'_'+param
+                                        paramName = ('--' + disp_name + '-no-' +
+                                                     param.replace('_', '-'))
+                                        parser_args['action'] = 'store_false'
+                                    else:
+                                        parser_args['action'] = 'store_true'
                                 else:
                                     parser_args['action'] = 'store_true'
+                            # specially handle file IO types
+                            elif (inspect.isclass(paramType) and
+                                  issubclass(paramType, IO)):
+                                if (issubclass(paramType, BinaryIO)):
+                                    parser_args['type'] = argparse.FileType('rb')
+                                else:
+                                    parser_args['type'] = \
+                                      argparse.FileType('r', encoding='UTF-8')
                             else:
-                                parser_args['action'] = 'store_true'
-                        # specially handle file IO types
-                        elif (issubclass(paramType, IO)):
-                            if (issubclass(paramType, BinaryIO)):
-                                parser_args['type'] = argparse.FileType('rb')
-                            else:
-                                parser_args['type'] = \
-                                  argparse.FileType('r', encoding='UTF-8')
+                                if (paramType not in primitives):
+                                    paramType = non_primitive(name, param)
+                                parser_args['type'] = paramType
+                                if ('choices' not in parser_args):
+                                    parser_args['metavar'] = param
+                        # deal with multiple parameter types
                         else:
-                            if (paramType not in primitives):
-                                if (not hasattr(class_, f'_{param}')):
-                                    err = ('Could not find type conversion '
-                                           f'for {param} in {name}')
-                                    raise NameError(err)
-                                paramType = getattr(class_, f'_{param}')
-                            parser_args['type'] = paramType
+                            parser_args['type'] = non_primitive(name, param)
                             if ('choices' not in parser_args):
                                 parser_args['metavar'] = param
+
                     # finalize option
                     group.add_argument(paramName, **parser_args)
 

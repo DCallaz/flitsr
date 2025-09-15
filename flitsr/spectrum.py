@@ -45,6 +45,8 @@ class Spectrum:
         """A generic spectrum `Spectrum.Entity`. This is the base class for `Spectrum.Element`
         and `Spectrum.Group` in the spectrum.
         """
+        __slots__ = ()
+
         @abstractmethod
         def isFaulty(self) -> bool:
             """Returns whether or not this `Spectrum.Entity` pertains to a fault"""
@@ -73,7 +75,7 @@ class Spectrum:
         element (line, method, class, etc...).
         """
         __slots__ = ('_index', '_group', 'path', 'method', 'line', 'faults',
-                     'tup')
+                     'tup', 'hash')
 
         def __init__(self, details: List[str], index: int, faults: List[Any]):
             if (len(details) < 1):
@@ -95,7 +97,7 @@ class Spectrum:
                     self.line = int(details[1])
             self.faults = faults
             self.tup = (self.path, self.method, self.line)
-            # self.hash = hash(self.tup)
+            self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:
             """Returns whether or not this `Spectrum.Element` pertains to a fault"""
@@ -156,10 +158,10 @@ class Spectrum:
 
         def __eq__(self, other):
             return (isinstance(other, Spectrum.Element) and
-                    self._index == other._index)
+                    self.tup == other.tup)
 
         def __hash__(self):
-            return self._index
+            return self.hash
 
         def semantic_eq(self, other) -> bool:
             """
@@ -180,7 +182,7 @@ class Spectrum:
         A spectral group is a collection of spectral elements which have
         identical spectra.
         """
-        __slots__ = ('_elems', '_is_faulty', '_index')
+        __slots__ = ('_elems', '_is_faulty', '_index', '_elem_set', '_hash')
 
         def __init__(self, elems: Optional[List[Spectrum.Element]] = None,
                      index: Optional[int] = None):
@@ -191,7 +193,8 @@ class Spectrum:
             self._elems = elems if elems is not None else []
             self._is_faulty = any(e.isFaulty() for e in self._elems)
             self._index = index
-            self._hash = hash(frozenset(self._elems))
+            self._elem_set = frozenset(self._elems)
+            self._hash = hash(self._elem_set)
 
         def sort_elems(self, key: Callable):
             """
@@ -236,10 +239,7 @@ class Spectrum:
             Returns:
               True if `group` is a subgroup of this `Spectrum.Group`, False otherwise.
             """
-            for elem in group._elems:
-                if (elem not in self):
-                    return False
-            return True
+            return group._elem_set < self._elem_set
 
         def __getitem__(self, index: int) -> Spectrum.Element:
             return self._elems[index]
@@ -258,7 +258,7 @@ class Spectrum:
 
         def __eq__(self, other):
             return (isinstance(other, Spectrum.Group) and
-                    self._hash == other._hash)
+                    self._elem_set == other._elem_set)
 
         def __hash__(self):
             return self._hash
