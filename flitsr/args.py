@@ -69,43 +69,48 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         cluster = None
         ranker = None
         refiner = None
-        args: Dict[Any, Optional[Dict[str, Any]]] = {}
+        args: Dict[str, Optional[Dict[str, Any]]] = {}
         for t in type_sep:
             m = re.fullmatch("([^(]+)(?:\\(([^)]+)\\))?", t)
             if (m is None):
                 raise argparse.ArgumentTypeError('Invalid type for '
                                                  f'--all-types: \"{t}\"')
             t = m.group(1).upper()
-            if (m.group(2) is None):
-                params = None
-            else:
-                params = dict(re.findall("([^=,]+)=['\"]?([^,'\"]+)['\"]?",
-                                    m.group(2)))
-                # check params are valid and convert types
-                for k,v in params:
-                    #TODO
-                    pass
             if (hasattr(advanced.ClusterType, t)):
                 if (cluster is not None):
                     raise argparse.ArgumentTypeError('Cannot have two '
                         f'cluster types: {cluster.name} and {t}')
                 cluster = advanced.ClusterType[t]
-                args[cluster] = params
             elif (hasattr(advanced.RefinerType, t)):
                 if (refiner is not None):
                     raise argparse.ArgumentTypeError('Cannot have two '
                         f'refiner types: {refiner.name} and {t}')
                 refiner = advanced.RefinerType[t]
-                args[refiner] = params
             elif (hasattr(advanced.RankerType, t)):
                 if (ranker is not None):
                     raise argparse.ArgumentTypeError('Cannot have two '
                         f'ranker types: {ranker.name} and {t}')
                 ranker = advanced.RankerType[t]
-                args[ranker] = params
             else:
                 raise argparse.ArgumentTypeError('Invalid type for '
                                                  f'--all-types: \"{t}\"')
+            if (m.group(2) is None):
+                params = None
+            else:
+                params = dict(re.findall("([^=,]+)=['\"]?([^,'\"]+)['\"]?",
+                                         m.group(2)))
+                # check params are valid and convert types
+                for k, v in params:
+                    # check valid param
+                    if (k not in self._advanced_params[t]):
+                        raise argparse.ArgumentTypeError('Invalid parameter '
+                                                         f'\"{k}\" for type '
+                                                         f'{t}')
+                    else:
+                        # convert type
+                        # TODO
+                        pass
+            args[t] = params
         adv_type = Config(ranker, cluster, refiner, args)
         return adv_type
 
