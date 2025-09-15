@@ -61,7 +61,7 @@ default value of ``'msp'``.
 
 ``flitsr`` uses `argparse <https://docs.python.org/3/library/argparse.html>`__
 for its command line processing, which will automatically support conversion to
-any primitive type. For conversion to a non-primitive type, you may implement a
+any primitive type. For conversion to a non-primitive type, you must implement a
 method named ``_<param>`` in your advanced type class, where ``<param>`` is the
 name of the ``__init__`` parameter to convert, which takes a string and converts
 it to your custom type. For example, if your technique takes a parameter ``my_date``,
@@ -70,6 +70,7 @@ function:
 
 .. code-block:: python
 
+   @staticmethod
    def _my_date(date_str : str):
        from datetime import datetime
        return datetime.strptime(date_str, '%b %d %Y %I:%M%p').date()
