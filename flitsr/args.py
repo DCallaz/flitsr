@@ -43,7 +43,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         """
         self._default_metric = 'ochiai'
         self._adv_required_args: Dict[str, Tuple[str, Set[str]]] = dict()
-        self._advanced_params: Dict[str, List[str]] = {}
+        self._advanced_params: Dict[str, Dict[str, Any]] = {}
         self._parser = self._gen_parser(cmd_line)
         if (not noparse):
             self._parse_args(argv)
@@ -62,8 +62,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             raise argparse.ArgumentTypeError('Could not find input file:'
                                              f' \"{filename}\"')
 
-    @staticmethod
-    def _check_type(type_comb: str):
+    def _check_type(self, type_comb: str):
         """ check FLITSR type combinations function """
         type_sep = type_comb.split('+')
         cluster = None
@@ -100,7 +99,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 params = dict(re.findall("([^=,]+)=['\"]?([^,'\"]+)['\"]?",
                                          m.group(2)))
                 # check params are valid and convert types
-                for k, v in params:
+                for k, v in params.items():
                     # check valid param
                     if (k not in self._advanced_params[t]):
                         raise argparse.ArgumentTypeError('Invalid parameter '
@@ -108,8 +107,12 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                                          f'{t}')
                     else:
                         # convert type
-                        # TODO
-                        pass
+                        try:
+                            converted = self._advanced_params[t][k](v)
+                            params[k] = converted
+                        except Exception:
+                            raise argparse.ArgumentTypeError('Invalid value '
+                                f'\"{v}\" for parameter {k} of type {t}')
             args[t] = params
         adv_type = Config(ranker, cluster, refiner, args)
         return adv_type
@@ -204,7 +207,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'named [<flitsr method>_]<metric>.run for each FLITSR method '
                 'and metric')
         adv_types = list(advanced.all_types.keys())
-        parser.add_argument('-t', '--types', action='append', type=Args._check_type,
+        parser.add_argument('-t', '--types', action='append', type=self._check_type,
                              help='Specify the advanced type combination to use '
                              'when running FLITSR. Note that this argument '
                              'overrides any of the individual advanced type '
@@ -275,9 +278,9 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                                     argspec.defaults is None
                                                     else len(argspec.defaults))
                 # add cmd-line arguments for each parameter of this adv type
-                self._advanced_params[name] = list()
+                self._advanced_params[name] = dict()
                 for p_index, param in enumerate(argspec.args[1:]):
-                    self._advanced_params[name].append(param)
+                    self._advanced_params[name][param] = None
                     # skip adding this parameter if it is marked as existing
                     if (hasattr(init, '__existing__') and
                         param in init.__existing__):
@@ -346,6 +349,16 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                             parser_args['type'] = non_primitive(name, param)
                             if ('choices' not in parser_args):
                                 parser_args['metavar'] = param
+                        # store parser type converter
+                        if ('type' in parser_args):
+                            self._advanced_params[name][param] = parser_args['type']
+                        else:  # must be bool type
+                            def boolConv(x: str) -> bool:
+                                if (x not in ['True', 'False']):
+                                    raise ValueError('invalid literal for '
+                                                     f'bool: \'{x}\'')
+                                return x == 'True'
+                            self._advanced_params[name][param] = boolConv
 
                     # finalize option
                     group.add_argument(paramName, **parser_args)
