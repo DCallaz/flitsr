@@ -132,8 +132,8 @@ class Runall:
 
     def collect_results(self):
         for m in self.metrics:
-            rs = find('.', type='f', name='*.run')
-            tre = f"\\.\\/(.*)_{m}_.+\\.run"
+            rs = find('.', type='f', name='*.run', action=osp.normpath)
+            tre = f"(.*)_{m}_.+\\.run"
             try:
                 types = {m.group(1) for m in (re.match(tre, r) for r in rs)
                          if m is not None}
@@ -143,9 +143,10 @@ class Runall:
             for t in sorted(types, key=natsort):
                 with redirect_stdout(open(f'{t}_{m}.results', 'w')):
                     runs = sorted(find('.', type='f', depth=0,
-                                       name=f'{t}_{m}_*.run'), key=natsort)
+                                       name=f'{t}_{m}_*.run',
+                                       action=osp.normpath), key=natsort)
                     for run in runs:
-                        orig = removeprefix(run, f'./{t}_{m}_')
+                        orig = removeprefix(run, f'{t}_{m}_')
                         print(orig)
                         with open(run) as file:
                             print(file.read(), end='')
@@ -190,11 +191,11 @@ class Runall:
         # Iterate over each directory
         for dir_ in dirs:
             # Initial housekeeping
-            print(f'Running {removeprefix(dir_, "./")}')
+            print(f'Running {osp.normpath(dir_)}')
             os.chdir(dir_)
             done_inp = []
             if (self.recover and osp.isfile("results")):
-                print(f'Recovered {removeprefix(dir_, "./")}, skipping...')
+                print(f'Recovered {osp.normpath(dir_)}, skipping...')
                 os.chdir(basedir)
                 continue
             elif (not self.recover and osp.isfile("done_inputs.tmp")):
@@ -206,7 +207,7 @@ class Runall:
                     print('Skipping done inputs:')
                     print(*done_inp, sep=", ")
             proj_inp = list(map(osp.basename, [i for i in inputs if
-                re.fullmatch(f"{re.escape(dir_)}/[^//]*", i)]))
+                re.fullmatch(f"{re.escape(dir_)}{osp.sep}[^{osp.sep}]*", i)]))
             self.num_inputs = len(proj_inp)
             # Remove done inputs
             proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)
@@ -225,9 +226,9 @@ class Runall:
                 for error_file in err_files:
                     if (osp.basename(error_file) != "results.err"):
                         if (osp.getsize(error_file) > 0):
-                            print_err = (removesuffix(removeprefix(
-                                error_file, "./"), ".err"))
-                            print(f'Dir {removeprefix(dir_, "./")}',
+                            print_err = (removesuffix(osp.normpath(
+                                error_file), ".err"))
+                            print(f'Dir {osp.normpath(dir_)}',
                                   f'File {print_err}')
                             with open(error_file) as file:
                                 print(file.read(), end='')
@@ -236,7 +237,7 @@ class Runall:
             self.collect_results()
             merge.main([])
             os.remove("done_inputs.tmp")
-            print(f'Done in {removeprefix(dir_, "./")}')
+            print(f'Done in {osp.normpath(dir_)}')
             os.chdir(basedir)
         # Check for empty results file
         results_fl = osp.join(basedir, "results.err")
@@ -322,9 +323,9 @@ def main(argv: Optional[List[str]] = None):
 
     # Process incl & excl (remove trailing slashes)
     if (args.include is not None):
-        args.include = [path.rstrip('/') for path in args.include]
+        args.include = [path.rstrip(osp.sep) for path in args.include]
     if (args.exclude is not None):
-        args.exclude = [path.rstrip('/') for path in args.exclude]
+        args.exclude = [path.rstrip(osp.sep) for path in args.exclude]
 
     # Process input type
     if (args.gzoltar or args.dir):
