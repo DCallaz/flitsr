@@ -210,9 +210,9 @@ class Runall:
             self.num_inputs = len(proj_inp)
             # Remove done inputs
             proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)
-            # start worker processes
+            # start worker processes; don't keep processes for more than 1 run
             self.progress(len(done_inp))
-            with Pool(processes=self.num_cpus) as pool:
+            with Pool(processes=self.num_cpus, maxtasksperchild=1) as pool:
                 for i, _ in enumerate(pool.imap_unordered(self.run_flitsr,
                                                           proj_inp),
                                       len(done_inp)+1):
