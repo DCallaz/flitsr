@@ -518,7 +518,7 @@ class Spectrum:
         group_keys_remove = []
         for key in self._removed_groups:
             if (bucket is None or (isinstance(bucket, str) and key == bucket)
-               or (isinstance(bucket, Iterable) and key in bucket)):
+               or (isinstance(bucket, List) and key in bucket)):
                 groups_add_back.extend(self._removed_groups[key])
                 group_keys_remove.append(key)
         for key in group_keys_remove:
@@ -534,7 +534,7 @@ class Spectrum:
         test_keys_remove = []
         for key in self._removed_tests:
             if (bucket is None or (isinstance(bucket, str) and key == bucket)
-               or (isinstance(bucket, Iterable) and key in bucket)):
+               or (isinstance(bucket, List) and key in bucket)):
                 tests_add_back.extend(self._removed_tests[key])
                 test_keys_remove.append(key)
         for key in test_keys_remove:
