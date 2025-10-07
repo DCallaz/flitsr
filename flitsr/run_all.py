@@ -206,8 +206,9 @@ class Runall:
                 if (len(done_inp) > 0):
                     print('Skipping done inputs:')
                     print(*done_inp, sep=", ")
+            pat = f"{re.escape(dir_)}{re.escape(osp.sep)}[^{re.escape(osp.sep)}]*"
             proj_inp = list(map(osp.basename, [i for i in inputs if
-                re.fullmatch(f"{re.escape(dir_)}{osp.sep}[^{osp.sep}]*", i)]))
+                                               re.fullmatch(pat, i)]))
             self.num_inputs = len(proj_inp)
             # Remove done inputs
             proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)
