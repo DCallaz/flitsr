@@ -101,7 +101,8 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
 
 
 def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
-         incl_metrics=None, flitsrs=None, incl_advs=None):
+         incl_metrics=None, flitsrs=None, incl_advs=None,
+         save=None):
     from matplotlib import pyplot as plt
     comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
     metrics, modes, comb_points = read_comb_file(plot_file)
@@ -126,7 +127,7 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
         num_plots = len(modes)
     plt.rcParams.update({'font.size': 10})
     fig, axs = plt.subplots(1, num_plots,
-                            gridspec_kw={"left": 0.045,
+                            gridspec_kw={"left": 0.055,
                                          "bottom": 0.06,
                                          "right": 0.99,
                                          "top": 0.99,
@@ -136,7 +137,11 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
         plot_all(axs, points, metrics, modes, flitsrs, log)
     else:
         plot_sep(axs, points, type, metrics, modes, log)
-    plt.show()
+    if (save is None):
+        plt.show()
+    else:
+        plt.savefig(fname=save)
+    plt.close()
 
 
 def plot_all(axs, points, metrics, modes, flitsrs, log):
@@ -260,6 +265,13 @@ def get_parser() -> ArgumentParser:
                              help='By default graphs are plot with both axes '
                              'in linear scale. This option enables plotting '
                              'the x-axis in log scale instead')
+    plot_parser.add_argument('-S', '--save-to-file', action='store',
+                             metavar='FILE', help='By default, the plotted '
+                             'figure is displayed in an interactive window. '
+                             'Using this option, you may instead save the '
+                             'figure to a file given by FILE. The extension '
+                             'of the filename is used to determine the output '
+                             'format.', default=None)
 
     auc_parser = subparsers.add_parser('auc', help='Calculates the Area Under '
                                        'Curve (AUC) for each metric and '
@@ -287,7 +299,7 @@ def main(argv: Optional[List[str]] = None):
     elif (args.mode == "plot"):
         plot(args.plot_file, log=args.log, all=args.all, type=args.split_type,
              incl_metrics=args.metrics, flitsrs=args.types,
-             incl_advs=args.advanced_types)
+             incl_advs=args.advanced_types, save=args.save_to_file)
     elif (args.mode == "auc"):
         comb_file = args.comb_file
         metrics, modes, points = read_comb_file(comb_file)
