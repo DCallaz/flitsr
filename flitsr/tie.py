@@ -6,13 +6,16 @@ from typing import List, Any, Optional, Set, Dict
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
 
+
 class Tie:
     def __init__(self):
         self._elems: Set[Spectrum.Element] = set()
         self._group_len = 0
+        self._fault_locs: Dict[Any, Set[Spectrum.Element]] = {}
+        self._fault_groups: Dict[Any, Set[Spectrum.Element]] = {}
         self._num_faults = 0
-        self._fault_locs = 0
-        self._fault_groups = 0
+        self._num_fault_locs = 0
+        self._num_fault_groups = 0
         self._all_fault_locs: Dict[Spectrum.Element, Set[Any]] = {}
         self._all_fault_groups: Dict[Spectrum.Element, Set[Any]] = {}
 
@@ -30,6 +33,13 @@ class Tie:
         """Return the set of all the elements in this tie"""
         return self._elems
 
+    def active_faults(self, collapse=False) \
+            -> Dict[Any, Set[Spectrum.Element]]:
+        if (collapse):
+            return self._fault_groups
+        else:
+            return self._fault_locs
+
     def num_faults(self) -> int:
         """
         Return the number of unique faults found for the first time in this
@@ -43,9 +53,9 @@ class Tie:
         this tie.
         """
         if (collapse):
-            return self._fault_groups
+            return self._num_fault_groups
         else:
-            return self._fault_locs
+            return self._num_fault_locs
 
     def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[Any]]:
         """
@@ -56,7 +66,6 @@ class Tie:
             return self._all_fault_groups
         else:
             return self._all_fault_locs
-
 
     def expected_value(self, q, weffort: bool, collapse=False) -> float:
         """
@@ -83,7 +92,7 @@ class Tie:
                     if (fpl*i >= q):  # exactly contained in location
                         return float(expval*i)
                     else:  # contained between this location and the next
-                        return float(expval*(i + (fpl*i % 1)))
+                        return float(expval*(i + (1 - ((fpl*i) % 1))))
             raise ValueError(f"Could not find fault {q}")
         else:
             dist = {}
@@ -101,10 +110,9 @@ class Tie:
             frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l))
             return float(expval*frac)
 
-
     def _add_entity(self, entity: Spectrum.Entity,
-                   faults: Dict[Any, Set[Spectrum.Element]],
-                   seen_faults: Set[Any]):
+                    faults: Dict[Any, Set[Spectrum.Element]],
+                    seen_faults: Set[Any]):
         self._elems.update(entity)
         self._group_len += 1
         # Check if fault is in group
@@ -112,6 +120,8 @@ class Tie:
         seen_fault_locs: Set[Spectrum.Element] = set()
         for (fault_num, fault_locs) in faults.items():
             for fault_loc in set(fault_locs).intersection(entity):
+                self._fault_locs.setdefault(fault_num, set()).add(fault_loc)
+                self._fault_groups.setdefault(fault_num, set()).add(entity[0])
                 # Check & update fault number
                 if (fault_num not in seen_faults):
                     self._num_faults += 1
@@ -119,12 +129,12 @@ class Tie:
                 # Check & update faulty locs
                 if (fault_loc not in seen_fault_locs):
                     seen_fault_locs.add(fault_loc)
-                    self._fault_locs += 1
+                    self._num_fault_locs += 1
                     self._all_fault_locs.setdefault(fault_loc,
                                                     set()).add(fault_num)
                 # Check & update faulty group
                 if (not faulty_group):
-                    self._fault_groups += 1
+                    self._num_fault_groups += 1
                     faulty_group = True
                     self._all_fault_groups.setdefault(entity[0],
                                                       set()).add(fault_num)
