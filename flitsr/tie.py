@@ -5,6 +5,7 @@ from math import factorial, ceil
 from typing import List, Any, Optional, Set, Dict
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
+from deprecated.sphinx import deprecated, versionadded
 
 
 class Tie:
@@ -21,8 +22,8 @@ class Tie:
 
     def len(self, collapse=False) -> int:
         """
-        Return either the number of groups (if collapsed), or number of elements
-        in this tie (if not collapsed).
+        Return either the number of groups (if collapsed), or number of
+        elements in this tie (if not collapsed).
         """
         if (collapse):
             return self._group_len
@@ -33,8 +34,14 @@ class Tie:
         """Return the set of all the elements in this tie"""
         return self._elems
 
+    @versionadded(version='2.3.1')
     def active_faults(self, collapse=False) \
             -> Dict[Any, Set[Spectrum.Element]]:
+        """
+        Return a dictionary of all faults seen for the fime time in this tie,
+        along with their fault locations (either groups or elements). This is a
+        subset of the ``Ties.faults`` dictionary.
+        """
         if (collapse):
             return self._fault_groups
         else:
@@ -43,24 +50,48 @@ class Tie:
     def num_faults(self) -> int:
         """
         Return the number of unique faults found for the first time in this
-        tie
+        tie.
         """
         return self._num_faults
 
     def num_fault_locs(self, collapse=False) -> int:
         """
-        Return the number of faulty locations (either groups or elements) in
-        this tie.
+        Return the total number of faulty locations (either groups or elements)
+        in this tie. NOTE: this includes both active and non-active fault
+        locations. Active fault locations are those of faults seen for the
+        first time in this tie, while non-active are those of faults already
+        seen in a previous tie.
         """
         if (collapse):
             return self._num_fault_groups
         else:
             return self._num_fault_locs
 
+    def num_active_fault_locs(self, collapse=False) -> int:
+        """
+        Return only the number of active fault locations (either groups or
+        elements) in this tie. An active fault location is a fault location
+        that belongs to a fault that is seen for the first time in this tie.
+        """
+        return len(self._all_fault_locs)
+
+    @deprecated(version='2.3.1', reason='This function has been renamed to '
+                '`Tie.active_fault_locations`.')
     def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[Any]]:
         """
-        Return all fault locations (either groups or elements) in
-        this tie, with the faults they contain.
+        Return all active fault locations (either groups or elements) in
+        this tie, with the faults they contain. Active fault locations are
+        those of faults seen for the first time in this tie.
+        """
+        return self.active_fault_locations(collapse=collapse)
+
+    @versionadded(version='2.3.1', reason='Renamed from `Tie.fault_groups`.')
+    def active_fault_locations(self, collapse=False) \
+            -> Dict[Spectrum.Element, Set[Any]]:
+        """
+        Return all active fault locations (either groups or elements) in
+        this tie, with the faults they contain. Active fault locations are
+        those of faults seen for the first time in this tie.
         """
         if (collapse):
             return self._all_fault_groups
@@ -77,17 +108,18 @@ class Tie:
         dups = sorted(chain(*fs.values()))
         m = self.len(collapse)
         l = self.num_fault_locs(collapse)
+        l_a = self.num_active_fault_locs(collapse)
         nf = self.num_faults()
         if (weffort):
-            expval = Fraction(m-l, l+1)
+            expval = Fraction(m-l, l_a+1)
         else:
-            expval = Fraction(m+1, l+1)
+            expval = Fraction(m+1, l_a+1)
         # first fault or all 1 fault per loc
-        if (q == 1 or (l == nf and all(len(ls) == 1 for ls in fs.values()))):
+        if (q == 1 or (l_a == nf and all(len(ls) == 1 for ls in fs.values()))):
             return float(q*expval)
-        elif (l > 10 or len(dups) == len(set(dups))):  # approx. solution or all single loc
-            fpl = Fraction(nf, l)  # faults per location
-            for i in range(1, l+1):
+        elif (l_a > 10 or len(dups) == len(set(dups))):  # approx. solution or all single loc
+            fpl = Fraction(nf, l_a)  # faults per (active) location
+            for i in range(1, l_a+1):
                 if (ceil(fpl*i) >= q):
                     if (fpl*i >= q):  # exactly contained in location
                         return float(expval*i)
@@ -107,7 +139,7 @@ class Tie:
                 if (tot not in dist):
                     dist[tot] = 0
                 dist[tot] += 1
-            frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l))
+            frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l_a))
             return float(expval*frac)
 
     def _add_entity(self, entity: Spectrum.Entity,
@@ -119,25 +151,31 @@ class Tie:
         faulty_group = False
         seen_fault_locs: Set[Spectrum.Element] = set()
         for (fault_num, fault_locs) in faults.items():
+            unseen_fault = False
             for fault_loc in set(fault_locs).intersection(entity):
-                self._fault_locs.setdefault(fault_num, set()).add(fault_loc)
-                self._fault_groups.setdefault(fault_num, set()).add(entity[0])
                 # Check & update fault number
                 if (fault_num not in seen_faults):
+                    unseen_fault = True
                     self._num_faults += 1
                     seen_faults.add(fault_num)
                 # Check & update faulty locs
                 if (fault_loc not in seen_fault_locs):
                     seen_fault_locs.add(fault_loc)
                     self._num_fault_locs += 1
-                    self._all_fault_locs.setdefault(fault_loc,
-                                                    set()).add(fault_num)
+                    if (unseen_fault):
+                        self._all_fault_locs.setdefault(fault_loc,
+                                                        set()).add(fault_num)
+                        self._fault_locs.setdefault(fault_num,
+                                                    set()).add(fault_loc)
                 # Check & update faulty group
                 if (not faulty_group):
                     self._num_fault_groups += 1
                     faulty_group = True
-                    self._all_fault_groups.setdefault(entity[0],
-                                                      set()).add(fault_num)
+                    if (unseen_fault):
+                        self._all_fault_groups.setdefault(entity[0],
+                                                          set()).add(fault_num)
+                        self._fault_groups.setdefault(fault_num,
+                                                      set()).add(entity[0])
 
 
 class Ties:

@@ -43,7 +43,7 @@ def method(n: Any, ties: Ties, perc: bool, worst_effort: bool,
                 Ntot = tie.len(collapse)  # total num of statements in the tie
                 expval = 0.0
                 # sum the expected values of finding each fault
-                for f in tie.active_faults():
+                for f in faults:
                     Ni = len(faults[f])
                     # Expected value of each fault is {1, 0} <=> probability
                     # P(selecting one or more locations of this fault)
