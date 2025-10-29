@@ -45,9 +45,9 @@ def find(directory: str, type: Optional[str] = None,
             continue
         # check for included/excluded dirs
         if ((excl_dirs is not None and
-             any(d in rootp.parts for d in excl_dirs)) or
+             any(fnmatch(p, d) for p in rootp.parts for d in excl_dirs)) or
             (incl_dirs is not None and
-             all(d not in rootp.parts for d in incl_dirs))):
+             not any(fnmatch(p, d) for p in rootp.parts for d in incl_dirs))):
             continue
         to_check = (dirs+files if (type is None) else dirs if (type == 'd')
                     else files if (type == 'f') else [])
@@ -259,11 +259,11 @@ def get_parser() -> argparse.ArgumentParser:
                         'metrics (can be specified multiple times)',
                         choices=metric_names)
 
-    parser.add_argument('-i', '--include', metavar='DIR', action='append',
-                        help='Include directories named DIR in run (can be '
+    parser.add_argument('-i', '--include', metavar='PAT', action='append',
+                        help='Include directories matching PAT in run (can be '
                         'specified multiple times)')
-    parser.add_argument('-e', '--exclude', metavar='DIR', action='append',
-                        help='Exclude directories names DIR in run (can be '
+    parser.add_argument('-e', '--exclude', metavar='PAT', action='append',
+                        help='Exclude directories matching PAT in run (can be '
                         'specified multiple times)')
 
     parser.add_argument('-d', '--depth', action='store', help='Specifies the '
