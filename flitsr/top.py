@@ -1,38 +1,29 @@
 from flitsr.tie import Ties, Tie
+from flitsr.precision_recall import method
 
 
-def one_top1(ties: Ties) -> bool:
-    tie = get_top1(ties)
-    for fault in ties.faults.values():
-        for loc in fault:
-            if (loc in tie.elems()):
-                return True
-    return False
+def one_top_n(ties: Ties, n: int, collapse=False) -> float:
+    k, _ = method(n, ties, collapse=collapse)
+    return min(1.0, k)
 
 
-def all_top1(ties: Ties) -> bool:
-    tie = get_top1(ties)
-    count = 0
-    for fault in ties.faults.values():
-        for loc in fault:
-            if (loc in tie.elems()):
-                count += 1
-                break  # Only consider first location of fault
-    return (count == len(ties.faults))
+def all_top_n(ties: Ties, n: int, collapse=False) -> float:
+    k, _ = method(n, ties, collapse=collapse)
+    return k
 
 
-def percent_top1(ties: Ties) -> float:
-    if (len(ties.faults) == 0):
-        return 100
-    else:
-        tie = get_top1(ties)
-        count = 0
-        for fault in ties.faults.values():
-            for loc in fault:
-                if (loc in tie.elems()):
-                    count += 1
-                    break
-        return (count/len(ties.faults))*100
+# def percent_top1(ties: Ties) -> float:
+#     if (len(ties.faults) == 0):
+#         return 100
+#     else:
+#         tie = get_top1(ties)
+#         count = 0
+#         for fault in ties.faults.values():
+#             for loc in fault:
+#                 if (loc in tie.elems()):
+#                     count += 1
+#                     break
+#         return (count/len(ties.faults))*100
 
 
 def size_top1(ties: Ties) -> int:

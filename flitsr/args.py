@@ -387,17 +387,22 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 type=check_fault_type, help='Display the wasted effort to the Nth fault')
 
         # TOP1 calculation options
-        calc_grp.add_argument('--one-top1', dest='top1',
-                action='append_const', const='one', default=[],
+        def all_top(value):
+            return ('all', pr(value))
+        def one_top(value):
+            return ('one', pr(value))
+
+        calc_grp.add_argument('--one-top', dest='top1', metavar='x',
+                action='append', type=one_top, default=[],
                 help='Display a boolean value indicating whether at least one '
-                'fault was found in the TOP1 group (elements with the highest '
-                'suspiciousness')
-        calc_grp.add_argument('--all-top1', dest='top1',
-                action='append_const', const='all',
+                'fault was found in the top `n` elements (elements with the '
+                'highest suspiciousness')
+        calc_grp.add_argument('--all-top', dest='top1', metavar='x',
+                action='append', type=all_top,
                 help='Display the number of faults found in the top1 group')
-        calc_grp.add_argument('--perc-top1', dest='top1',
-                action='append_const', const='perc',
-                help='Display the percentage of faults found in the top1 group')
+        # calc_grp.add_argument('--perc-top1', dest='top1',
+        #         action='append_const', const='perc',
+        #         help='Display the percentage of faults found in the top1 group')
 
         # Percent at n calculation options
         calc_grp.add_argument('--perc@n', '--percent-at-n', dest='perc_at_n',
@@ -433,7 +438,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 return int(value)
             else:
                 raise ValueError(str(value)+" is not a valid precision/recall "
-                        "string value")
+                                 "string value")
         def precision(value):
             return ('p', pr(value))
         def recall(value):

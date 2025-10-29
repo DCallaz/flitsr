@@ -21,8 +21,8 @@ def recall(n: Any, ties: Ties, perc=False, worst_effort=False,
     return fault_num/len(ties.faults)
 
 
-def method(n: Any, ties: Ties, perc: bool, worst_effort: bool,
-           collapse: bool) -> Tuple[float, int]:
+def method(n: Any, ties: Ties, perc: bool = False, worst_effort: bool = False,
+           collapse: bool = False) -> Tuple[float, int]:
     size = ties.size(collapse)
     if (n == "b"):
         n = -1
