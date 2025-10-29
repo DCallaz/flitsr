@@ -565,6 +565,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
                                  ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
                 args.faults = ["num"]
+                args.top1 = [('all', 1), ('all', 5), ('all', 10), ('one', 5)]
         elif (args.types is None):
             args.types = [Config(args.ranker, getattr(args, 'cluster', None),
                                  getattr(args, 'refiner', None))]
