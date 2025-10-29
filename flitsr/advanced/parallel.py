@@ -47,7 +47,8 @@ class Parallel(Cluster):
         InputType['TCM'].value.write_spectrum(spectrum, tmp_name)
         # Run the parallel algorithm
         spectrums = self.partition_table(inp_file, spectrum)
-        # remove temporary file
+        # close and remove temporary file
+        os.close(tmp_fd)
         os.remove(tmp_name)
         return spectrums
 

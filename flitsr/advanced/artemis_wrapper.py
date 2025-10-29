@@ -20,9 +20,6 @@ class Artemis(Ranker):
         self.tiebrk = tiebrk
 
     def rank(self, spectrum: Spectrum, metric: str) -> Ranking:
-        # Set default metric
-        if (metric == 'artemis'):
-            metric = 'ochiai'
         elements = spectrum.groups()
         matrix, errVector = spectrum.to_matrix()
         rankingList = artemis.explorer(matrix, errVector, spectrum.locs(),

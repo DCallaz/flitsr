@@ -2,6 +2,7 @@ import random
 from typing import List, Set, Optional, Dict, Iterator, Iterable, Any
 from enum import Enum, auto
 from flitsr.spectrum import Spectrum
+from flitsr.errors import warning
 import copy
 
 
@@ -99,10 +100,18 @@ class Ranking:
             random.shuffle(self._ranks)
         elif (self._tiebrk == Tiebrk.ORIG):  # original ranking tie break
             if (orig is not None):  # sort by original rank then exec count
-                self._ranks.sort(key=lambda x: orig.get_rank(x.entity, True).exec,
-                                 reverse=reverse)
-                self._ranks.sort(key=lambda x: orig.get_rank(x.entity, True).score,
-                                 reverse=reverse)
+                try:
+                    self._ranks.sort(key=lambda x:
+                                     orig.get_rank(x.entity, True).exec,
+                                     reverse=reverse)
+                    self._ranks.sort(key=lambda x:
+                                     orig.get_rank(x.entity, True).score,
+                                     reverse=reverse)
+                except KeyError:
+                    # if sorting by orig fails, print a warning and continue
+                    warning("Could not sort by original ranking, despite it "
+                            "being set")
+                    pass
             else:  # if no orig, still sort by current execution count
                 self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
         self._ranks.sort(key=lambda x: x.score, reverse=reverse)
