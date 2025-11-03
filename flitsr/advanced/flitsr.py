@@ -182,12 +182,14 @@ class Multi(Flitsr):
     Run the FLITSR* algorithm over the spectrum to produce ranked lists.
     """
     @existing('args')
-    def __init__(self, args: Optional['Args'] = None):
+    def __init__(self, args: Optional['Args'] = None,
+                 cutoff: Optional[int] = None):
         if (args is None):
             from flitsr.args import Args
             args = Args()
         flitsr_opts = args.get_arg_group('FLITSR')
         super().__init__(**flitsr_opts)
+        self.cutoff = cutoff
 
     def multiRemove(self, spectrum: Spectrum,
                     faulty: List[Spectrum.Group]) -> bool:
@@ -219,8 +221,10 @@ class Multi(Flitsr):
         ranking = self.run_metric(spectrum, formula)
         set_orig(ranking)
         val = 2**64
+        i = 1
         newSpectrum = copy.deepcopy(spectrum)
-        while (newSpectrum.tf > 0):
+        while (newSpectrum.tf > 0 and
+               (self.cutoff is None or i <= self.cutoff)):
             basis = self.flitsr(newSpectrum, formula)
             if (not basis == []):
                 ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
@@ -239,6 +243,7 @@ class Multi(Flitsr):
             # for the same faults
             self.multiRemove(newSpectrum, basis)
             val = val-1
+            i += 1
         ranking.sort(True)
         unset_orig()
         return ranking
