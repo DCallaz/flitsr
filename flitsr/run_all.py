@@ -21,6 +21,7 @@ import argparse
 import argcomplete
 
 from flitsr.suspicious import Suspicious
+from flitsr import advanced
 from flitsr import merge
 from flitsr.errors import warning
 
@@ -250,7 +251,8 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog='run_all', description='Run large '
                                      'experiments automatically')
 
-    metric_names = Suspicious.getNames(True)
+    metric_names = (Suspicious.getNames(True) +
+                    [m.lower() for m in advanced.all_types.keys()])
     parser.add_argument('-m', '--metrics', metavar='METRIC', action='extend',
                         nargs='+', help='Runs only the given metrics (can be '
                         'specified multiple times)', choices=metric_names)
