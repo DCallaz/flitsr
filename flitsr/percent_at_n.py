@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple, Optional, Collection
 from flitsr.spectrum import Spectrum
 from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
+from flitsr import advanced
 
 
 def ci_in(str1: str, col: Collection[str]):
@@ -154,7 +155,7 @@ def plot_all(axs, points, metrics, modes, flitsrs, log):
     for (i, me) in enumerate(metrics):
         for (j, mo) in enumerate(modes):
             if ((me, mo) in points and (mo == "Base" or flitsrs is None
-                                        or me in flitsrs)):
+                                        or ci_in(me, flitsrs))):
                 point = points[(me, mo)]
                 # print(point)
                 ls = axs.plot(point[0], point[1], dashes=style[j],
@@ -230,7 +231,8 @@ def get_parser() -> ArgumentParser:
     combine_parser = subparsers.add_parser('combine')
     combine_parser.add_argument('input_file')
 
-    met_names = Suspicious.getNames(True)
+    met_names = (Suspicious.getNames(True) +
+                 [m.lower() for m in advanced.all_types.keys()])
     plot_parser = subparsers.add_parser('plot', help='Plots the percentage at '
                                         'n graph for the given input file '
                                         'produced by the merge script')
