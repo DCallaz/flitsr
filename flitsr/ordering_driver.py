@@ -102,6 +102,8 @@ def main(argv: List[str]):
                         hasattr(RankerType, metric.upper())):
                         ranker = RankerType[metric.upper()]
                         metric = args.flitsr_default_metric
+                    # updated the internal ranking
+                    args.flitsr_internal_ranking = ordering
                     ranker_params = args.get_arg_group(ranker.name)
                     if ('internal_ranking' in ranker_params):
                         ranker_params['internal_ranking'] = ordering

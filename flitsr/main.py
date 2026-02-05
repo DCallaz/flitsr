@@ -63,22 +63,13 @@ def output(rankings: Rankings, weff=[], top1=[],
                     nth, weffort.nth(ties, int(nth), collapse),
                     decimals), file=file)
         if (top1):
-            if ("one" in top1):
-                print("at least 1 ranked #1: {:.{}f}".format(
-                    top.one_top1(ties),
-                    decimals), file=file)
-            if ("all" in top1):
-                print("all ranked #1: {:.{}f}".format(
-                    top.all_top1(ties),
-                    decimals), file=file)
-            if ("perc" in top1):
-                print("percentage ranked #1: {:.{}f}".format(
-                    top.percent_top1(ties),
-                    decimals), file=file)
-            if ("size" in top1):
-                print("size of #1: {:.{}f}".format(
-                    top.size_top1(ties),
-                    decimals), file=file)
+            for entry in top1:
+                if (entry[0] == 'all'):
+                    atp = top.all_top_n(ties, entry[1], collapse=collapse)
+                    print(f"all top {entry[1]}: {atp:.{decimals}f}", file=file)
+                elif (entry[0] == 'one'):
+                    otp = top.one_top_n(ties, entry[1], collapse=collapse)
+                    print(f"one top {entry[1]}: {otp:.{decimals}f}", file=file)
         if (perc_at_n):
             bumps = percent_at_n.getBumps(ties, collapse=collapse)
             if ('perc' in perc_at_n):
@@ -100,11 +91,13 @@ def output(rankings: Rankings, weff=[], top1=[],
         if (prec_rec):
             for entry in prec_rec:
                 if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], ties, collapse)
+                    p = precision_recall.precision(entry[1], ties,
+                                                   collapse=collapse)
                     print("precision at {}: {:.{}f}".format(entry[1], p,
                                                             decimals), file=file)
                 elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], ties, collapse)
+                    r = precision_recall.recall(entry[1], ties,
+                                                collapse=collapse)
                     print("recall at {}: {:.{}f}".format(entry[1], r,
                                                          decimals), file=file)
         if (faults):
