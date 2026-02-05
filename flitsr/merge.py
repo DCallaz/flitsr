@@ -351,6 +351,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
             top: Optional[float] = None
             top_avgs = []
             for (mode, metric) in zipped:
+                if (not ci_in(mode, avgs) or not ci_in(metric, avgs[mode])):
+                    continue
                 av = avgs[mode][metric][calc].eval()
                 if (not isinstance(av, Number)):
                     break

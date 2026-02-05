@@ -1,5 +1,5 @@
-import copy
-from typing import Any, Dict, List, Tuple
+from fractions import Fraction
+from typing import Any, Dict, Tuple, Set
 from math import comb, factorial
 from flitsr.spectrum import Spectrum
 from flitsr.tie import Ties
@@ -21,8 +21,8 @@ def recall(n: Any, ties: Ties, perc=False, worst_effort=False,
     return fault_num/len(ties.faults)
 
 
-def method(n: Any, ties: Ties, perc: bool, worst_effort: bool,
-           collapse: bool) -> Tuple[float, int]:
+def method(n: Any, ties: Ties, perc: bool = False, worst_effort: bool = False,
+           collapse: bool = False) -> Tuple[float, int]:
     size = ties.size(collapse)
     if (n == "b"):
         n = -1
@@ -36,21 +36,20 @@ def method(n: Any, ties: Ties, perc: bool, worst_effort: bool,
     try:
         while (total < n):
             tie = next(tie_iter)
+            faults = tie.active_faults(collapse)
             add = 0.0
             if (total+tie.len(collapse) > n and tie.num_faults() > 0):
-                p = int(n - total)
-                m = tie.len(collapse)
-                n_l = tie.num_fault_locs(collapse)
-                fpl = tie.num_faults()/n_l
-                outer_top = factorial(m-p) * factorial(p)
-                outer_bot = factorial(m)
-                for x in range(1, p+1):
-                    add += fpl*x*((comb(n_l, x) * comb(m - n_l, p - x) *
-                                   outer_top)/outer_bot)
-                # for i in range(curr_faults):
-                #     expected_value = (i+1)*(len(uuts)+1)/(curr_faults+1)
-                #     if (expected_value <= x):
-                #         add += 1
+                p = int(n - total)  # num of statements to inspect in the tie
+                Ntot = tie.len(collapse)  # total num of statements in the tie
+                expval = 0.0
+                # sum the expected values of finding each fault
+                for f in faults:
+                    Ni = len(faults[f])
+                    # Expected value of each fault is {1, 0} <=> probability
+                    # P(selecting one or more locations of this fault)
+                    # <=> 1 - P(selecting no locations of this fault)
+                    expval += 1 - Fraction(comb(Ntot-Ni, p), comb(Ntot, p))
+                add += float(expval)  # add the expected # of faults found in p
                 total += p
             else:
                 add = tie.num_faults()

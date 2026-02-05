@@ -24,7 +24,8 @@ dependencies = [
   'argcomplete',
   'numpy',
   'bitarray',
-  'scipy'
+  'scipy',
+  'deprecated'
 ]
 
 [project.optional-dependencies]
