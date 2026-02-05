@@ -3,8 +3,10 @@ import pkgutil
 from flitsr import advanced
 from enum import Enum
 import importlib
-from typing import Union, Optional, Any, Dict
+from typing import Union, Optional, Any, Dict, TYPE_CHECKING
 import sys
+if TYPE_CHECKING:
+    from flitsr.args import Args
 
 _rankers = {}
 _clusters = {}
@@ -66,9 +68,9 @@ class Config:
                  cluster: Optional[ClusterType] = None,
                  refiner: Optional[RefinerType] = None,
                  args: Optional[Dict[Any, Optional[Dict[str, Any]]]] = None):
-        self.cluster = cluster
-        self.ranker = ranker
-        self.refiner = refiner
+        self._cluster = cluster
+        self._ranker = ranker
+        self._refiner = refiner
         if (args is None):
             self.args = {}
         else:
@@ -79,25 +81,48 @@ class Config:
 
     def _get_str(self, printed=False):
         c = '_' if printed else '+'
-        components = [self.ranker or RankerType['SBFL'], self.refiner,
-                      self.cluster]
+        components = [self._ranker or RankerType['SBFL'], self._refiner,
+                      self._cluster]
         string = c.join(self._get_name(c, printed) for c in components
                         if c is not None)
         return string
 
-    def get_args(self, adv_type: Union[RefinerType, ClusterType, RankerType]):
-        return self.args.get(adv_type, None)
+    def _get_args(self, adv_type: Union[RefinerType, ClusterType, RankerType]):
+        return self.args.get(adv_type.name.upper(), {})
+
+    def _get_params(self, adv_type: Union[RefinerType, ClusterType,
+                    RankerType], args: Args):
+        arg_params = args.get_arg_group(adv_type.name)
+        custom_params = self._get_args(adv_type)
+        refiner_params = {**arg_params, **custom_params}
+        return refiner_params
+
+    def refiner(self, args: Args):
+        return self.run_adv_type(self._refiner, args)
+
+    def cluster(self, args: Args):
+        return self.run_adv_type(self._cluster, args)
+
+    def ranker(self, args: Args):
+        return self.run_adv_type(self._ranker, args)
+
+    def run_adv_type(self, adv_type: Union[RefinerType, ClusterType,
+                     RankerType, None], args: Args):
+        if (adv_type is None):
+            return None
+        params = self._get_params(adv_type, args)
+        mthd = adv_type.value(**params)
+        return mthd
 
     def _get_name(self, typ: Union[RefinerType, ClusterType, RankerType],
                   printed) -> str:
         # first get args
-        args = self.args.get(typ, None)
-        if (args is not None):
+        args = self._get_args(typ)
+        if (args is not None and len(args) > 0):
             if (printed):
-                a = ''
+                a = '_' + '_'.join(f'{k}-{v}' for k, v in args.items())
             else:
-                print(args.items())
-                a = '(' + ','.join(f'{k}={v}' for k,v in args.items()) + ')'
+                a = '(' + ','.join(f'{k}={v}' for k, v in args.items()) + ')'
         else:
             a = ''
         # then get name

@@ -10,14 +10,12 @@ activated (no base SBFL techniques) and running all variants of the flitsr
 basis orderings on these.
 """
 
-
-import re
 import sys
 from os import path as osp
 from typing import List
 from flitsr.args import Args
 from flitsr.main import output, compute_cutoff
-from flitsr.ranking import Ranking, Rankings
+from flitsr.ranking import Rankings
 from flitsr.input.input_reader import Input
 from flitsr.errors import error
 from flitsr.advanced import Config, RankerType, ClusterType
@@ -53,8 +51,7 @@ def main(argv: List[str]):
     # Execute techniques
     for config in [Config(RankerType['FLITSR']),
                    Config(RankerType['MULTI'])]:
-        if (config.ranker is RankerType['FLITSR'] or
-            config.ranker is RankerType['MULTI']):
+        if (config.ranker in [RankerType['FLITSR'], RankerType['MULTI']]):
             orderings = ['auto', 'conf', 'original', 'reverse', 'flitsr']
         else:
             orderings = ['original']

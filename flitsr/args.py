@@ -94,7 +94,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 raise argparse.ArgumentTypeError('Invalid type for '
                                                  f'--all-types: \"{t}\"')
             if (m.group(2) is None):
-                params = None
+                params = {}
             else:
                 params = dict(re.findall("([^=,]+)=['\"]?([^,'\"]+)['\"]?",
                                          m.group(2)))

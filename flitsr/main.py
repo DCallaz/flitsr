@@ -165,24 +165,19 @@ def main(argv: Optional[List[str]] = None):
             # copy spectrum
             spectrum = copy.deepcopy(gspectrum)
             # Check for spectrum refining
-            if (config.refiner is not None):
-                refiner_params = args.get_arg_group(config.refiner.name)
-                refiner_mthd = config.refiner.value(**refiner_params)
-                spectrum = refiner_mthd.refine(spectrum, args.method)
+            refiner = config.refiner(args)
+            if (refiner is not None):
+                spectrum = refiner.refine(spectrum, args.method)
             # Check for clustering
-            if (config.cluster is not None or
-                hasattr(ClusterType, metric.upper())):
-                # deal with clustering technique as metric
-                if (config.cluster is None):
-                    cluster = ClusterType[metric.upper()]
-                    # Set default metric for clustering
-                    metric = args.flitsr_default_metric
-                else:
-                    cluster = config.cluster
-                cluster_params = args.get_arg_group(cluster.name)
-                cluster_mthd = cluster.value(**cluster_params)
-                spectrums = cluster_mthd.cluster(args.input, spectrum,
-                                                 args.method)
+            cluster = config.cluster(args)
+            # deal with clustering technique as metric
+            if (cluster is None and hasattr(ClusterType, metric.upper())):
+                metric_cluster = ClusterType[metric.upper()]
+                cluster = config.run_adv_type(metric_cluster, args)
+                # Set default metric for clustering
+                metric = args.flitsr_default_metric
+            if (cluster is not None):
+                spectrums = cluster.cluster(args.input, spectrum, args.method)
             else:
                 spectrums = [spectrum]
             rankings = Rankings(spectrum.get_faults(),
@@ -190,16 +185,14 @@ def main(argv: Optional[List[str]] = None):
             # Run each sub-spectrum
             for subspectrum in spectrums:
                 # Run techniques
-                ranker = config.ranker
-                if (ranker is None):
-                    ranker = RankerType['SBFL']
-                if (ranker == RankerType['SBFL'] and
-                    hasattr(RankerType, metric.upper())):
-                    ranker = RankerType[metric.upper()]
+                ranker = config.ranker(args)
+                if (ranker is None and hasattr(RankerType, metric.upper())):
+                    metric_ranker = RankerType[metric.upper()]
+                    ranker = config.run_adv_type(metric_ranker, args)
                     metric = args.flitsr_default_metric
-                ranker_params = args.get_arg_group(ranker.name)
-                ranker_mthd = ranker.value(**ranker_params)
-                ranking = ranker_mthd.rank(subspectrum, metric)
+                elif (ranker is None):
+                    ranker = config.run_adv_type(RankerType['SBFL'], args)
+                ranking = ranker.rank(subspectrum, metric)
                 # Compute cut-off
                 if (args.cutoff_strategy):
                     ranking = compute_cutoff(args.cutoff_strategy, ranking,
