@@ -1,5 +1,5 @@
 import copy
-from typing import List, Set, Optional, TYPE_CHECKING
+from typing import List, Set, Optional, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from flitsr.args import Args
 from flitsr.spectrum import Spectrum
@@ -7,6 +7,7 @@ from flitsr.errors import warning
 from flitsr.ranking import Ranking, Tiebrk, set_orig, unset_orig
 from flitsr.advanced.ranker import Ranker
 from flitsr.advanced.sbfl import SBFL
+from flitsr.suspicious import Suspicious
 from flitsr.advanced.attributes import existing, choices, print_name
 from flitsr import advanced
 
@@ -19,8 +20,10 @@ class Flitsr(Ranker):
     @existing('args')
     @choices('internal_ranking', ['auto', 'conf', 'original', 'reverse',
                                   'flitsr'])
+    @choices('default_metric', Suspicious.getNames(all_names=True))
     def __init__(self, args: Optional['Args'] = None,
-                 internal_ranking: str = 'auto', tiebrk: Tiebrk = Tiebrk.ORIG):
+                 internal_ranking: str = 'auto', tiebrk: Tiebrk = Tiebrk.ORIG,
+                 default_metric: str = 'ochiai'):
         self.tiebrk = tiebrk
         if (args is None):
             from flitsr.args import Args
@@ -28,6 +31,8 @@ class Flitsr(Ranker):
         else:
             self.args = args
         self.order_method = internal_ranking
+        self.default_metric = default_metric
+        self._cached_metrics: Dict[str, Ranker] = dict()
 
     def remove_faulty_elements(self, spectrum: Spectrum,
                                tests_removed: Set[Spectrum.Test],
@@ -41,12 +46,16 @@ class Flitsr(Ranker):
                     break
         tests_removed.difference_update(toRemove)
 
-    def run_metric(self, spectrum: Spectrum, formula: str):
-        if (hasattr(advanced.RankerType, formula.upper())):
+    def run_metric(self, spectrum: Spectrum, formula: str) -> Ranking:
+        if (formula.upper() in self._cached_metrics):
+            ranker = self._cached_metrics[formula.upper()]
+            ranking = ranker.rank(spectrum, self.default_metric)
+        elif (hasattr(advanced.RankerType, formula.upper())):
             ranker_args = self.args.get_arg_group(formula)
             ranker = advanced.RankerType[formula.upper()].value(**ranker_args)
+            self._cached_metrics[formula.upper()] = ranker
             # set the default metric
-            ranking = ranker.rank(spectrum, self.args._default_metric)
+            ranking = ranker.rank(spectrum, self.default_metric)
         else:
             sbfl_args = self.args.get_arg_group('SBFL')
             ranking = SBFL(**sbfl_args).rank(spectrum, formula)
@@ -174,12 +183,14 @@ class Multi(Flitsr):
     Run the FLITSR* algorithm over the spectrum to produce ranked lists.
     """
     @existing('args')
-    def __init__(self, args: Optional['Args'] = None):
+    def __init__(self, args: Optional['Args'] = None,
+                 cutoff: Optional[int] = None):
         if (args is None):
             from flitsr.args import Args
             args = Args()
         flitsr_opts = args.get_arg_group('FLITSR')
         super().__init__(**flitsr_opts)
+        self.cutoff = cutoff
 
     def multiRemove(self, spectrum: Spectrum,
                     faulty: List[Spectrum.Group]) -> bool:
@@ -211,8 +222,10 @@ class Multi(Flitsr):
         ranking = self.run_metric(spectrum, formula)
         set_orig(ranking)
         val = 2**64
+        i = 1
         newSpectrum = copy.deepcopy(spectrum)
-        while (newSpectrum.tf > 0):
+        while (newSpectrum.tf > 0 and
+               (self.cutoff is None or i <= self.cutoff)):
             basis = self.flitsr(newSpectrum, formula)
             if (not basis == []):
                 ordered_basis = self.flitsr_ordering(spectrum, basis, ranking,
@@ -231,6 +244,7 @@ class Multi(Flitsr):
             # for the same faults
             self.multiRemove(newSpectrum, basis)
             val = val-1
+            i += 1
         ranking.sort(True)
         unset_orig()
         return ranking

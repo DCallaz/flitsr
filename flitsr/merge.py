@@ -2,30 +2,34 @@
 import re
 from flitsr.percent_at_n import combine
 import os
-import sys
 import locale
 from functools import cmp_to_key
 from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
+from math import isclose
 from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
 import argcomplete
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
+from flitsr.errors import warning
 from flitsr import advanced
-from typing import Set, Dict, List, Tuple, Collection, Optional, Union
+from typing import Set, Dict, List, Tuple, Collection, Optional
+from numbers import Number
 
 PERC_N = "percentage at n"
 
 
 class Avg:
     """Holds a partially constructed average"""
-    def __init__(self, size=None, percn=False):
+    def __init__(self, size=None, percn=False, sum_only=False, perc=False):
         self.all = []
         self.adds = 0
+        self.sum_only = sum_only
         self.top = False
         self.percn = percn
         self.rel = False
+        self.perc = perc
         if (size is not None):
             self.rel = True
             self.size = size
@@ -38,12 +42,21 @@ class Avg:
         self.adds += 1
 
     def eval(self):
+        # check if percent-at-n
         if (self.percn):
             return self.all
-        elif (self.rel):
-            return sum(s*100/self.size for s in self.all)/self.adds
+        # check if relative
+        if (self.rel):
+            sum_ = sum(s*100/self.size for s in self.all)
         else:
-            return sum(self.all)/self.adds
+            sum_ = sum(self.all)
+        # check if only sum (not average)
+        if (self.sum_only):
+            return sum_
+        elif (self.perc):
+            return 100 * (sum_/self.adds)
+        else:
+            return sum_/self.adds
 
     def significance(self, avg: 'Avg'):
         # if number of observations differ, no significance
@@ -121,9 +134,10 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
           excl: List[Tuple[str, str]], rel: bool,
           output_file: TextIOWrapper, perc_file: TextIOWrapper,
           tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
-          percs=None, incl_metrics=None, incl_advs=None, adv_metrics=None,
-          sign=None, sign_type=[], base_types: Optional[List] = None,
-          thrs=[], keep_order=False, find_top=False):
+          percs=None, only_sums=None, incl_metrics=None, incl_advs=None,
+          adv_metrics=None, sign=None, sign_type=[],
+          base_types: Optional[List] = None, thrs=[], keep_order=False,
+          find_top=False):
     # Set up the include and exclude dir names dicts
     incl_dict: Dict[str, List[str]] = {}
     excl_dict: Dict[str, List[str]] = {}
@@ -174,12 +188,12 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                 try:
                     block = readBlock(files[d][mode][metric])
                 except Exception:
-                    print('WARNING: Could not find results for '
-                          f'{mode.replace("_", " ").title()} '
-                          f'{metric.replace("_", " ").title()} in dir {d}',
-                          file=sys.stderr)
+                    warning('Could not find results for '
+                            f'{mode.replace("_", " ").title()} '
+                            f'{metric.replace("_", " ").title()} in dir {d}')
                     continue
-                while (block != []):
+                warn_empty = 0
+                while (block != [] or files[d][mode][metric].hasline()):
                     for line in block:
                         line_s = line.split(": ")
                         calc = line_s[0]
@@ -190,15 +204,29 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                                 (float(vals[0]), [float(x) for x in vals[1:]]))
                         else:
                             s = None
+                            perc = False
                             if (rel):
                                 s = sizes[d] if recurse else size
-                            avgs[mode][metric].setdefault(calc, Avg(s)).add(
+                            elif (percs is not None and ci_in(calc, percs)):
+                                perc = True
+                            sum_only = (ci_in(calc, only_sums)
+                                        if only_sums is not None else False)
+                            avg = Avg(size=s, sum_only=sum_only, perc=perc)
+                            avgs[mode][metric].setdefault(calc, avg).add(
                                     float(line_s[1]))
                     block = readBlock(files[d][mode][metric])
+                    if (block == [] and files[d][mode][metric].hasline()):
+                        warn_empty += 1
+                if (warn_empty > 0):
+                    warning(f"File {mode}_{metric}.results in the "
+                            f"{d or 'current'} directory has "
+                            f"{warn_empty} empty runs!")
     # calculate thresholds
     for thr in thrs:
         thr_key = str(thr).lower()
         temp_calcs.add(thr_key)
+        incl_calcs.append(thr_key)
+        percs.append(thr_key)
         for mode in temp_modes:
             for metric in temp_metrics:
                 vals = avgs[mode][metric][thr.calc].all
@@ -261,10 +289,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                     print("\t\t", calc+": ", comb, sep='', file=perc_file)
             else:
                 avg = avgs[mode][metric][calc]
-                if (not rel and percs is not None and ci_in(calc, percs)):
-                    result = round(100*avg.eval(), dec)
-                else:
-                    result = round(avg.eval(), dec)
+                result = round(avg.eval(), dec)
                 sign_disp = ""
                 if (sign is not None):
                     signis: Dict[str, List[Tuple[str, float]]] = {}
@@ -310,7 +335,8 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                     end = (" & " if j+1 != len(calcs) else " \\\\\n")
                     top_disp = "\\bf" if avg.top else ""
                     print('{: <9}'.format(sign_disp+top_disp),
-                          '{: >10.{}f}'.format(result, min(dec, 8)),
+                          '{: >{}.{}f}'.format(result, 6+min(dec, 8),
+                                               min(dec, 8)),
                           end=end, file=tex_file)
 
     # Get the metric and mode order
@@ -322,16 +348,20 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
     # Determine and set top results
     if (find_top):
         for calc in calcs:
-            top: Optional[Avg] = None
+            top: Optional[float] = None
             top_avgs = []
             for (mode, metric) in zipped:
-                avg = avgs[mode][metric][calc].eval()
+                av = avgs[mode][metric][calc].eval()
+                if (not isinstance(av, Number)):
+                    break
                 if (top is None or
-                    (calc in sign_type and sign_type[calc] == 'less' and avg < top) or
-                    ((calc not in sign_type or sign_type[calc] == 'greater') and avg > top)):
-                    top = avg
+                    (calc in sign_type and sign_type[calc] == 'less'
+                     and av < top) or
+                    ((calc not in sign_type or sign_type[calc] == 'greater')
+                     and av > top)):
+                    top = av
                     top_avgs = [avgs[mode][metric][calc]]
-                elif (avg == top):
+                elif (round(top, dec) == round(av, dec)):
                     top_avgs.append(avgs[mode][metric][calc])
             for top_avg in top_avgs:
                 top_avg.set_top()
@@ -456,7 +486,8 @@ def get_parser() -> ArgumentParser:
             d = getattr(args, self.dest)
             d.append(Threshold(calc, comp, threshold))
 
-    met_names = Suspicious.getNames(True)
+    met_names = (Suspicious.getNames(True) +
+                 [m.lower() for m in advanced.all_types.keys()])
     adv_names = advanced.all_types_print
 
     parser = ArgumentParser(prog='merge', description='Merge .results files '
@@ -552,6 +583,11 @@ def get_parser() -> ArgumentParser:
                         'a percentage value. NOTE: the names of the '
                         'calculations need to be found in the corresponding '
                         '.results files', action='extend')
+    parser.add_argument('-S', '--sum', nargs='+', metavar='CALC',
+                        help='Specify calculations that should be simply '
+                        'summed together instead of averaged. NOTE: the names '
+                        'of the calculations need to be found in the '
+                        'corresponding .results files', action='extend')
     parser.add_argument('-s', '--significance', nargs='?', const='type',
                         choices=['metric', 'type'], dest='sign',
                         help='Specifies that additional significance tests '
@@ -623,9 +659,9 @@ def main(argv: Optional[List[str]] = None):
     merge(args.recurse, args.max, args.incl, args.excl, args.relative,
           args.output, args.perc_at_n, args.tex, dec=args.decimals,
           group=args.group, incl_calcs=args.calcs, percs=args.percentage,
-          incl_metrics=args.metrics, incl_advs=args.advanced_types,
-          adv_metrics=args.advanced_metrics, sign=args.sign,
-          sign_type=sign_type, base_types=args.base_types,
+          only_sums=args.sum, incl_metrics=args.metrics,
+          incl_advs=args.advanced_types, adv_metrics=args.advanced_metrics,
+          sign=args.sign, sign_type=sign_type, base_types=args.base_types,
           thrs=args.threshold, keep_order=args.keep_order,
           find_top=args.top_results)
 

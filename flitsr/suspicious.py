@@ -54,7 +54,7 @@ class Suspicious():
             all_names = dir(Suspicious)
             names = [x for x in all_names if (not x.startswith("_")
                      and x != "execute" and x != "getNames"
-                     and x != "apply_formula")]
+                     and x != "apply_formula" and x != "inf")]
         else:
             names = ['artemis', 'barinel', 'dstar', 'gp13', 'harmonic',
                      'hyperbolic', 'jaccard', 'naish2', 'ochiai', 'overlap',
@@ -80,10 +80,6 @@ class Suspicious():
         elif (denominator == 0):
             return Suspicious.inf
         return nominator/denominator
-
-    def artemis(self) -> float:
-        """Dummy implementation to add artemis to list of available metrics"""
-        raise NotImplementedError("Artemis not implemented as a basic metric")
 
     def cohen(self) -> float:
         denominator = (self.ef + self.ep)*self.tp + self.tf*(self.nf + self.np)
@@ -225,10 +221,6 @@ class Suspicious():
         elif (denominator == 0):
             return Suspicious.inf
         return self.ef/denominator
-
-    def parallel(self) -> float:
-        """Dummy implementation to add parallel to list of available metrics"""
-        raise NotImplementedError("Parallel not implemented as a basic metric")
 
     def rogers_tanimoto(self) -> float:
         nominator = self.ef + self.np

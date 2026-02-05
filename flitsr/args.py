@@ -165,15 +165,25 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         parser.add_argument('--spectrum-csv', action='store_true',
                 help='Enabling this option will cause FLITSR to '
                 'output the spectrum in CSV format.')
+        metric_choices = (Suspicious.getNames(True) +
+                          [m.lower() for m in advanced.all_types.keys()])
         parser.add_argument('-m', '--metric', dest='metrics', action='append',
-                choices=Suspicious.getNames(True), metavar='METRIC',
+                choices=metric_choices, metavar='METRIC',
                 help='The underlying (SBFL) metric(s) to use when either ranking '
                 '(if the sbfl option is given), or running the FLITSR algorithm. '
                 'Option may be supplied multiple times to run multiple metrics. '
                 'Specifying multiple metrics will output the results of each '
                 'metric to a seperate file using the metric\'s name instead of '
-                'stdout. Allowed values are: ['+', '.join(Suspicious.getNames(True))+'] '
-                '(default: {})'.format(self._default_metric))
+                f'stdout. Allowed values are: [{", ".join(Suspicious.getNames(True))}] '
+                f'(default: {self._default_metric}). When using the FLITSR '
+                'advanced technique (or similar), you may also specify '
+                'an advanced technique here to use as base metric, in which '
+                'case the --flitsr-default_metric option may be used to '
+                'likewise specify the base metric for that advanced '
+                'technique. Note that it is your job to determine whether the '
+                'given advanced technique is compatible with the FLITSR (or '
+                'similar) algorithm, as this is not ensured for all advanced '
+                'types.')
         parser.add_argument('-r', '--ranking', action='store_true',
                 help='Changes FLITSR\'s expected input to be an SBFL ranking in '
                 'Gzoltar or FLITSR format (determined automatically), instead of '

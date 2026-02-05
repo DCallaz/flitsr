@@ -81,7 +81,7 @@ def main(argv: List[str]):
                     if (config.cluster is None):
                         cluster = ClusterType[metric.upper()]
                         # Set default metric for clustering
-                        metric = 'ochiai'
+                        metric = args.flitsr_default_metric
                     else:
                         cluster = config.cluster
                     cluster_params = args.get_arg_group(cluster.name)
@@ -101,7 +101,7 @@ def main(argv: List[str]):
                     if (ranker == RankerType['SBFL'] and
                         hasattr(RankerType, metric.upper())):
                         ranker = RankerType[metric.upper()]
-                        metric = 'ochiai'
+                        metric = args.flitsr_default_metric
                     ranker_params = args.get_arg_group(ranker.name)
                     if ('internal_ranking' in ranker_params):
                         ranker_params['internal_ranking'] = ordering
