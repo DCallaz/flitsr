@@ -6,7 +6,8 @@ import sys
 import re
 from pathlib import Path
 from os import path as osp
-from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set, Union, Generic
+from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set, \
+        Union, Generic
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -68,7 +69,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         cluster = None
         ranker = None
         refiner = None
-        args: Dict[str, Optional[Dict[str, Any]]] = {}
+        args: Dict[str, Dict[str, Any]] = {}
         for t in type_sep:
             m = re.fullmatch("([^(]+)(?:\\(([^)]+)\\))?", t)
             if (m is None):
