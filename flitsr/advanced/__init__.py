@@ -78,15 +78,32 @@ class Config:
         else:
             self._args = args
 
-    def __str__(self):
-        return self._get_str()
+    def __str__(self, params: Optional[str] = ""):
+        return self.get_str(filename=True, params=params)
 
-    def _get_str(self, printed=False):
-        c = '_' if printed else '+'
+    def get_str(self, filename=False, params: Optional[str] = None):
+        """
+        Returns a string description of the advanced types of this config
+        object that can be used either in the name of the output file
+        (`filename=True`), or for other script use (`filename=False`).
+
+        Args:
+          params: (Default value = None) If and how to include advanced type
+            parameters in the output string. If None, parameters will not be
+            included in the output string. If the empty string `""` is given,
+            parameters will be included in the format "{k}-{v}" (for filenames)
+            or "{k}={v}" (for non-filenames), where "{k}" is the parameter
+            name, and "{v}" the value. Alternatively, a different format can be
+            specified by giving a string using the same "{k}", "{v}" format.
+
+        Returns:
+            A string description of this `Config`.
+        """
+        c = '_' if filename else '+'
         components = [self._ranker or RankerType['SBFL'], self._refiner,
                       self._cluster]
-        string = c.join(self._get_name(c, printed) for c in components
-                        if c is not None)
+        string = c.join(self._get_adv_name(c, filename, params)
+                        for c in components if c is not None)
         return string
 
     def _get_args(self, adv_type: AdvType):
@@ -119,6 +136,19 @@ class Config:
 
     def get_adv_name(self, adv_type: Union[Type[RefinerType],
                      Type[ClusterType], Type[RankerType]]) -> Optional[str]:
+        """
+        Returns a string name of this `Config`'s concrete advanced type for the
+        given category (Refiner, Cluster or Ranker), if it is available.
+
+        Args:
+          adv_type: The advanced type category to retrieve. For example, if
+            RankerType was given, and this Config contained SBFL, then
+            "SBFL" would be returned.
+
+        Returns:
+            The name of the concrete implementation for the given advanced type
+            in this `Config` object.
+        """
         typ: Optional[AdvType] = None
         if (adv_type is RefinerType):
             typ = self._refiner
@@ -131,29 +161,55 @@ class Config:
         else:
             return typ.name
 
-    def _get_name(self, typ: AdvType,
-                  printed) -> str:
-        # first get args
+    def _get_adv_name(self, typ: AdvType, filename: bool,
+                      params: Optional[str] = None) -> str:
+        # first get args (if needed and available)
         args = self._get_args(typ)
-        if (args is not None and len(args) > 0):
-            if (printed):
-                a = '_' + '_'.join(f'{k.replace("_", "-")}-{v}' for k, v
-                                   in args.items())
+        # Always add params for non-filename
+        if (not filename and params is None):
+            params = ""
+        if (params is not None and args is not None and len(args) > 0):
+            if (params == ""):
+                if (filename):
+                    params = "{k}-{v}"
+                else:
+                    params = "{k}={v}"
+            param_set = []
+            for k, v in args.items():
+                if (filename):
+                    k = k.replace("_", "-")
+                param_set.append(params.replace("{k}", k)
+                                       .replace("{v}", v))
+            if (filename):
+                a = '_' + '_'.join(param_set)
             else:
-                a = '(' + ','.join(f'{k}={v}' for k, v in args.items()) + ')'
+                a = '(' + ','.join(param_set) + ')'
         else:
             a = ''
         # then get name
-        if (printed and hasattr(typ.value, '__print_name__')):
+        if (filename and hasattr(typ.value, '__print_name__')):
             name = typ.value.__print_name__.lower()
-        elif (printed):
+        elif (filename):
             name = typ.name.lower()
         else:
             name = typ.name.upper()
         return name + a
 
-    def __repr__(self):
-        return self._get_str()
+    def __repr__(self, params: Optional[str] = ""):
+        return self.get_str(filename=False, params=params)
 
-    def get_file_name(self):
-        return self._get_str(printed=True)
+    def get_file_name(self, params: Optional[str] = None):
+        """
+        Returns a string description of the advanced types of this config
+        object that can be used in the name of the output file.
+        (Synonym for `Config.get_str(filename=True, params)`.
+
+        Args:
+          params: (Default value = None) Whether to include advanced type
+            parameters in the file name. See the `get_str` method for a
+            description.
+
+        Returns:
+            A string description of this `Config` for filename use.
+        """
+        return self.get_str(filename=True, params=params)

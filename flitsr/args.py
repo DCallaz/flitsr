@@ -228,6 +228,18 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                              'this argument is: "--types <type>[+<type>...]", '
                              'where each <type> is a (case-insensitive) FLITSR '
                              f'advanced type. Allowed types are: {adv_types}')
+        parser.add_argument('-p', '--print-params', nargs='?', const="",
+                            default=None, type=str,
+                            help='When producing multiple output files, '
+                            'specifies that the parameters for advanced types,'
+                            'given by the --types option, should be included '
+                            'in the names of these output files. Without an '
+                            'argument, this option produces file names with '
+                            'advanced type parameters of the form "{k}-{v}" '
+                            'where {k} is the parameter name, and {v} is the '
+                            'value. Other formats can be constructed by '
+                            'instead providing an argument using the same '
+                            '"{k}", "{v}" syntax.')
         parser.add_argument('--no-override', action='store_true',
                             help='By default FLITSR will override the output '
                             'file(s) if they already exist, printing a warning '

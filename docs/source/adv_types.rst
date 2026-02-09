@@ -120,6 +120,7 @@ The API for a `Ranker <flitsr.advanced.ranker.Ranker>` as well as all
    :toctree: generated
    :template: custom-class-template.rst
 
+   flitsr.advanced.Config
    flitsr.advanced.ranker.Ranker
    flitsr.advanced.sbfl.SBFL
    flitsr.advanced.flitsr.Flitsr

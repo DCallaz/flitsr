@@ -149,8 +149,8 @@ def main(argv: Optional[List[str]] = None):
             else:
                 # store output files in the current directory
                 input_filename = osp.basename(d_p)
-                filename = (config.get_file_name() + '_' + metric + '_'
-                            + input_filename)
+                filename = (config.get_file_name(args.print_params) + '_'
+                            + metric + '_' + input_filename)
                 try:
                     output_file = open(filename, "x")
                 except FileExistsError:
