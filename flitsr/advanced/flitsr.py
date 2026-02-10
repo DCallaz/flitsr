@@ -54,6 +54,7 @@ class Flitsr(Ranker):
             ranker_args = self.args.get_arg_group(formula)
             ranker = advanced.RankerType[formula.upper()].value(**ranker_args)
             self._cached_metrics[formula.upper()] = ranker
+            # set the default metric
             ranking = ranker.rank(spectrum, self.default_metric)
         else:
             sbfl_args = self.args.get_arg_group('SBFL')
