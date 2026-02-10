@@ -18,6 +18,7 @@ from flitsr.args import Args
 from flitsr.advanced import ClusterType, RankerType
 from flitsr.input.input_reader import Input
 from flitsr.errors import error
+from flitsr.advanced import Config
 
 
 def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
@@ -141,6 +142,7 @@ def main(argv: Optional[List[str]] = None):
         print_spectrum_csv(gspectrum, file=args.output)
         return
     # Execute techniques
+    config: Config
     for config in args.types:
         for metric in args.metrics:
             # Get the output channel
@@ -173,7 +175,7 @@ def main(argv: Optional[List[str]] = None):
             # deal with clustering technique as metric
             if (cluster is None and hasattr(ClusterType, metric.upper())):
                 metric_cluster = ClusterType[metric.upper()]
-                cluster = config.run_adv_type(metric_cluster, args)
+                cluster = config.build_adv_type(metric_cluster, args)
                 # Set default metric for clustering
                 metric = args.flitsr_default_metric
             if (cluster is not None):
@@ -188,10 +190,10 @@ def main(argv: Optional[List[str]] = None):
                 ranker = config.ranker(args)
                 if (ranker is None and hasattr(RankerType, metric.upper())):
                     metric_ranker = RankerType[metric.upper()]
-                    ranker = config.run_adv_type(metric_ranker, args)
+                    ranker = config.build_adv_type(metric_ranker, args)
                     metric = args.flitsr_default_metric
                 elif (ranker is None):
-                    ranker = config.run_adv_type(RankerType['SBFL'], args)
+                    ranker = config.build_adv_type(RankerType['SBFL'], args)
                 ranking = ranker.rank(subspectrum, metric)
                 # Compute cut-off
                 if (args.cutoff_strategy):

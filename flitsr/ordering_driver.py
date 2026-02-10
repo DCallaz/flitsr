@@ -51,7 +51,7 @@ def main(argv: List[str]):
     # Execute techniques
     for config in [Config(RankerType['FLITSR']),
                    Config(RankerType['MULTI'])]:
-        if (config.get_adv_name(RankerType) in ['FLITSR', 'MULTI']):
+        if (config.get_concrete(RankerType) in ['FLITSR', 'MULTI']):
             orderings = ['auto', 'conf', 'original', 'reverse', 'flitsr']
         else:
             orderings = ['original']
@@ -77,7 +77,7 @@ def main(argv: List[str]):
                 # deal with clustering technique as metric
                 if (cluster is None and hasattr(ClusterType, metric.upper())):
                     metric_cluster = ClusterType[metric.upper()]
-                    cluster = config.run_adv_type(metric_cluster, args)
+                    cluster = config.build_adv_type(metric_cluster, args)
                     # Set default metric for clustering
                     metric = args.flitsr_default_metric
                 if (cluster is not None):
@@ -96,10 +96,11 @@ def main(argv: List[str]):
                     if (ranker is None and
                             hasattr(RankerType, metric.upper())):
                         metric_ranker = RankerType[metric.upper()]
-                        ranker = config.run_adv_type(metric_ranker, args)
+                        ranker = config.build_adv_type(metric_ranker, args)
                         metric = args.flitsr_default_metric
                     elif (ranker is None):
-                        ranker = config.run_adv_type(RankerType['SBFL'], args)
+                        ranker = config.build_adv_type(RankerType['SBFL'],
+                                                       args)
                     ranking = ranker.rank(subspectrum, metric)
                     # Compute cut-off
                     if (args.cutoff_strategy):
