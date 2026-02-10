@@ -229,7 +229,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                              'where each <type> is a (case-insensitive) FLITSR '
                              f'advanced type. Allowed types are: {adv_types}')
         parser.add_argument('-p', '--print-params', nargs='?', const="",
-                            default=None, type=str,
+                            default=None, type=str, metavar='FORMAT_STR',
                             help='When producing multiple output files, '
                             'specifies that the parameters for advanced types,'
                             'given by the --types option, should be included '
