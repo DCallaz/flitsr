@@ -10,6 +10,7 @@ from typing import Union, Optional, Any, Dict, Type, TYPE_CHECKING, overload
 import sys
 if TYPE_CHECKING:
     from flitsr.args import Args
+from deprecated.sphinx import deprecated, versionadded, versionchanged
 
 _rankers = {}
 _clusters = {}
@@ -68,6 +69,8 @@ for cls in all_types.values():
         all_types_print.append(cls.__name__.lower())
 
 
+@versionchanged(version='2.3.0', reason='Replaced the `ranker`, `cluster`, '
+                'and `refiner` attributes with functions constructing them')
 class Config:
     """
     The advanced type configuration for a particular run of SBFL methods.
@@ -76,6 +79,8 @@ class Config:
     any arguments related to these advanced types. Multiple of these Config
     objects can be created in the same execution.
     """
+    @versionchanged(version='2.4.0',
+                    reason='Added the `args` optional argument')
     def __init__(self, ranker: Optional[RankerType] = None,
                  cluster: Optional[ClusterType] = None,
                  refiner: Optional[RefinerType] = None,
@@ -106,6 +111,7 @@ class Config:
     def __str__(self, params: Optional[str] = ""):
         return self.get_str(filename=True, params=params)
 
+    @versionadded(version='2.4.0')
     def get_str(self, filename=False, params: Optional[str] = None):
         """
         Returns a string description of the advanced types of this config
@@ -141,6 +147,7 @@ class Config:
         refiner_params = {**arg_params, **custom_params}
         return refiner_params
 
+    @versionadded(version='2.4.0')
     def set_arg(self, adv_type: AdvType, arg_name: str, arg_value: Any):
         """
         Set the argument given by `arg_name` with `arg_value` for the given
@@ -153,6 +160,7 @@ class Config:
         """
         self._args.setdefault(adv_type.name, {})[arg_name] = arg_value
 
+    @versionadded(version='2.4.0')
     def refiner(self, args: Args) -> Optional[Refiner]:
         """
         Build and return this `Config`'s `RefinerType`, if available.
@@ -167,6 +175,7 @@ class Config:
         """
         return self.build_adv_type(self._refiner, args)
 
+    @versionadded(version='2.4.0')
     def cluster(self, args: Args) -> Optional[Cluster]:
         """
         Build and return this `Config`'s `ClusterType`, if available.
@@ -181,6 +190,7 @@ class Config:
         """
         return self.build_adv_type(self._cluster, args)
 
+    @versionadded(version='2.4.0')
     def ranker(self, args: Args) -> Optional[Ranker]:
         """
         Build and return this `Config`'s `RankerType`, if available.
@@ -207,6 +217,7 @@ class Config:
     @overload
     def build_adv_type(self, adv_type: None, args: Args) -> None: ...
 
+    @versionadded(version='2.4.0')
     def build_adv_type(self, adv_type: Optional[AdvType], args: Args) -> Union[
             Refiner, Cluster, Ranker, None]:
         """
@@ -229,6 +240,7 @@ class Config:
         mthd = adv_type.value(**params)
         return mthd
 
+    @versionadded(version='2.4.0')
     def get_concrete(self, adv_type: Union[Type[RefinerType],
                      Type[ClusterType], Type[RankerType]]) -> Optional[str]:
         """
@@ -292,9 +304,12 @@ class Config:
             name = typ.name.upper()
         return name + a
 
+    @versionadded(version='2.4.0')
     def __repr__(self, params: Optional[str] = ""):
         return self.get_str(filename=False, params=params)
 
+    @versionchanged(version='2.4.0',
+                    reason='Added the `params` optional argument')
     def get_file_name(self, params: Optional[str] = None):
         """
         Synonym for `Config.get_str(filename=True, ...) <get_str>`.

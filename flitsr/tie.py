@@ -34,7 +34,7 @@ class Tie:
         """Return the set of all the elements in this tie"""
         return self._elems
 
-    @versionadded(version='2.3.1')
+    @versionadded(version='2.4.0')
     def active_faults(self, collapse=False) \
             -> Dict[Any, Set[Spectrum.Element]]:
         """
@@ -75,7 +75,7 @@ class Tie:
         """
         return len(self._all_fault_locs)
 
-    @deprecated(version='2.3.1', reason='This function has been renamed to '
+    @deprecated(version='2.4.0', reason='This function has been renamed to '
                 '`Tie.active_fault_locations`.')
     def fault_groups(self, collapse=False) -> Dict[Spectrum.Element, Set[Any]]:
         """
@@ -85,7 +85,7 @@ class Tie:
         """
         return self.active_fault_locations(collapse=collapse)
 
-    @versionadded(version='2.3.1', reason='Renamed from `Tie.fault_groups`.')
+    @versionadded(version='2.4.0', reason='Renamed from `Tie.fault_groups`.')
     def active_fault_locations(self, collapse=False) \
             -> Dict[Spectrum.Element, Set[Any]]:
         """

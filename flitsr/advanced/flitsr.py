@@ -10,12 +10,15 @@ from flitsr.advanced.sbfl import SBFL
 from flitsr.suspicious import Suspicious
 from flitsr.advanced.attributes import existing, choices, print_name
 from flitsr import advanced
+from deprecated.sphinx import versionchanged
 
 
 class Flitsr(Ranker):
     """
     Run the main FLITSR algorithm over the spectrum to produce ranked lists.
     """
+    @versionchanged(version='2.4.0',
+                    reason='Added the `default_metric` optional argument')
     @existing('tiebrk')
     @existing('args')
     @choices('internal_ranking', ['auto', 'conf', 'original', 'reverse',
@@ -182,6 +185,8 @@ class Multi(Flitsr):
     """
     Run the FLITSR* algorithm over the spectrum to produce ranked lists.
     """
+    @versionchanged(version='2.4.0',
+                    reason='Added the `cutoff` optional argument')
     @existing('args')
     def __init__(self, args: Optional['Args'] = None,
                  cutoff: Optional[int] = None):
