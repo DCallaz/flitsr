@@ -4,6 +4,7 @@ import argcomplete
 import inspect
 import sys
 import re
+from warnings import warn
 from pathlib import Path
 from os import path as osp
 from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set, \
@@ -42,6 +43,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
               parse any arguments. This is primarily used for generating
               documentation for flitsr's command line. (Default value = False)
         """
+        self._deprecations: Dict[str, str] = {}
         self._default_metric = 'ochiai'
         self._adv_required_args: Dict[str, Tuple[str, Set[str]]] = dict()
         self._advanced_params: Dict[str, Dict[str, Any]] = {}
@@ -449,18 +451,48 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             return ('all', pr(value))
         def one_top(value):
             return ('one', pr(value))
+        def perc_top(value):
+            return ('perc', pr(value))
 
         calc_grp.add_argument('--one-top', dest='top1', metavar='x',
                 action='append', type=one_top, default=[],
-                help='Display a boolean value indicating whether at least one '
-                'fault was found in the top `n` elements (elements with the '
-                'highest suspiciousness')
+                help='Display the expected value of finding at least one '
+                'fault in the top `x` elements (elements with the '
+                'highest suspiciousness).')
         calc_grp.add_argument('--all-top', dest='top1', metavar='x',
                 action='append', type=all_top,
-                help='Display the number of faults found in the top1 group')
-        # calc_grp.add_argument('--perc-top1', dest='top1',
-        #         action='append_const', const='perc',
-        #         help='Display the percentage of faults found in the top1 group')
+                help='Display the expected value of the total number of '
+                'faults found in the top `x` elements (elements with the '
+                'highest suspiciousness)')
+        calc_grp.add_argument('--perc-top', dest='top1', metavar='x',
+                action='append', type=perc_top,
+                help='Display the expected value of the percentage of faults '
+                'found in the top `x` elements (elements with the highest '
+                'suspiciousness)')
+        self._deprecations['--one-top1'] = ('`--one-top1` is deprecated and '
+                                            'will be removed in an upcomming '
+                                            'release. Use `--one-top` instead')
+        calc_grp.add_argument('--one-top1', dest='top1',
+                action='append_const', const=('one', 1),
+                help='(Deprecated: Use `--one-top` instead) Display the '
+                'expected value of finding at least one fault in the first '
+                'element in the ranking.')
+        self._deprecations['--all-top1'] = ('`--all-top1` is deprecated and '
+                                            'will be removed in an upcomming '
+                                            'release. Use `--all-top` instead')
+        calc_grp.add_argument('--all-top1', dest='top1',
+                action='append_const', const=('all', 1),
+                help='(Deprecated: Use `--all-top` instead) Display the '
+                'expected value of the total number of faults found in the '
+                'first element in the ranking')
+        self._deprecations['--perc-top1'] = ('`--perc-top1` is deprecated and '
+                                            'will be removed in an upcomming '
+                                            'release. Use `--perc-top` instead')
+        calc_grp.add_argument('--perc-top1', dest='top1',
+                action='append_const', const=('perc', 1),
+                help='(Deprecated: Use `--perc-top` instead) Display the '
+                'percentage of faults found in the first element in the '
+                'ranking')
 
         # Percent at n calculation options
         calc_grp.add_argument('--perc@n', '--percent-at-n', dest='perc_at_n',
@@ -577,6 +609,13 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         """
 
         args = self._parser.parse_args(argv)
+
+        # check for deprecations
+        for dep, message in self._deprecations.items():
+            if ((argv is not None and dep in argv) or
+                    (argv is None and dep in sys.argv)):
+                # stacklevel=10 to remove all context
+                warn(message, category=FutureWarning, stacklevel=10)
 
         # manually set flitsr as the default
         default_ranker_used = False

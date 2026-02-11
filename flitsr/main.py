@@ -71,6 +71,10 @@ def output(rankings: Rankings, weff=[], top1=[],
                 elif (entry[0] == 'one'):
                     otp = top.one_top_n(ties, entry[1], collapse=collapse)
                     print(f"one top {entry[1]}: {otp:.{decimals}f}", file=file)
+                elif (entry[0] == 'perc'):
+                    ptp = top.perc_top_n(ties, entry[1], collapse=collapse)
+                    print(f"perc top {entry[1]}: {ptp:.{decimals}f}",
+                          file=file)
         if (perc_at_n):
             bumps = percent_at_n.getBumps(ties, collapse=collapse)
             if ('perc' in perc_at_n):
