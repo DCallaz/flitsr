@@ -7,6 +7,16 @@ from enum import Enum
 from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from flitsr.input import InputType
+from deprecated.sphinx import deprecated
+
+
+class GroupError(ValueError):
+    """
+    Custom exception for Spectra, raised when an operation is performed using a
+    Group in a Spectrum where the group does not exist in the given Spectrum.
+    """
+    pass
+
 
 class Outcome(Enum):
     """ The outcome of a `Spectrum.Test` """
@@ -163,17 +173,19 @@ class Spectrum:
         def __hash__(self):
             return self.hash
 
+        @deprecated(version='2.4.0', reason='The generic element equality '
+                    '(`__eq__`) is now equivalent to this function')
         def semantic_eq(self, other) -> bool:
             """
-            Variant of the __eq__ method for an `Spectrum.Element` that checks whether
-            two elements are semantically equivalent.
+            Duplicate of the __eq__ method for an `Spectrum.Element`, checking
+            whether two elements are semantically equivalent.
 
             Args:
               other: The element to compare to
 
             Returns:
-              True if this `Spectrum.Element` is equal to `other`, False otherwise.
-
+              True if this `Spectrum.Element` is equal to `other`, False
+              otherwise.
             """
             return self.tup == other.tup
 
@@ -251,20 +263,27 @@ class Spectrum:
             return iter(self._elems)
 
         def __str__(self) -> str:
-            return f"G{self._index} ({self._elems})"
+            if (len(self._elems) > 10):
+                e_str = (f'{",".join(str(e) for e in self._elems[:9])},...,'
+                         f'{",".join(str(e) for e in self._elems[-1])}')
+            else:
+                e_str = f"{self._elems}"
+            return f"G{self._index} ({e_str})"
 
         def __repr__(self) -> str:
             return str(self)
 
         def __eq__(self, other):
-            return (isinstance(other, Spectrum.Group) and
-                    self._elem_set == other._elem_set)
+            return ((self is other) or
+                    (isinstance(other, Spectrum.Group) and
+                     self._elem_set == other._elem_set))
 
         def __hash__(self):
             return self._hash
 
-    class Execution():
-        """The Execution object holds all of the spectral information pertaining
+    class Execution:
+        """
+        The Execution object holds all of the spectral information pertaining
         to the execution of a particular test.
         """
         __slots__ = ('_groups', '_spectrum', 'exec', 'test', '_iter')
@@ -325,7 +344,7 @@ class Spectrum:
               `default` otherwise.
             """
             try:
-                return bool(self.exec[group.index()])
+                return bool(self.exec[self._spectrum._group_index(group)])
             except (KeyError, IndexError):
                 return default
 
@@ -362,7 +381,9 @@ class Spectrum:
             group.sort_elems(key=lambda x: edict[x])
         self._groups = sorted(groups, key=lambda g: edict[g[0]])
         self._group_map: Dict[Spectrum.Element, Spectrum.Group] = {}
+        self._group_index_map: Dict[Spectrum.Group, int] = {}
         for i, group in enumerate(self._groups):
+            self._group_index_map[group] = i
             group.set_index(i)
             self.p[group] = 0
             self.f[group] = 0
@@ -603,6 +624,16 @@ class Spectrum:
             spectrum.
         """
         return self._group_map[element]
+
+    def _group_index(self, group: Spectrum.Group) -> int:
+        try:
+            return self._group_index_map[group]
+        except KeyError:
+            raise GroupError(f'Group {group} does not exist in this spectrum. '
+                             'Groups usually only exist for the spectrum they '
+                             'are created in (unless the same grouping of '
+                             'elements is present in another spectrum).') \
+                from None
 
     def get_faults(self) -> Dict[Any, Set[Spectrum.Element]]:
         """

@@ -10,7 +10,7 @@ from typing import Union, Optional, Any, Dict, Type, TYPE_CHECKING, overload
 import sys
 if TYPE_CHECKING:
     from flitsr.args import Args
-from deprecated.sphinx import deprecated, versionadded, versionchanged
+from deprecated.sphinx import versionadded, versionchanged
 
 _rankers = {}
 _clusters = {}
