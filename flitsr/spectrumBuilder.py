@@ -1,11 +1,18 @@
-from typing import List, Dict, Any, Set, Tuple, Union
-from flitsr.spectrum import Spectrum, Outcome
+from typing import List, Dict, Any, Set, Tuple, Union, Optional
+from flitsr.spectrum import Spectrum, Outcome, Details
+from flitsr.input.duplicates import DuplicateStrategy
+from deprecated.sphinx import versionchanged
+
+
+class DuplicateError(ValueError):
+    pass
 
 
 class SpectrumBuilder:
     """ Builds a `Spectrum <flitsr.spectrum.Spectrum>` object."""
 
-    def __init__(self, collapse_methods: bool = False):
+    def __init__(self, collapse_methods: bool = False, allow_duplicates:
+                 Optional[DuplicateStrategy] = None):
         """
         Constructs a `SpectrumBuilder` object to facilitate building a
         `Spectrum <flitsr.spectrum.Spectrum>`.
@@ -15,11 +22,13 @@ class SpectrumBuilder:
             method level spectrum.
         """
         self._collapse_methods = collapse_methods
+        self._allow_duplicates = allow_duplicates
         self._method_map: Dict[int, Spectrum.Element] = {}
         self._methods: Dict[Tuple[str, str], Spectrum.Element] = {}
         self._elements: List[Spectrum.Element] = []
         self._tests: Dict[int, Spectrum.Test] = {}
         self._executions: Dict[Spectrum.Test, Set[Spectrum.Element]] = {}
+        self._duplicates: Dict[Spectrum.Element, int] = {}
 
     def get_tests(self) -> List[Spectrum.Test]:
         """ Return the current list of Tests. """
@@ -57,23 +66,30 @@ class SpectrumBuilder:
         self._executions[t] = set()
         return t
 
-    def addElement(self, details: List[str],
+    @versionchanged(version='2.5', reason='Added the option to use the '
+                    '`flitsr.spectrum.Details` object for the `details` '
+                    'parameter')
+    def addElement(self, details: Union[Details, List[str]],
                    faults: List[Any], index: int = None) -> Spectrum.Element:
         """
         Add a new element to the spectrum, with the given details and faults.
+        Note: the `allow_duplicates <__init__>` parameter to the `__init__`
+        method will determine if duplicates are retained.
 
         Args:
-          details: List[str]: The list of details of the element. The list MUST
-            contain at least one string. It conforms to one of the following::
+          details: The details of the element, either as a
+            `flitsr.spectrum.Details` object, or a List of strings. The list
+            of strings, if given, MUST contain at least one string, and conform
+            to one of the following::
 
               [<name>]
               [<path>, <method>]
               [<path>, <line num>]
               [<path>, <method>, <line num>]
 
-          faults: List[Any]: The list of faults that this element pertains to.
-          index: int:  (Default value = None) The (optional) index of this
-            element.
+          faults: The list of faults that this element pertains to, or an empty
+            list if this element does not pertain to any faults.
+          index: The (optional) index of this element.
 
         Returns:
           The created element.
@@ -82,6 +98,12 @@ class SpectrumBuilder:
             index = len(self._elements)
         i = len(self._method_map)  # number of actual elements
         if (self._collapse_methods):
+            if (len(details) < 2 or details[0] is None or details[1] is None
+                    or details[1].isdigit()):
+                name = "|".join(filter(None, details))
+                raise ValueError('Cannot create method level spectra when '
+                                 f'element "{name}" does not have '
+                                 'a method name')
             if ((details[0], details[1]) not in self._methods):
                 # append with first line number
                 elem = self._add_element(details, faults, index)
@@ -99,21 +121,40 @@ class SpectrumBuilder:
             self._method_map[i] = elem
         return elem
 
-    def _add_element(self, details: List[str], faults: List[Any],
-                     index: int) -> Spectrum.Element:
+    def _add_element(self, details: Union[Details, List[str]],
+                     faults: List[Any], index: int) -> Spectrum.Element:
         """
         Helper method to consistently add element to this builder.
-
-        Args:
-          details: List[str]:
-          faults: List[Any]:
-          index: int:
+        Note: the  `allow_duplicates <__init__>` parameter to the `__init__`
+        method will determine if duplicates are retained.
 
         Returns:
+          The constructed element, or pre-existing element if duplicate and
+          duplicates are ignored.
 
+        Raises:
+          DuplicateError: If the element denoted by `details` is already in the
+            spectrum, and duplicates are explicitly not allowed.
         """
         # Create element
         e = Spectrum.Element(details, index, faults)
+        # Check for duplicates
+        if (e in self._elements):
+            if (self._allow_duplicates is DuplicateStrategy.ALLOW):
+                # create updated element with index
+                if (not isinstance(details, Details)):
+                    details = Details.constructDetails(details)
+                self._duplicates.setdefault(e, 1)
+                details.extra = str(self._duplicates[e] + 1)
+                self._duplicates[e] = self._duplicates[e] + 1
+                e = Spectrum.Element(details, index, faults)
+            elif (self._allow_duplicates is DuplicateStrategy.REFUSE):
+                # raise exception for duplicate
+                raise DuplicateError(f'Element {e} already exists! (Consider '
+                                     'allowing or ignoring duplicates)')
+            elif (self._allow_duplicates is DuplicateStrategy.IGNORE):
+                # passively ignore duplicates if DuplicateStrategy.IGNORE
+                pass
         # Record element
         self._elements.append(e)
         return e
@@ -292,6 +333,6 @@ class SpectrumUpdater(SpectrumBuilder):
             the given `other` element.
         """
         for elem in self._elements:
-            if (elem.semantic_eq(other)):
+            if (elem == other):
                 return elem
         raise KeyError(f'Could not find element {other} in SpectrumUpdater')

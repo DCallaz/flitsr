@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, final, Type
 from abc import ABC, abstractmethod
 from flitsr.spectrum import Spectrum
+from flitsr.spectrumBuilder import SpectrumBuilder
 from flitsr import input
 
 
@@ -9,8 +10,17 @@ class Input(ABC):
     def __init_subclass__(cls):
         input.register_input(cls)
 
+    @final
+    def __init__(self, split_faults=False, method_level=False,
+                 allow_duplicates=None):
+        self.method_level = method_level
+        self.allow_duplicates = allow_duplicates
+        self.split_faults = split_faults
+        self.sb = SpectrumBuilder(method_level, allow_duplicates)
+
+    @staticmethod
     @abstractmethod
-    def get_run_file_name(self, input_path: str):
+    def get_run_file_name(input_path: str):
         """
         Return the name of the run file that this input type determines for
         the given input string.
@@ -25,8 +35,7 @@ class Input(ABC):
         pass
 
     @abstractmethod
-    def read_spectrum(self, input_path: str, split_faults: bool,
-                      method_level=False) -> Spectrum:
+    def read_spectrum(self, input_path: str) -> Spectrum:
         """
         Read in the spectrum from the given input file using this input type.
 
@@ -95,8 +104,8 @@ class Input(ABC):
         pass
 
     @staticmethod
-    def read_in(input_path: str, split_faults: bool,
-                method_level=False) -> Spectrum:
+    def read_in(input_path: str, split_faults=False, method_level=False,
+                allow_duplicates=None) -> Spectrum:
         """
         Static helper method that guesses the input type of the given input
         path out of all available input types, and reads in the spectrum using
@@ -113,12 +122,12 @@ class Input(ABC):
           The spectrum that was read in.
 
         """
-        reader = Input.get_reader(input_path)
-        return reader.read_spectrum(input_path, split_faults,
-                                    method_level)
+        reader = Input.get_reader(input_path)(split_faults, method_level,
+                                              allow_duplicates)
+        return reader.read_spectrum(input_path)
 
     @staticmethod
-    def get_reader(input_path: str) -> 'Input':
+    def get_reader(input_path: str) -> Type['Input']:
         """
         Static helper method that guesses the input type of the given input
         path out of all available input types.
@@ -133,5 +142,5 @@ class Input(ABC):
         for input_enum in list(input.InputType):
             input_cls = input_enum.value
             if (input_cls.check_format(input_path)):
-                return input_cls()
+                return input_cls
         raise ValueError(f"Unknown input type \"{input_path}\"")

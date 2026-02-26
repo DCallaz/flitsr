@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from flitsr.input import InputType
 from deprecated.sphinx import deprecated
+from recordclass import RecordClass
 
 
 class GroupError(ValueError):
@@ -25,6 +26,46 @@ class Outcome(Enum):
     FAILED = 1
     FAIL = 1
     ERROR = 2
+
+
+class Details(RecordClass):
+    """
+    The information pertaining to and uniquely identifying a
+    `Spectrum.Element`.
+
+    Args:
+      pname: Either the full name of the element (if no other information
+        is given), or the path name.
+      method: The method name of the element.
+      line_no: The line number of the element.
+      extra: Any additional information related to this element; May include an
+        index for duplicate elements.
+    """
+    pname: str
+    method: Optional[str] = None
+    line_no: Optional[int] = None
+    extra: Optional[str] = None
+
+    @classmethod
+    def constructDetails(cls, details: List[str]) -> Details:
+        if (len(details) < 1):
+            raise ValueError("Unnamed element: ", *details)
+        path = details[0]
+        method = None
+        line = None
+        extra = None
+        if (len(details) > 2):
+            if (details[2].isdigit()):
+                line = int(details[2])
+                method = details[1]
+            else:
+                method = details[1] + "|" + details[2]
+        elif (len(details) > 1):
+            if (not details[1].isdigit()):
+                method = details[1]
+            else:
+                line = int(details[1])
+        return cls(pname=path, method=method, line_no=line, extra=extra)
 
 
 class Spectrum:
@@ -84,29 +125,22 @@ class Spectrum:
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        __slots__ = ('_index', '_group', 'path', 'method', 'line', 'faults',
+        __slots__ = ('_index', 'path', 'method', 'line', 'extra', 'faults',
                      'tup', 'hash')
 
-        def __init__(self, details: List[str], index: int, faults: List[Any]):
-            if (len(details) < 1):
-                raise ValueError("Unnamed element: ", *details)
+        def __init__(self, details: Union[Details, List[str]], index: int,
+                     faults: List[Any]):
             self._index = index
-            self.path = details[0]
-            self.method = None
-            self.line = None
-            if (len(details) > 2):
-                if (details[2].isdigit()):
-                    self.line = int(details[2])
-                    self.method = details[1]
-                else:
-                    self.method = details[1] + "|" + details[2]
-            elif (len(details) > 1):
-                if (not details[1].isdigit()):
-                    self.method = details[1]
-                else:
-                    self.line = int(details[1])
+            # process details
+            if (not isinstance(details, Details)):
+                details = Details.constructDetails(details)
+            self.path: str = details.pname
+            self.method: Optional[str] = details.method
+            self.line: Optional[int] = details.line_no
+            self.extra: Optional[str] = details.extra
+
             self.faults = faults
-            self.tup = (self.path, self.method, self.line)
+            self.tup = (self.path, self.method, self.line, self.extra)
             self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:

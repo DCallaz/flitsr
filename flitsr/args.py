@@ -15,6 +15,7 @@ from flitsr.singleton import SingletonMeta
 from flitsr.ranking import Tiebrk
 from flitsr import advanced
 from flitsr.advanced import Config
+from flitsr.input.duplicates import DuplicateStrategy
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
@@ -204,6 +205,16 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'of a method is determined by the union of the executions of its '
                 'statements. Bugs added to the coverage are handled in a similar '
                 'fashion.')
+        parser.add_argument('--duplicates', default=DuplicateStrategy.REFUSE,
+                choices=list(DuplicateStrategy),
+                type=DuplicateStrategy.from_string,
+                help='Specify the strategy for dealing with duplicate '
+                'elements in the spectrum. ALLOW: Allow the spectrum to '
+                'contain duplicates, which will then use a random index to '
+                'distinguish them. IGNORE: Silently remove and ignore '
+                'duplicate elements in the spectrum, merging their spectra. '
+                'REFUSE: Raise an exception if any duplicate elements are '
+                'encountered when reading in the spectrum.')
         parser.add_argument('--split', help='When given, this option causes faults'
                 ' that are a combination of two or more sub-faults in mutually'
                 ' exclusive parts of the system to be split into separate'
