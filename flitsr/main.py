@@ -137,7 +137,8 @@ def main(argv: Optional[List[str]] = None):
         error(e)
     d_p = reader.get_run_file_name(args.input)
     # Read the spectrum in and setup parallel if needed
-    gspectrum = reader.read_spectrum(args.input, args.split, args.method)
+    gspectrum = (reader(args.split, args.method, args.duplicates)
+                 .read_spectrum(args.input))
     if (gspectrum is None or len(gspectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)

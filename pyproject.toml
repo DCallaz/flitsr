@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flitsr"
-version = "2.4.0"
+version = "2.5.0"
 authors = [
   {name="Dylan Callaghan", email="dcallaghan@acm.org"}
 ]
 description="An automatic fault finding/localization tool for multiple faults"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 license = "MIT"
 license-files = ["LICENSE"]
 classifiers = [
@@ -25,7 +25,8 @@ dependencies = [
   'numpy',
   'bitarray',
   'scipy',
-  'deprecated'
+  'deprecated',
+  'recordclass'
 ]
 
 [project.optional-dependencies]

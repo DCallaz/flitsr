@@ -10,10 +10,15 @@ _inputs = {}
 def register_input(cls):
     _inputs[cls.__name__.upper()] = cls
 
+#  Exposed imports
+from flitsr.input.input_reader import Input  # noqa
+from flitsr.input.tcm_input import TCM  # noqa
+from flitsr.input.gzoltar_input import Gzoltar  # noqa
+__all__ = ['Input', 'TCM', 'Gzoltar', 'InputType']
 
 # load local inputs
-__all__ = [m[1] for m in pkgutil.iter_modules(input.__path__)]
-for module in __all__:
+__all = [m[1] for m in pkgutil.iter_modules(input.__path__)]
+for module in __all:
     importlib.import_module('.'+module, package=__name__)
 # load plugin inputs
 if sys.version_info < (3, 10):

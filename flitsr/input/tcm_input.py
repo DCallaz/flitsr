@@ -4,18 +4,19 @@ from io import TextIOWrapper
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
-from flitsr.spectrumBuilder import SpectrumBuilder, TestKeyError, ElemKeyError
+from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
 from flitsr.split_faults import split_spectrum_faults, NoFaultsError
 
 
 class TCM(Input):
-    def get_run_file_name(self, input_path: str):
+
+    @staticmethod
+    def get_run_file_name(input_path: str):
         return re.sub("\\.\\w+$", ".run", input_path)
 
-    def construct_details(self, f: TextIOWrapper, method_level: bool,
-                          sb: SpectrumBuilder):
+    def construct_details(self, f: TextIOWrapper):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -37,7 +38,7 @@ class TCM(Input):
                         for b in bs:
                             faults.append(int(b))
                     bugs += 1
-                if (method_level):
+                if (self.method_level):
                     details_m = re.match('([^:]+):([^:]+):([0-9]+)',
                                          m.group(1))
                     if (details_m is None):
@@ -47,10 +48,10 @@ class TCM(Input):
                         details = list(details_m.groups())
                 else:
                     details = m.group(1).split(":")
-                sb.addElement(details, faults)
+                self.sb.addElement(details, faults)
                 line = f.readline()
 
-    def construct_tests(self, f: TextIOWrapper, sb: SpectrumBuilder):
+    def construct_tests(self, f: TextIOWrapper):
         line = f.readline()
         while (not line == '\n'):
             m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?',
@@ -59,11 +60,11 @@ class TCM(Input):
                 error("incorrectly formatted test line in input file:", line,
                       "terminating...")
             else:
-                sb.addTest(m.group(1), Outcome[m.group(2)])
+                self.sb.addTest(m.group(1), Outcome[m.group(2)])
             line = f.readline()
 
-    def fill_spectrum(self, f: TextIOWrapper, sb: SpectrumBuilder):
-        for t, test in enumerate(sb.get_tests()):
+    def fill_spectrum(self, f: TextIOWrapper):
+        for t, test in enumerate(self.sb.get_tests()):
             line = f.readline()
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t})',
@@ -71,7 +72,7 @@ class TCM(Input):
             arr = line.rstrip().split()
             for i in range(0, len(arr), 2):
                 try:
-                    sb.addExecution(t, int(arr[i]))
+                    self.sb.addExecution(t, int(arr[i]))
                 except ElemKeyError:
                     error(f'Incorrect element reference "{arr[i]}"',
                           f'at column {i*2+1} on line {t} of the matrix',
@@ -80,9 +81,7 @@ class TCM(Input):
                     error('Incorrect number of matrix lines', f'({t})',
                           'in input file, terminating...')
 
-    def read_spectrum(self, input_path: str, split_faults: bool,
-                      method_level=False) -> Spectrum:
-        sb = SpectrumBuilder(method_level)
+    def read_spectrum(self, input_path: str) -> Spectrum:
         file = open(input_path)
         exec_checks = {'#tests': False, '#uuts': False, '#matrix': False}
         while (True):
@@ -97,21 +96,21 @@ class TCM(Input):
                     print("WARNING: duplicate #tests component in input file",
                           file=sys.stderr)
                 # Constructing the spectrum
-                self.construct_tests(file, sb)
+                self.construct_tests(file)
                 exec_checks['#tests'] = True
             elif (line.startswith("#uuts")):
                 if (exec_checks['#uuts'] is True):
                     print("WARNING: duplicate #uuts component in input file",
                           file=sys.stderr)
                 # Getting the details of the project
-                self.construct_details(file, method_level, sb)
+                self.construct_details(file)
                 exec_checks['#uuts'] = True
             elif (line.startswith("#matrix")):
                 if (exec_checks['#matrix'] is True):
                     print("WARNING: duplicate #matrix component in input file",
                           file=sys.stderr)
                 # Filling the spectrum
-                self.fill_spectrum(file, sb)
+                self.fill_spectrum(file)
                 exec_checks['#matrix'] = True
             else:
                 print("ERROR: Incorrectly formatted input file at line:", line,
@@ -121,10 +120,10 @@ class TCM(Input):
         if (sum(exec_checks.values()) != 3):
             missing = [e[0] for e in exec_checks.items() if e[1] is False]
             error(f"Input file missing components: {missing}, terminating...")
-        spectrum = sb.get_spectrum()
-        del sb
+        spectrum = self.sb.get_spectrum()
+        del self.sb
         # Split fault groups if necessary
-        if (split_faults):
+        if (self.split_faults):
             try:
                 split_spectrum_faults(spectrum)
             except NoFaultsError:
@@ -150,8 +149,7 @@ class TCM(Input):
                 print(test.name, test.outcome.name, file=file)
             print(file=file)
             print("#uuts", file=file)
-            # TODO: change _elements below to elements()
-            for elem in spectrum._elements:
+            for elem in spectrum.elements():
                 print(elem.output_str(type_=type_), file=file)
             print(file=file)
             print("#matrix", file=file)
@@ -173,5 +171,5 @@ if __name__ == "__main__":
     from flitsr.output import print_spectrum
     d = sys.argv[1]
     tinput = TCM()
-    spectrum = tinput.read_spectrum(d, False)
+    spectrum = tinput.read_spectrum(d)
     print_spectrum(spectrum)

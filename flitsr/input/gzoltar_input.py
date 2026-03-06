@@ -6,17 +6,17 @@ from io import TextIOWrapper
 from shutil import rmtree
 from flitsr.split_faults import split_spectrum_faults, NoFaultsError
 from flitsr.spectrum import Spectrum, Outcome
-from flitsr.spectrumBuilder import SpectrumBuilder, TestKeyError, ElemKeyError
+from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
 
 
 class Gzoltar(Input):
-    def get_run_file_name(self, input_path: str):
+    @staticmethod
+    def get_run_file_name(input_path: str):
         return input_path.split("/")[0] + ".run"
 
-    def construct_details(self, f: TextIOWrapper, method_level: bool,
-                          sb: SpectrumBuilder):
+    def construct_details(self, f: TextIOWrapper):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -40,10 +40,9 @@ class Gzoltar(Input):
                             faults.append(int(b))
                     bugs += 1
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
-                sb.addElement(details, faults)
+                self.sb.addElement(details, faults)
 
-    def construct_tests(self, tests_reader: TextIOWrapper,
-                        sb: SpectrumBuilder):
+    def construct_tests(self, tests_reader: TextIOWrapper):
         tests_reader.readline()
         for line in tests_reader:
             m = re.fullmatch('([^,]+),(PASS|FAIL|ERROR)(,.*)?', line.rstrip())
@@ -51,9 +50,9 @@ class Gzoltar(Input):
                 error("incorrectly formatted test line in input file:",
                       line, "terminating...")
             else:
-                sb.addTest(m.group(1), Outcome[m.group(2)])
+                self.sb.addTest(m.group(1), Outcome[m.group(2)])
 
-    def fill_spectrum(self, bin_file: TextIOWrapper, sb: SpectrumBuilder):
+    def fill_spectrum(self, bin_file: TextIOWrapper):
         for t, line in enumerate(bin_file):
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t+1})',
@@ -63,7 +62,7 @@ class Gzoltar(Input):
             for i in range(0, len(arr)-1):
                 if (arr[i] != "0"):
                     try:
-                        sb.addExecution(t, i)
+                        self.sb.addExecution(t, i)
                     except ElemKeyError:
                         error('Incorrect number of matrix columns',
                               f'({i+1})', 'in input file, terminating...')
@@ -71,20 +70,17 @@ class Gzoltar(Input):
                         error('Incorrect number of matrix lines',
                               f'({t+1})', 'in input file, terminating...')
 
-    def read_spectrum(self, input_path: str, split_faults: bool,
-                      method_level=False) -> Spectrum:
-        sb = SpectrumBuilder(method_level)
+    def read_spectrum(self, input_path: str) -> Spectrum:
         # Getting the details of the elements
-        self.construct_details(open(input_path+"/spectra.csv"),
-                               method_level, sb)
+        self.construct_details(open(input_path+"/spectra.csv"))
         # Getting the details of the tests
-        self.construct_tests(open(input_path+"/tests.csv"), sb)
+        self.construct_tests(open(input_path+"/tests.csv"))
         # Constructing the spectrum
-        self.fill_spectrum(open(input_path+"/matrix.txt"), sb)
-        spectrum = sb.get_spectrum()
-        del sb
+        self.fill_spectrum(open(input_path+"/matrix.txt"))
+        spectrum = self.sb.get_spectrum()
+        del self.sb
         # Split fault groups if necessary
-        if (split_faults):
+        if (self.split_faults):
             try:
                 split_spectrum_faults(spectrum)
             except NoFaultsError:
@@ -135,5 +131,5 @@ if __name__ == "__main__":
     from flitsr.output import print_spectrum
     d = sys.argv[1]
     ginput = Gzoltar()
-    spectrum = ginput.read_spectrum(d, False)
+    spectrum = ginput.read_spectrum(d)
     print_spectrum(spectrum)

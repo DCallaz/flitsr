@@ -19,7 +19,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
     except ValueError as e:
         error(e)
     input_format = reader.get_type()
-    spectrum = reader.read_spectrum(input_file, False)
+    spectrum = reader().read_spectrum(input_file)
     # Set the output method if necessary
     if (output_format is None):
         if (input_format is InputType['TCM']):
