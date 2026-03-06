@@ -188,9 +188,9 @@ class Spectrum:
             if (self.details.method):
                 gstring += ((seps[1] if (gstring != '') else '') +
                             self.details.method)
-            if (self.details.line):
+            if (self.details.line_no):
                 gstring += ((seps[2] if (gstring != '') else '') +
-                            str(self.details.line))
+                            str(self.details.line_no))
             if (incl_faults and self.isFaulty()):
                 gstring += seps[3] + seps[3].join(str(x) for x in self.faults)
             return gstring
