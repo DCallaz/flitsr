@@ -337,7 +337,7 @@ class Spectrum:
               executed: bool: The updated execution information; whether this
                   group is executed or not.
             """
-            self.exec[group.index()] = executed
+            self.exec[self._spectrum._group_index(group)] = executed
 
         def __len__(self):
             return len(self._groups)
@@ -359,7 +359,7 @@ class Spectrum:
 
         def __setitem__(self, group: Spectrum.Group, val: bool):
             try:
-                self.exec[group.index()] = val
+                self.exec[self._spectrum._group_index(group)] = val
             except KeyError:
                 pass
 
@@ -399,7 +399,8 @@ class Spectrum:
             """
             # Get the element's group
             try:
-                return bool(self.exec[self._spectrum.get_group(elem).index()])
+                i = self._spectrum._group_index(self._spectrum.get_group(elem))
+                return bool(self.exec[i])
             except (KeyError, IndexError):
                 return default
 

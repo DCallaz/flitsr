@@ -154,8 +154,8 @@ class Runall:
                         os.remove(run)
                         print("--------------------------")
 
-    def run(self, input_type: InputType, include: List[str] = [],
-            exclude: List[str] = [], depth: Optional[int] = None,
+    def run(self, input_type: InputType, include: Optional[List[str]] = [],
+            exclude: Optional[List[str]] = [], depth: Optional[int] = None,
             base: Optional[str] = None):
         def del_tell(file: str):
             os.remove(file)
