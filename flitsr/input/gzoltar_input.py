@@ -6,7 +6,7 @@ from io import TextIOWrapper
 from shutil import rmtree
 from flitsr.split_faults import split_spectrum_faults, NoFaultsError
 from flitsr.spectrum import Spectrum, Outcome
-from flitsr.spectrumBuilder import SpectrumBuilder, TestKeyError, ElemKeyError
+from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
 

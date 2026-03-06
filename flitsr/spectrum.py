@@ -125,8 +125,7 @@ class Spectrum:
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        __slots__ = ('_index', 'path', 'method', 'line', 'extra', 'faults',
-                     'tup', 'hash')
+        __slots__ = ('_index', 'details', 'faults', 'tup', 'hash')
 
         def __init__(self, details: Union[Details, List[str]], index: int,
                      faults: List[Any]):
@@ -134,13 +133,10 @@ class Spectrum:
             # process details
             if (not isinstance(details, Details)):
                 details = Details.constructDetails(details)
-            self.path: str = details.pname
-            self.method: Optional[str] = details.method
-            self.line: Optional[int] = details.line_no
-            self.extra: Optional[str] = details.extra
+            self.details = details
 
             self.faults = faults
-            self.tup = (self.path, self.method, self.line, self.extra)
+            self.tup = tuple(self.details)
             self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:
@@ -170,8 +166,8 @@ class Spectrum:
 
         def output_str(self, type_: 'InputType', incl_faults=True) -> str:
             """
-            Returns the string representation of this `Spectrum.Element` that can be
-            used when writing out the spectrum in the given input type.
+            Returns the string representation of this `Spectrum.Element` that
+            can be used when writing out the spectrum in the given input type.
 
             Args:
               type_: 'InputType': The input type to render the output string for.
@@ -184,15 +180,17 @@ class Spectrum:
             """
             seps = type_.value.get_elem_separators()
             gstring = ''
-            path_part = self.path.rpartition('.')
+            path_part = self.details.pname.rpartition('.')
             if (path_part[0] != '' and path_part[2] != ''):
                 gstring = path_part[0] + seps[0] + path_part[2]
             elif (path_part[0] != '' or path_part[2] != ''):
                 gstring = path_part[0] + path_part[2]
-            if (self.method):
-                gstring += (seps[1] if (gstring != '') else '') + self.method
-            if (self.line):
-                gstring += (seps[2] if (gstring != '') else '') + str(self.line)
+            if (self.details.method):
+                gstring += ((seps[1] if (gstring != '') else '') +
+                            self.details.method)
+            if (self.details.line):
+                gstring += ((seps[2] if (gstring != '') else '') +
+                            str(self.details.line))
             if (incl_faults and self.isFaulty()):
                 gstring += seps[3] + seps[3].join(str(x) for x in self.faults)
             return gstring

@@ -4,7 +4,7 @@ from io import TextIOWrapper
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
-from flitsr.spectrumBuilder import SpectrumBuilder, TestKeyError, ElemKeyError
+from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
 from flitsr.split_faults import split_spectrum_faults, NoFaultsError
@@ -149,8 +149,7 @@ class TCM(Input):
                 print(test.name, test.outcome.name, file=file)
             print(file=file)
             print("#uuts", file=file)
-            # TODO: change _elements below to elements()
-            for elem in spectrum._elements:
+            for elem in spectrum.elements():
                 print(elem.output_str(type_=type_), file=file)
             print(file=file)
             print("#matrix", file=file)

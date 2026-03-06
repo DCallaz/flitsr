@@ -40,8 +40,8 @@ To start, let's read in the `Spectrum <flitsr.spectrum.Spectrum>`. We'll use the
 
 .. code-block:: python
 
-  from flitsr.input.input_reader import Input
-  spectrum = Input.read_in('./example_spectrum.tcm', False)
+  from flitsr.input import Input
+  spectrum = Input.read_in('./example_spectrum.tcm')
 
 This will use the TCM format to read in the Spectrum, and store the resulting
 ``flitsr`` `Spectrum <flitsr.spectrum.Spectrum>` in our ``spectrum`` variable.

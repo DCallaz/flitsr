@@ -1,7 +1,7 @@
 from typing import List, final, Type
 from abc import ABC, abstractmethod
 from flitsr.spectrum import Spectrum
-from flitsr.spectrumBuilder import SpectrumBuilder
+from flitsr.input.spectrumBuilder import SpectrumBuilder
 from flitsr import input
 
 

@@ -98,9 +98,9 @@ all the implemented input types is given below:
    :toctree: generated
    :template: custom-class-template.rst
 
-   flitsr.input.input_reader.Input
-   flitsr.input.tcm_input.TCM
-   flitsr.input.gzoltar_input.Gzoltar
+   flitsr.input.Input
+   flitsr.input.TCM
+   flitsr.input.Gzoltar
 
 .. _input-ranking:
 
