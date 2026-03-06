@@ -1,11 +1,21 @@
 import copy
 from fractions import Fraction
-from itertools import permutations, chain
-from math import factorial, ceil
+from itertools import permutations, chain, combinations
+from math import factorial, ceil, comb
 from typing import List, Any, Optional, Set, Dict, Tuple
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
 from deprecated.sphinx import deprecated, versionadded
+
+def falling(n, k):
+    """
+    Calculates the `k`th falling factorial of `n`.
+    """
+    res = 1
+    for i in range(k):
+        res *= n
+        n -= 1
+    return res
 
 
 class Tie:
@@ -144,6 +154,22 @@ class Tie:
                 dist[tot] += 1
             frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l_a))
             return float(expval*frac)
+
+    def new_expected_value(self, q, weffort: bool, collapse=False) -> float:
+        l = self.num_active_fault_locs()
+        k = min(q, self.num_faults())
+        m = self.len()
+        res = 0.0
+        F = self.active_faults
+        for i in range(l):  # iterate over each fault loc
+            for n in range(1, k+1):  # iterate over number of faults found
+                exp_val = Fraction(i*m, l+1)
+                for K in combinations(F, n):
+                    all_f = set.union(*[F[fn] for fn in K])
+                    perms = ((-1)**(k - len(K)) * comb(n-len(K), k-len(K)) *
+                             Fraction(falling(len(all_f), i), falling(l, i)))
+                res += exp_val * perms
+        return float(res)
 
     def _add_entity(self, entity: Spectrum.Entity,
                     active_faults: Dict[Any, Set[Spectrum.Element]],
