@@ -146,7 +146,8 @@ class SpectrumBuilder:
                 if (not isinstance(details, Details)):
                     details = Details.constructDetails(details)
                 self._duplicates.setdefault(e, 1)
-                details.extra = str(self._duplicates[e] + 1)
+                details.extra = (details.extra+"|" if details.extra is not None
+                                 else "") + str(self._duplicates[e] + 1)
                 self._duplicates[e] = self._duplicates[e] + 1
                 e = Spectrum.Element(details, index, faults)
             elif (self._allow_duplicates is DuplicateStrategy.REFUSE):
