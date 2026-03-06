@@ -2,7 +2,7 @@ import copy
 from fractions import Fraction
 from itertools import permutations, chain
 from math import factorial, ceil
-from typing import List, Any, Optional, Set, Dict
+from typing import List, Any, Optional, Set, Dict, Tuple
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
 from deprecated.sphinx import deprecated, versionadded
@@ -73,7 +73,10 @@ class Tie:
         elements) in this tie. An active fault location is a fault location
         that belongs to a fault that is seen for the first time in this tie.
         """
-        return len(self._all_fault_locs)
+        if (collapse):
+            return len(self._all_fault_groups)
+        else:
+            return len(self._all_fault_locs)
 
     @deprecated(version='2.4.0', reason='This function has been renamed to '
                 '`Tie.active_fault_locations`.')
@@ -143,86 +146,131 @@ class Tie:
             return float(expval*frac)
 
     def _add_entity(self, entity: Spectrum.Entity,
-                    faults: Dict[Any, Set[Spectrum.Element]],
-                    seen_faults: Set[Any]):
+                    active_faults: Dict[Any, Set[Spectrum.Element]],
+                    inactive_faults: Dict[Any, Set[Spectrum.Element]]):
         self._elems.update(entity)
         self._group_len += 1
-        # Check if fault is in group
-        faulty_group = False
+
+        if (len(active_faults) > 0 or len(inactive_faults) > 0):
+            self._num_fault_groups += 1
+
         seen_fault_locs: Set[Spectrum.Element] = set()
-        for (fault_num, fault_locs) in faults.items():
-            unseen_fault = False
-            for fault_loc in set(fault_locs).intersection(entity):
-                # Check & update fault number
-                if (fault_num not in seen_faults):
-                    unseen_fault = True
-                    self._num_faults += 1
-                    seen_faults.add(fault_num)
-                # Check & update faulty locs
+        for (fault_num, fault_locs) in active_faults.items():
+            # set number of faults
+            if (fault_num not in self._fault_locs):
+                self._num_faults += 1
+            # set faulty groups
+            self._fault_groups.setdefault(fault_num, set()).add(entity[0])
+            self._all_fault_groups.setdefault(entity[0], set()).add(fault_num)
+            # set faulty elements
+            self._fault_locs.setdefault(fault_num, set()).update(fault_locs)
+            for fault_loc in fault_locs:
                 if (fault_loc not in seen_fault_locs):
-                    seen_fault_locs.add(fault_loc)
                     self._num_fault_locs += 1
-                    if (unseen_fault):
-                        self._all_fault_locs.setdefault(fault_loc,
-                                                        set()).add(fault_num)
-                        self._fault_locs.setdefault(fault_num,
-                                                    set()).add(fault_loc)
-                # Check & update faulty group
-                if (not faulty_group):
-                    self._num_fault_groups += 1
-                    faulty_group = True
-                    if (unseen_fault):
-                        self._all_fault_groups.setdefault(entity[0],
-                                                          set()).add(fault_num)
-                        self._fault_groups.setdefault(fault_num,
-                                                      set()).add(entity[0])
+                    seen_fault_locs.add(fault_loc)
+                self._all_fault_locs.setdefault(fault_loc,
+                                                set()).add(fault_num)
+
+        # update numbers for inactive faults
+        inactive_locs = set().union(*inactive_faults.values())
+        self._num_fault_locs += len(inactive_locs.difference(seen_fault_locs))
 
 
 class Ties:
+    class _RankingIter:
+        def __init__(self, ranking: Ranking):
+            self.r_iter = iter(ranking)
+            self.cur: Optional[Rank] = next(self.r_iter, None)
+
+        def is_active(self) -> bool:
+            return self.cur is not None
+
+        def consume(self) -> Rank:
+            if (self.cur is None):
+                raise StopIteration("No more elements in ScoreIter")
+            old_cur = self.cur
+            self.cur = next(self.r_iter, None)
+            return old_cur
+
+        def cur_score(self):
+            if (self.cur is not None):
+                return self.cur.score
+            else:
+                raise StopIteration()
+
+    @staticmethod
+    def _get_tie_entities(ri: _RankingIter) -> Set[Spectrum.Entity]:
+        entities: Set[Spectrum.Entity] = set()
+        # sanity check
+        if (not ri.is_active()):
+            return entities
+        # Get all UUTs with same score
+        score = ri.cur_score()
+        while (ri.is_active() and ri.cur_score() == score):
+            r = ri.consume()
+            entities.add(r.entity)
+        return entities
+
+    @staticmethod
+    def _get_faults(entity: Spectrum.Entity,
+                    faults: Dict[Any, Set[Spectrum.Element]],
+                    seen_faults: Set[Any]) -> Tuple[
+                    Dict[Any, Set[Spectrum.Element]],
+                    Dict[Any, Set[Spectrum.Element]]]:
+        """
+        Return all identified faults found in the given entity, both active and
+        inactive.
+
+        Args:
+          entity: The Entity to check for faults in.
+          faults: A dictionary of all the faults in the subject system, with
+            keys being the fault IDs, and values being the set of fault
+            locations.
+          seen_faults: A set of all the faults that have already been
+            identified in a previous tie.
+
+        Returns:
+          A Tuple of the active and inactive faults (in that order) identified
+          in the given entity. The format is the same as for the `faults`
+          parameter given as input.
+        """
+        active_faults: Dict[Any, Set[Spectrum.Element]] = {}
+        inactive_faults: Dict[Any, Set[Spectrum.Element]] = {}
+        for (fault_num, fault_locs) in faults.items():
+            cur_fault_locs = set(fault_locs).intersection(entity)
+            if (len(cur_fault_locs) == 0):    # no locs in this entity: skip
+                continue
+            elif (fault_num in seen_faults):  # already seen: inactive fault
+                inactive_faults.setdefault(fault_num,
+                                           set()).update(cur_fault_locs)
+            else:                             # not seen before: active fault
+                active_faults.setdefault(fault_num,
+                                         set()).update(cur_fault_locs)
+        return active_faults, inactive_faults
+
     def __init__(self, rankings: Rankings):
         self.faults = rankings.faults()
         seen_faults: Set[Any] = set()
         seen_entities: Set[Spectrum.Entity] = set()
         self.ties: List[Tie] = []
-        class RankingIter:
-            def __init__(self, ranking: Ranking):
-                self.r_iter = iter(ranking)
-                self.cur: Optional[Rank] = next(self.r_iter, None)
-            def is_active(self) -> bool:
-                return self.cur is not None
-            def consume(self) -> Rank:
-                if (self.cur is None):
-                    raise StopIteration("No more elements in ScoreIter")
-                old_cur = self.cur
-                self.cur = next(self.r_iter, None)
-                return old_cur
-            def cur_score(self):
-                if (self.cur is not None):
-                    return self.cur.score
-                else:
-                    raise StopIteration()
-        r_iters = [RankingIter(r) for r in rankings]
         # Populate this Ties object
-        def get_tie_entities(ri: RankingIter) -> Set[Spectrum.Entity]:
-            entities: Set[Spectrum.Entity] = set()
-            # sanity check
-            if (not ri.is_active()):
-                return entities
-            # Get all UUTs with same score
-            score = ri.cur_score()
-            while (ri.is_active() and ri.cur_score() == score):
-                r = ri.consume()
-                entities.add(r.entity)
-            return entities
+        r_iters = [self._RankingIter(r) for r in rankings]
         while (any(ri.is_active() for ri in r_iters)):
+            # Get all entities with the same score
             all_entities: Set[Spectrum.Entity] = set()
             for ri in r_iters:
                 if (ri.is_active()):
-                    entities = get_tie_entities(ri)
+                    entities = self._get_tie_entities(ri)
                     all_entities.update(entities)
+            # Form the tie
             tie = Tie()
+            cur_faults: Set[Any] = set()  # faults identified in this tie
             for entity in all_entities.difference(seen_entities):
-                tie._add_entity(entity, self.faults, seen_faults)
+                a_fault, ia_fault = self._get_faults(entity, self.faults,
+                                                     seen_faults)
+                tie._add_entity(entity, a_fault, ia_fault)
+                cur_faults.update(a_fault.keys())
+            seen_faults.update(cur_faults)
             seen_entities.update(all_entities)
             self.ties.append(tie)
         # Add elements not seen to bottom of tie
@@ -230,8 +278,13 @@ class Ties:
         for entity in seen_entities:
             not_seen.difference_update(entity)
         tie = Tie()
+        cur_faults = set()
         for entity in not_seen:
-            tie._add_entity(entity, self.faults, seen_faults)
+            a_fault, ia_fault = self._get_faults(entity, self.faults,
+                                                 seen_faults)
+            tie._add_entity(entity, a_fault, ia_fault)
+            cur_faults.update(a_fault.keys())
+        seen_faults.update(cur_faults)
         self.ties.append(tie)
         self._num_entities = len(seen_entities)
         self._num_elems = len(rankings.elements())
