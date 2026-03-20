@@ -1,4 +1,3 @@
-import copy
 from fractions import Fraction
 from itertools import permutations, chain, combinations
 from math import factorial, ceil, comb
@@ -6,6 +5,7 @@ from typing import List, Any, Optional, Set, Dict, Tuple
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
 from deprecated.sphinx import deprecated, versionadded
+
 
 def falling(n, k):
     """
@@ -111,7 +111,7 @@ class Tie:
         else:
             return self._all_fault_locs
 
-    def expected_value(self, q, weffort: bool, collapse=False) -> float:
+    def old_expected_value(self, q, weffort: bool, collapse=False) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
         expected value can either be in terms of wasted effort (not
@@ -155,20 +155,55 @@ class Tie:
             frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l_a))
             return float(expval*frac)
 
-    def new_expected_value(self, q, weffort: bool, collapse=False) -> float:
-        l = self.num_active_fault_locs()
+    def expected_value(self, q: int, weffort: bool,
+                       collapse=False) -> float:
+        """
+        Calculates the expected value of the qth fault in this tie. The
+        expected value can either be in terms of wasted effort (not
+        counting fault inspection) or actual position in the ranking.
+        """
+        if (self.num_faults() == 1):  # single-fault shortcut
+            return self.single_fault_exp_value(q, weffort, collapse)
+        elif ((all(len(ls) == 1 for ls in self.active_faults().values()) and
+               all(len(fs) == 1 for fs in self.active_fault_locations().values())) or
+              (q == 1)):  # single-loc or first fault shortcut
+            return self.single_loc_exp_value(q, weffort, collapse)
+        else:
+            return self.multi_fault_exp_value(q, weffort, collapse)
+
+    def single_fault_exp_value(self, q: int, weffort: bool,
+                               collapse=False) -> float:
+        print("single fault")
+        assert (self.num_faults() == 1)
+        l = self.num_active_fault_locs(collapse)
+        m = self.len()
+        return float(Fraction(m-l, l+1))
+
+    def single_loc_exp_value(self, q: int, weffort: bool,
+                             collapse=False) -> float:
+        print("single loc")
+        l = self.num_active_fault_locs(collapse)
+        m = self.len()
+        return float(q*Fraction(m-l, l+1))
+
+    def multi_fault_exp_value(self, q: int, weffort: bool, collapse=False):
+        print("multi fault")
+        l = self.num_active_fault_locs(collapse)
         k = min(q, self.num_faults())
         m = self.len()
         res = 0.0
-        F = self.active_faults
-        for i in range(l):  # iterate over each fault loc
+        F = self.active_faults(collapse)
+        f = self.num_faults()
+        print(F)
+        for i in range(1, l+1):  # iterate over each fault loc
+            exp_val = Fraction(i*m, l+1)
             for n in range(1, k+1):  # iterate over number of faults found
-                exp_val = Fraction(i*m, l+1)
                 for K in combinations(F, n):
                     all_f = set.union(*[F[fn] for fn in K])
-                    perms = ((-1)**(k - len(K)) * comb(n-len(K), k-len(K)) *
+                    perms = ((-1)**(k - len(K)) * comb(f-len(K), k-len(K)) *
                              Fraction(falling(len(all_f), i), falling(l, i)))
-                res += exp_val * perms
+                    print(K, all_f, exp_val, perms)
+                    res += exp_val * perms
         return float(res)
 
     def _add_entity(self, entity: Spectrum.Entity,
@@ -200,6 +235,9 @@ class Tie:
         # update numbers for inactive faults
         inactive_locs = set().union(*inactive_faults.values())
         self._num_fault_locs += len(inactive_locs.difference(seen_fault_locs))
+
+    def __str__(self):
+        return str(self._elems)
 
 
 class Ties:
@@ -317,6 +355,12 @@ class Ties:
 
     def __iter__(self):
         return iter(self.ties)
+
+    def __getitem__(self, index: int):
+        return self.ties[index]
+
+    def __len__(self):
+        return len(self.ties)
 
     def size(self, collapse=False):
         if (collapse):
