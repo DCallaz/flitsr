@@ -474,9 +474,28 @@ class Spectrum:
         """Get a list of a all the groups in this spectrum"""
         return self._groups
 
-    def tests(self) -> List[Spectrum.Test]:
-        """Get a list of a all the tests (passing and failing) in this spectrum"""
-        return self._tests
+    def tests(self, outcome: Optional[Outcome] = None) -> List[Spectrum.Test]:
+        """
+        Get a list of all the tests (passing and failing) in this spectrum.
+        If the optional `outcome` parameter is given, return only the tests
+        matching the given outcome, e.g., only passing or failing.
+
+        Args:
+          outcome: If given, filters the output by the given outcome. For
+            example, if `Outcome.PASSED` is given, only passing tests are
+            returned. Note that `Outcome.FAILED` and `Outcome.ERROR` tests are
+            considered different here, so that if `outcome` is `Outcome.FAILED`,
+            tests with an outcome of `Outcome.ERROR` will not be returned. For
+            a list including both, consider using `Spectrum.failing`.
+
+        Returns:
+          A list of all test cases in the spectrum, which optionally match the
+          outcome (if given).
+        """
+        if (outcome is None):
+            return self._tests
+        else:
+            return list(filter(lambda t: t.outcome is outcome, self._tests))
 
     def failing(self) -> List[Spectrum.Test]:
         """Get a list of a all the failing tests in this spectrum"""
