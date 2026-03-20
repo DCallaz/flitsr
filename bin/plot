@@ -1,4 +1,8 @@
 #!/bin/bash
+echo "WARNING: You are using the flitsr shell script at $(realpath "$0")." \
+     "Use of these scripts is deprecated and will be removed in a future" \
+     "release. See https://flitsr.readthedocs.io/en/stable/install.html for" \
+     "installing flitsr as a python script."
 source "$FLITSR_HOME/.venv/bin/activate"
 python -m flitsr.plot "$@"
 deactivate
