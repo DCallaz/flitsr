@@ -4,6 +4,7 @@ from math import factorial, ceil, comb
 from typing import List, Any, Optional, Set, Dict, Tuple
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
+from flitsr.calcs import BUModel
 from deprecated.sphinx import deprecated, versionadded
 
 
@@ -156,55 +157,128 @@ class Tie:
             return float(expval*frac)
 
     def expected_value(self, q: int, weffort: bool,
-                       collapse=False) -> float:
+                       collapse=False, x=BUModel.PERFECT()) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
         expected value can either be in terms of wasted effort (not
         counting fault inspection) or actual position in the ranking.
         """
         if (self.num_faults() == 1):  # single-fault shortcut
-            return self.single_fault_exp_value(q, weffort, collapse)
+            assert (self.single_fault_exp_value(q, weffort, collapse, x) ==
+                    self.multi_fault_exp_value(q, weffort, collapse, x))
+            return self.single_fault_exp_value(q, weffort, collapse, x)
         elif ((all(len(ls) == 1 for ls in self.active_faults().values()) and
-               all(len(fs) == 1 for fs in self.active_fault_locations().values())) or
-              (q == 1)):  # single-loc or first fault shortcut
+               all(len(fs) == 1 for fs in self.active_fault_locations().values()))):
+            assert (self.single_loc_exp_value(q, weffort, collapse) ==
+                    self.multi_fault_exp_value(q, weffort, collapse, x))
+            # single-loc shortcut
             return self.single_loc_exp_value(q, weffort, collapse)
         else:
-            return self.multi_fault_exp_value(q, weffort, collapse)
+            return self.multi_fault_exp_value(q, weffort, collapse, x)
 
-    def single_fault_exp_value(self, q: int, weffort: bool,
-                               collapse=False) -> float:
-        print("single fault")
+    def single_fault_exp_value(self, q: int, weffort: bool, collapse=False,
+                               x=BUModel.PERFECT()) -> float:
+        # print("single fault")
         assert (self.num_faults() == 1)
         l = self.num_active_fault_locs(collapse)
-        m = self.len()
-        return float(Fraction(m-l, l+1))
+        m = self.len(collapse)
+        if (x.model is BUModel.PERFECT().model):
+            return float(Fraction(m-l, l+1))
+        else:
+            return l*float(Fraction(m-l, l+1))
 
     def single_loc_exp_value(self, q: int, weffort: bool,
                              collapse=False) -> float:
-        print("single loc")
+        # print("single loc")
         l = self.num_active_fault_locs(collapse)
+        assert (self.num_faults() == l)
         m = self.len()
         return float(q*Fraction(m-l, l+1))
 
-    def multi_fault_exp_value(self, q: int, weffort: bool, collapse=False):
-        print("multi fault")
+    def multi_fault_exp_value(self, q: int, weffort: bool, collapse=False,
+                              x=BUModel.PERFECT()):
+        # print("multi fault")
         l = self.num_active_fault_locs(collapse)
         k = min(q, self.num_faults())
         m = self.len()
-        res = 0.0
-        F = self.active_faults(collapse)
-        f = self.num_faults()
-        print(F)
+        exp_val = Fraction(m-l, l+1)
+        res = l+1
         for i in range(1, l+1):  # iterate over each fault loc
-            exp_val = Fraction(i*m, l+1)
-            for n in range(1, k+1):  # iterate over number of faults found
-                for K in combinations(F, n):
-                    all_f = set.union(*[F[fn] for fn in K])
-                    perms = ((-1)**(k - len(K)) * comb(f-len(K), k-len(K)) *
-                             Fraction(falling(len(all_f), i), falling(l, i)))
-                    print(K, all_f, exp_val, perms)
-                    res += exp_val * perms
-        return float(res)
+            if (x.model is BUModel.PERFECT().model):
+                cur = self._perfect_bu(self.active_faults(), k, i)
+            elif (x.model is BUModel.INEPT().model):
+                cur = self._inept_bu(self.active_faults(), k, i)
+            else:
+                assert (sum(len(f_locs) for f_locs in
+                            self.active_faults().values()) == l)
+                cur = self._defective_bu(self.active_faults(), k, i, x)
+            res -= cur
+        return float(exp_val * res)
+
+    @staticmethod
+    def _perfect_bu(fs: Dict[Any, Set[Spectrum.Element]], k: int, i: int):
+        l = len(set().union(*fs.values()))
+        numerator = comb(l, i)
+        # num_str = f'{numerator}'
+        for j in range(k-1, 0, -1):  # iterate over number of faults found
+            factor = comb(len(fs) - (j+1), (k-1) - j)
+            # num_str += f' {factor}*('
+            for subset in combinations(fs.keys(), j):  # iterate over selection
+                non_chosen = set().union(*[fs[f] for f in fs if f not in subset])
+                subset_no_ovrlp = (set().union(*[fs[f] for f in subset])
+                                   .difference(non_chosen))
+                cur = comb(len(subset_no_ovrlp), i)
+                numerator += factor * (-1)**(k-j) * cur
+                # num_str += f' {"-" if (k-j) % 2 == 1 else "+"} {cur}'
+            # num_str += ')'
+        # print(f"({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
+        return Fraction(numerator, comb(l, i))
+
+    @staticmethod
+    def _inept_bu(fs: Dict[Any, Set[Spectrum.Element]], k: int, i: int):
+        l = len(set().union(*fs.values()))
+        numerator = 0
+        # num_str = f'{numerator}'
+        # iterate over number of faults found
+        for size_k in range(k, len(fs)+1):
+            factor = comb(size_k-1, k-1)
+            # num_str += f' {"-" if (size_k-k) % 2 == 1 else "+"} {factor}*('
+            # iterate over selection
+            for subset in combinations(fs.values(), size_k):
+                size = len(set().union(*subset))
+                cur = comb(l - size, l - i)
+                numerator += (-1)**(size_k-k) * factor * cur
+                # num_str += f' + {cur}'
+            # num_str += ')'
+        # print(f"{i}: ({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
+        return Fraction(numerator, comb(l, i))
+
+    @staticmethod
+    def _defective_bu(fs: Dict[Any, Set[Spectrum.Element]], k: int, i: int,
+                      x: BUModel):
+        l = len(set().union(*fs.values()))
+        numerator = 0
+        num_str = f'{numerator}'
+        # iterate over number of faults found
+        for size_k in range(k, len(fs)+1):
+            factor = comb(size_k-1, k-1)
+            num_str += f' {"-" if (size_k-k) % 2 == 1 else "+"} {factor}*('
+            # iterate over selection
+            for subset in combinations(fs.keys(), size_k):
+                cur = 1
+                sum_xi = 0
+                cur_str = ''
+                for fault in subset:
+                    xi = x.strategy(len(fs[fault]))
+                    cur *= comb(len(fs[fault]), xi)
+                    cur_str += f'{comb(len(fs[fault]), xi)}*'
+                    sum_xi += xi
+                numerator += ((-1)**(size_k-k) * factor * cur *
+                              comb(l-sum_xi, l-i))
+                num_str += f' + {cur_str}{comb(l-sum_xi, l-i)}'
+            num_str += ')'
+        print(f"{i}: ({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
+        return Fraction(numerator, comb(l, i))
 
     def _add_entity(self, entity: Spectrum.Entity,
                     active_faults: Dict[Any, Set[Spectrum.Element]],
