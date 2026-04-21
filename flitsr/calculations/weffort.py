@@ -67,7 +67,7 @@ def method(ties: Ties, target, avg=False, collapse=False,
     while (not found):
         tie = next(tie_iter)
         # print(tie)
-        actual += tie.num_faults()
+        actual += tie.num_faults(active=True)
         found = (actual >= target)
         if (avg):
             for j in range(1, tie.num_faults()+1):
@@ -75,7 +75,7 @@ def method(ties: Ties, target, avg=False, collapse=False,
         if (not found):
             effort += tie.len(collapse) - tie.num_fault_locs(collapse)
         else:
-            k = target + tie.num_faults() - actual
+            k = target + tie.num_faults(active=True) - actual
             effort += tie.expected_value(k, True, collapse)
     if (avg):
         return sum(efforts)/target

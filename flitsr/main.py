@@ -5,7 +5,6 @@ import copy
 from os import path as osp
 from math import log
 from typing import List, Optional
-from flitsr import weffort
 from flitsr import top
 from flitsr import percent_at_n
 from flitsr import precision_recall
@@ -19,6 +18,7 @@ from flitsr.advanced import ClusterType, RankerType
 from flitsr.input.input_reader import Input
 from flitsr.errors import error
 from flitsr.advanced import Config
+from flitsr.calculations import BUModel, weffort
 
 
 def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
@@ -39,9 +39,9 @@ def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
 
 def output(rankings: Rankings, weff=[], top1=[],
            perc_at_n=[], prec_rec=[], faults=[], collapse=False,
-           csv=False, decimals=2, file=sys.stdout):
+           csv=False, decimals=2, file=sys.stdout, bu_model=BUModel.PERFECT):
     if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: Ties = Ties(rankings)
+        ties: Ties = Ties(rankings, bu_model)
         if (weff):
             if ("first" in weff):
                 print("wasted effort (first): {:.{}f}".format(
@@ -128,7 +128,8 @@ def main(argv: Optional[List[str]] = None):
         rankings = read_any_ranking(args.input, method_level=args.method)
         output(rankings, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               decimals=args.decimals, file=args.output)
+               decimals=args.decimals, file=args.output,
+               bu_model=args.bug_understanding)
         return
     # Else, run the full process
     try:
@@ -209,7 +210,8 @@ def main(argv: Optional[List[str]] = None):
             # Compute and print output
             output(rankings, args.weff, args.top1, args.perc_at_n,
                    args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                   decimals=args.decimals, file=output_file)
+                   decimals=args.decimals, file=output_file,
+                   bu_model=args.bug_understanding)
             spectrum.reset()
 
 

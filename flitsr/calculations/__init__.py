@@ -7,6 +7,7 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import entry_points
 
+from flitsr.calculations.bu_model import BUModel
 from flitsr import calculations
 
 calcs = {}

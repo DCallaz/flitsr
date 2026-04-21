@@ -31,7 +31,8 @@ def main(argv: List[str]):
                                     method_level=args.method)
         output(rankings, args.weff, args.top1, args.perc_at_n,
                args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               decimals=args.decimals, file=args.output)
+               decimals=args.decimals, file=args.output,
+               bu_model=args.bug_understanding)
         return
     # Else, run the full process
     try:

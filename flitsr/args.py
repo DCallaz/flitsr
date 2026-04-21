@@ -16,6 +16,7 @@ from flitsr.ranking import Tiebrk
 from flitsr import advanced
 from flitsr.advanced import Config
 from flitsr.input.duplicates import DuplicateStrategy
+from flitsr.calculations import BUModel
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
@@ -412,6 +413,23 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         #         'larger part of the original test suite first. "original" returns '
         #         'the elements based on their original positions in the ranking '
         #         'produced by the base SBFL metric used by FLITSR.')
+
+        parser.add_argument('-bu', '--bug-understanding', metavar='MODEL',
+                            default=BUModel.PERFECT, type=BUModel.from_string,
+                            choices=BUModel.get_types(),
+                            help='Specify the bug understanding model to use '
+                            'when evaluating the rankings using any of the '
+                            'calculations. The bug understanding model is the '
+                            'number of locations that must be inspected for '
+                            'each fault in order to identify that fault. The '
+                            'default is "perfect" bug understanding, i.e., '
+                            'where it is only necessary to inspect a single '
+                            'fault location to identify a fault. Inept bug '
+                            'understanding instead specifies that all fault '
+                            'locations must be inspected to localize a fault. '
+                            'Finally, defective is when only some (by default '
+                            'half) of the locations must be inspected. '
+                            f'Choices: {BUModel.get_types()}')
 
         # Tie breaking options
         tie_grp = parser.add_argument_group('Tie breaking strategy',
