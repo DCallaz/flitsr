@@ -1,24 +1,19 @@
 # PYTHON_ARGCOMPLETE_OK
 import sys
-import re
 import copy
 from os import path as osp
-from math import log
-from typing import List, Optional
-from flitsr import top
-from flitsr import percent_at_n
-from flitsr import precision_recall
+from typing import List, Optional, Dict, Any, Union, TextIO
 from flitsr.output import print_rankings, print_spectrum_csv
 from flitsr import cutoff_points
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, Rankings
-from flitsr.tie import Ties
 from flitsr.args import Args
 from flitsr.advanced import ClusterType, RankerType
 from flitsr.input.input_reader import Input
 from flitsr.errors import error
 from flitsr.advanced import Config
-from flitsr.calculations import BUModel, weffort
+from flitsr.calculations import BUModel
+from flitsr.calculations.output import calculate
 
 
 def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
@@ -37,87 +32,15 @@ def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
     return ranking
 
 
-def output(rankings: Rankings, weff=[], top1=[],
-           perc_at_n=[], prec_rec=[], faults=[], collapse=False,
-           csv=False, decimals=2, file=sys.stdout, bu_model=BUModel.PERFECT):
-    if (weff or top1 or perc_at_n or prec_rec or faults):
-        ties: Ties = Ties(rankings, bu_model)
-        if (weff):
-            if ("first" in weff):
-                print("wasted effort (first): {:.{}f}".format(
-                    weffort.first(ties, collapse),
-                    decimals), file=file)
-            if ("avg" in weff):
-                print("wasted effort (avg): {:.{}f}".format(
-                    weffort.average(ties, collapse),
-                    decimals), file=file)
-            if ("med" in weff):
-                print("wasted effort (median): {:.{}f}".format(
-                    weffort.median(ties, collapse),
-                    decimals), file=file)
-            if ("last" in weff):
-                print("wasted effort (last): {:.{}f}".format(
-                    weffort.last(ties, collapse),
-                    decimals), file=file)
-            for nth in [w for w in weff if type(w) == int]:
-                print("wasted effort ({}): {:.{}f}".format(
-                    nth, weffort.nth(ties, int(nth), collapse),
-                    decimals), file=file)
-        if (top1):
-            for entry in top1:
-                if (entry[0] == 'all'):
-                    atp = top.all_top_n(ties, entry[1], collapse=collapse)
-                    print(f"all top {entry[1]}: {atp:.{decimals}f}", file=file)
-                elif (entry[0] == 'one'):
-                    otp = top.one_top_n(ties, entry[1], collapse=collapse)
-                    print(f"one top {entry[1]}: {otp:.{decimals}f}", file=file)
-                elif (entry[0] == 'perc'):
-                    ptp = top.perc_top_n(ties, entry[1], collapse=collapse)
-                    print(f"perc top {entry[1]}: {ptp:.{decimals}f}",
-                          file=file)
-        if (perc_at_n):
-            bumps = percent_at_n.getBumps(ties, collapse=collapse)
-            if ('perc' in perc_at_n):
-                form = ','.join(['{{:.{}f}}'.format(decimals)]*len(bumps))
-                print("percentage at n:", form.format(*bumps), file=file)
-            if (any([a in perc_at_n for a in ['auc', 'pauc', 'lauc']])):
-                auc = percent_at_n.auc_calc(
-                        percent_at_n.combine([(bumps[0], bumps[1:])]))
-                if ('auc' in perc_at_n):
-                    print("auc:", auc, file=file)
-                if ('pauc' in perc_at_n):
-                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])
-                    print("pauc:", "{:.{}f}".format(auc/optimal, decimals),
-                          file=file)
-                if ('lauc' in perc_at_n):
-                    optimal = percent_at_n.auc_calc([(0.0, 100.0)])+1
-                    lauc = abs(1-log(optimal-auc, optimal))
-                    print("lauc:", "{:.{}f}".format(lauc, decimals), file=file)
-        if (prec_rec):
-            for entry in prec_rec:
-                if (entry[0] == 'p'):
-                    p = precision_recall.precision(entry[1], ties,
-                                                   collapse=collapse)
-                    print("precision at {}: {:.{}f}".format(entry[1], p,
-                                                            decimals), file=file)
-                elif (entry[0] == 'r'):
-                    r = precision_recall.recall(entry[1], ties,
-                                                collapse=collapse)
-                    print("recall at {}: {:.{}f}".format(entry[1], r,
-                                                         decimals), file=file)
-        if (faults):
-            if ("num" in faults):
-                print("fault number: {}".format(len(ties.faults)), file=file)
-            if ("ids" in faults):
-                print("fault ids: {}".format(list(ties.faults.keys())),
-                      file=file)
-            if ("elems" in faults):
-                print("fault elements: {}".format([e for es in ties.faults.values()
-                                                   for e in es]), file=file)
-            if ("all" in faults):
-                print("fault info: {}".format(ties.faults), file=file)
-    else:
+def output(rankings: Rankings,
+           calc_args: Optional[Dict[str, List[Optional[Dict[str, Any]]]]],
+           decimals: int = 2, file: Union[str, TextIO] = sys.stdout, bu_model:
+           BUModel = BUModel.PERFECT, collapse: bool = False, csv=False):
+    if (calc_args is None):
         print_rankings(rankings, csv, file=file)
+    else:
+        calculate(rankings, calc_args, decimals=decimals, file=file,
+                  bu_model=bu_model, collapse=collapse)
 
 
 def main(argv: Optional[List[str]] = None):
@@ -126,10 +49,9 @@ def main(argv: Optional[List[str]] = None):
     if (args.ranking):
         from flitsr.read_ranking import read_any_ranking
         rankings = read_any_ranking(args.input, method_level=args.method)
-        output(rankings, args.weff, args.top1, args.perc_at_n,
-               args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               decimals=args.decimals, file=args.output,
-               bu_model=args.bug_understanding)
+        output(rankings, args.calcs, decimals=args.decimals,
+               file=args.output, bu_model=args.bug_understanding,
+               collapse=args.collapse, csv=args.csv)
         return
     # Else, run the full process
     try:
@@ -208,10 +130,9 @@ def main(argv: Optional[List[str]] = None):
                                              args.cutoff_eval)
                 rankings.append(ranking)
             # Compute and print output
-            output(rankings, args.weff, args.top1, args.perc_at_n,
-                   args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                   decimals=args.decimals, file=output_file,
-                   bu_model=args.bug_understanding)
+            output(rankings, args.calcs, decimals=args.decimals,
+                   file=output_file, bu_model=args.bug_understanding,
+                   collapse=args.collapse, csv=args.csv)
             spectrum.reset()
 
 

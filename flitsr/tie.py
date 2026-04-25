@@ -6,7 +6,7 @@ from typing import List, Any, Optional, Set, Dict, Tuple, Iterable, \
         Collection, NamedTuple, Union, overload, Literal
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
-from flitsr.calculations import BUModel
+from flitsr.calculations.bu_model import BUModel
 from deprecated.sphinx import deprecated, versionadded, versionchanged
 AnyEntitiesDict = Union[Dict[Any, Set[Spectrum.Element]],
                         Dict[Any, Set[Spectrum.Entity]]]

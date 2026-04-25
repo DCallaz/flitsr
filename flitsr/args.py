@@ -2,13 +2,15 @@ from __future__ import annotations
 import argparse
 import argcomplete
 import inspect
+from inspect import FullArgSpec
 import sys
 import re
 from warnings import warn
 from pathlib import Path
 from os import path as osp
 from typing import List, Dict, Any, Optional, IO, BinaryIO, Tuple, Set, \
-        Union, Generic
+        Union, Generic, Type, Iterator, Iterable, overload
+from collections.abc import Callable
 from flitsr.suspicious import Suspicious
 from flitsr import cutoff_points
 from flitsr.singleton import SingletonMeta
@@ -16,7 +18,162 @@ from flitsr.ranking import Tiebrk
 from flitsr import advanced
 from flitsr.advanced import Config
 from flitsr.input.duplicates import DuplicateStrategy
-from flitsr.calculations import BUModel
+from flitsr.calculations import BUModel, calcs
+
+
+class ParameterParser(Iterator, Iterable):
+    def __init__(self, fn: Callable, class_: Optional[Type] = None,
+                 ext_name: Optional[str] = None):
+        """
+        Constructs an object that supports parsing of the parameters of the
+        given function/method `fn` to be used in the command-line interface.
+
+        Args:
+          fn: The function to parse the parameters for.
+          class_: (Optionally) the class of the method to parse the parameters
+            for. This is only used for getting the type conversion functions
+            which may be shared between multiple methods in the class.
+          option_name: The name of the extension for this function/method that
+            is to be added to the command-line interface. When not given, the
+            name of the method/function will be used.
+        """
+        # if the class is provided, make sure we have the method (not function)
+        if (class_ is not None and hasattr(class_, fn.__name__) and
+                getattr(class_, fn.__name__) == fn):
+            self.fn = getattr(object.__new__(class_), fn.__name__)
+        else:
+            self.fn = fn
+        self.ismethod = inspect.ismethod(self.fn)
+        if (ext_name is None):
+            self.name = self.fn.__name__
+        else:
+            self.name = ext_name
+        self._argspec = inspect.getfullargspec(fn)
+        if (self._argspec.defaults is None):
+            num_defaults = 0
+        else:
+            num_defaults = len(self._argspec.defaults)
+        num_args = len(self._argspec.args)
+        if (self.ismethod):
+            num_args -= 1
+        self._def_diff = (num_args - num_defaults)
+        self.class_ = class_
+        self.params: List[str] = self._argspec.args
+        if (self.ismethod):
+            self.params = self.params[1:]
+        self._p_index: int = 0
+        self.num_params = len(self.params)
+
+    # global list of primitive types
+    _primitives = (bool, str, int, float, Path)
+
+    @staticmethod
+    def _get_base_type(typ) -> List[type]:
+        """ function to extract the base type from a typing.Union, etc."""
+        if (hasattr(typ, '__origin__')):
+            if (typ.__origin__ is Union):
+                ret = list(typ.__args__)
+                # remove NoneType from Optionals
+                if (type(None) in ret):
+                    ret.remove(type(None))
+                return ret
+            elif (typ.__origin__ is Generic):
+                return [typ.__args__[0]]
+        return [typ]
+
+    def _gen_parameter(self, param: str, p_index: int) -> Dict[str, Any]:
+        """
+        Collect the information for a parameter from a flitsr extension method
+        to be added to the flitsr command-line interface.
+
+        Args:
+          fn: The function/method to collect the parameter from. This should be
+            a flitsr extension method, which contains dunder variables (e.g.
+            "__choices__") added to the method by flitsr annotations for extra
+            information.
+          argspec:
+        """
+        parser_args: Dict[str, Any] = {}
+        # get the parameter type(s) (if any)
+        paramTypes = (self._get_base_type(self._argspec.annotations[param])
+                      if param in self._argspec.annotations else None)
+        # add default arguments if param has
+        if (self._argspec.defaults is not None and p_index >= self._def_diff):
+            parser_args['default'] = self._argspec.defaults[p_index -
+                                                            self._def_diff]
+            parser_args['help'] = '(default: %(default)s)'
+        # else add param as conditionally "required" if not bool
+        elif (paramTypes is None or paramTypes != [bool]):
+            parser_args['help'] = '(required)'
+            parser_args['required'] = True
+        # add choices
+        if (hasattr(self.fn, '__choices__') and
+                param in self.fn.__choices__):
+            parser_args['choices'] = self.fn.__choices__[param]
+            parser_args['help'] = (f'Choices: {parser_args["choices"]} '
+                                   + parser_args['help'])
+        # add types
+        if (paramTypes is not None):
+            # function to deal with non-primitives
+            def non_primitive(name, param):
+                if (hasattr(self.class_, f'_{param}')):
+                    return getattr(self.class_, f'_{param}')
+                elif (hasattr(self.fn, '__types__') and
+                      param in self.fn.__types__):
+                    return getattr(self.fn, '__types__')[param]
+                else:
+                    err = ('Could not find type conversion '
+                           f'for {param} in {name}')
+                    raise NameError(err)
+
+            # only add automatic type conversion for single types
+            if (len(paramTypes) == 1):
+                paramType = paramTypes[0]
+                # specially handle bools
+                if (paramType is bool):
+                    if ('default' in parser_args):
+                        # check if default is True
+                        if (parser_args['default']):
+                            parser_args['action'] = 'store_false'
+                        else:
+                            parser_args['action'] = 'store_true'
+                    else:
+                        parser_args['action'] = 'store_true'
+                # specially handle file IO types
+                elif (inspect.isclass(paramType) and
+                      issubclass(paramType, IO)):
+                    if (issubclass(paramType, BinaryIO)):
+                        parser_args['type'] = argparse.FileType('rb')
+                    else:
+                        parser_args['type'] = \
+                          argparse.FileType('r', encoding='UTF-8')
+                else:
+                    if (paramType not in ParameterParser._primitives):
+                        paramType = non_primitive(self.name, param)
+                    parser_args['type'] = paramType
+                    parser_args['metavar'] = param
+            # deal with multiple parameter types
+            else:
+                parser_args['type'] = non_primitive(self.name, param)
+                parser_args['metavar'] = param
+        return parser_args
+
+    def __iter__(self) -> Iterator[Tuple[str, Dict[str, Any]]]:
+        self._p_index = 0
+        return self
+
+    def __next__(self) -> Tuple[str, Dict[str, Any]]:
+        try:
+            param = self.params[self._p_index]
+            if (hasattr(self.fn, '__existing__')):
+                while (param in self.fn.__existing__):
+                    self._p_index += 1
+                    param = self.params[self._p_index]
+        except IndexError:
+            raise StopIteration
+        ret = self._gen_parameter(param, self._p_index)
+        self._p_index += 1
+        return param, ret
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
@@ -123,18 +280,81 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         return adv_type
 
     @staticmethod
-    def _get_base_type(typ) -> List[type]:
-        """ function to extract the base type from a typing.Union, etc."""
-        if (hasattr(typ, '__origin__')):
-            if (typ.__origin__ is Union):
-                ret = list(typ.__args__)
-                # remove NoneType from Optionals
-                if (type(None) in ret):
-                    ret.remove(type(None))
+    def type_bundler(function: Callable[[str], Any],
+                     *functions: Callable[[str], Any]) \
+            -> Union[Callable[[str], Any], Callable[[List[str]], List[Any]]]:
+        if (len(functions) == 0):
+            return function
+        else:
+            all_functions = [function, *functions]
+
+            def bundler(lst: List[str]):
+                ret = []
+                for i in range(len(all_functions)):
+                    try:
+                        ret.append(all_functions[i](lst[i]))
+                    except ValueError as e:
+                        if (len(e.args) > 0):
+                            updated_args = (f'argument {i+1}: '+e.args[0],
+                                            *e.args[1:])
+                        else:
+                            updated_args = (f'argument {i+1}',)
+                        raise ValueError(*updated_args)
+
                 return ret
-            elif (typ.__origin__ is Generic):
-                return [typ.__args__[0]]
-        return [typ]
+            return bundler
+
+    @overload
+    @staticmethod
+    def bundler_action(bundler: Callable[[str], Any], ids: str,
+                       name: Optional[str] = None): ...
+
+    @overload
+    @staticmethod
+    def bundler_action(bundler: Callable[[List[str]], List[Any]],
+                       ids: List[str], name: Optional[str] = None): ...
+
+    @overload
+    @staticmethod
+    def bundler_action(bundler: None, ids: None,
+                       name: Optional[str] = None): ...
+
+    @staticmethod
+    def bundler_action(bundler: Union[None, Callable[[str], Any],
+                       Callable[[List[str]], List[Any]]], ids: Union[None, str,
+                       List[str]], name: Optional[str] = None):
+        class BundlerAction(argparse.Action):
+            def __call__(self, parser, namespace, values, option_string=None):
+                args: Union[Any, Dict[str, Any]]
+                if (bundler is None or ids is None):
+                    args = None
+                else:
+                    try:
+                        typed_values = bundler(values)
+                    except ValueError as e:
+                        raise argparse.ArgumentError(self, str(e))
+                    args = {}
+                    if (isinstance(ids, str)):
+                        args[ids] = typed_values
+                    else:
+                        for i, id_ in enumerate(ids):
+                            args[id_] = typed_values[i]
+                if (name is None):
+                    setattr(namespace, self.dest, args)
+                else:
+                    if (not hasattr(namespace, self.dest) or
+                            getattr(namespace, self.dest) is None):
+                        setattr(namespace, self.dest, dict())
+                    d = getattr(namespace, self.dest)
+                    d.setdefault(name, list()).append(args)
+        return BundlerAction
+
+    @staticmethod
+    def boolConv(x: str) -> bool:
+        if (x not in ['True', 'False']):
+            raise ValueError('invalid literal for '
+                             f'bool: \'{x}\'')
+        return x == 'True'
 
     def _gen_parser(self, cmd_line: bool = True) -> argparse.ArgumentParser:
         """
@@ -266,8 +486,6 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'the output of all of the calculations (default: %(default)s)')
 
         # Advanced types options
-        primitives = (bool, str, int, float, Path)
-
         advanced_groups: List[Tuple[str, Any, Any, Any]] = []
 
         refiner_enum = advanced.RefinerType
@@ -310,109 +528,32 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 mu.add_argument('--'+disp_name, dest=adv_name,
                                 action='store_const', const=adv_enum[name],
                                 help=help_)
-                argspec = inspect.getfullargspec(init)
-                def_diff = (len(argspec.args)-1) - (0 if
-                                                    argspec.defaults is None
-                                                    else len(argspec.defaults))
                 # add cmd-line arguments for each parameter of this adv type
+                pp = ParameterParser(init, class_, ext_name=name)
                 self._advanced_params[name] = dict()
-                for p_index, param in enumerate(argspec.args[1:]):
+                for param, parser_args in pp:
                     self._advanced_params[name][param] = None
-                    # skip adding this parameter if it is marked as existing
-                    if (hasattr(init, '__existing__') and
-                        param in init.__existing__):
-                        continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
-                    parser_args: Dict[str, Any] = {}
-                    # get the parameter type(s) (if any)
-                    paramTypes = (self._get_base_type(argspec.annotations[param])
-                                  if param in argspec.annotations else None)
-                    # add default arguments if param has
-                    if (argspec.defaults is not None and p_index >= def_diff):
-                        parser_args['default'] = argspec.defaults[p_index-def_diff]
-                        parser_args['help'] = '(default: %(default)s)'
-                    # else add param as conditionally "required" if not bool
-                    elif (paramTypes is None or paramTypes != [bool]):
+                    # check if argument is required
+                    if (parser_args.get('required', False) is True):
+                        # remove the required parser argument
+                        parser_args.pop('required', None)
+                        # add to the list of potentially required args
                         if (name not in self._adv_required_args):
                             self._adv_required_args[name] = (adv_name, set())
                         self._adv_required_args[name][1].add(param)
-                        parser_args['help'] = '(required)'
-                    # add choices
-                    if (hasattr(init, '__choices__') and
-                        param in init.__choices__):
-                        parser_args['choices'] = init.__choices__[param]
-                    # add types
-                    if (paramTypes is not None):
-                        # function to deal with non-primitives
-                        def non_primitive(name, param):
-                            if (not hasattr(class_, f'_{param}')):
-                                err = ('Could not find type conversion '
-                                       f'for {param} in {name}')
-                                raise NameError(err)
-                            return getattr(class_, f'_{param}')
-
-                        # only add automatic type conversion for single types
-                        if (len(paramTypes) == 1):
-                            paramType = paramTypes[0]
-                            # specially handle bools
-                            if (paramType is bool):
-                                if ('default' in parser_args):
-                                    # check if default is True
-                                    if (parser_args['default']):
-                                        parser_args['dest'] = disp_name+'_'+param
-                                        paramName = ('--' + disp_name + '-no-' +
-                                                     param.replace('_', '-'))
-                                        parser_args['action'] = 'store_false'
-                                    else:
-                                        parser_args['action'] = 'store_true'
-                                else:
-                                    parser_args['action'] = 'store_true'
-                            # specially handle file IO types
-                            elif (inspect.isclass(paramType) and
-                                  issubclass(paramType, IO)):
-                                if (issubclass(paramType, BinaryIO)):
-                                    parser_args['type'] = argparse.FileType('rb')
-                                else:
-                                    parser_args['type'] = \
-                                      argparse.FileType('r', encoding='UTF-8')
-                            else:
-                                if (paramType not in primitives):
-                                    paramType = non_primitive(name, param)
-                                parser_args['type'] = paramType
-                                if ('choices' not in parser_args):
-                                    parser_args['metavar'] = param
-                        # deal with multiple parameter types
-                        else:
-                            parser_args['type'] = non_primitive(name, param)
-                            if ('choices' not in parser_args):
-                                parser_args['metavar'] = param
-                        # store parser type converter
-                        if ('type' in parser_args):
-                            self._advanced_params[name][param] = parser_args['type']
-                        else:  # must be bool type
-                            def boolConv(x: str) -> bool:
-                                if (x not in ['True', 'False']):
-                                    raise ValueError('invalid literal for '
-                                                     f'bool: \'{x}\'')
-                                return x == 'True'
-                            self._advanced_params[name][param] = boolConv
-
+                    # specially handle boolean options with default True
+                    if (parser_args.get('action', '') == 'store_false'):
+                        parser_args['dest'] = disp_name+'_'+param
+                        paramName = ('--' + disp_name + '-no-' +
+                                     param.replace('_', '-'))
+                    # store parser type converter
+                    if ('type' in parser_args):  # must be non-bool type
+                        self._advanced_params[name][param] = parser_args['type']
+                    else:  # must be bool type
+                        self._advanced_params[name][param] = Args.boolConv
                     # finalize option
                     group.add_argument(paramName, **parser_args)
-
-        # parser.add_argument('--multi', action='store_true',
-        #         help='Runs the FLITSR* (i.e. multi-round) algorithm')
-        # parser.add_argument('-i', '--internal-ranking', action='store',
-        #         choices=['flitsr', 'reverse', 'original', 'auto', 'conf'], default='auto',
-        #         help='Specify the order in which the elements of each FLITSR basis '
-        #         'are ranked. "flitsr" uses the order that FLITSR returns the basis '
-        #         'in (i.e. from FLITSRs lowest to highest recursion depth), which '
-        #         'aligns with FLITSRs confidence for each element being a fault. '
-        #         '"reverse" uses the reverse of "flitsr" (i.e. the order in which '
-        #         'FLITSR identifies the elements) which gives elements that use a '
-        #         'larger part of the original test suite first. "original" returns '
-        #         'the elements based on their original positions in the ranking '
-        #         'produced by the base SBFL metric used by FLITSR.')
 
         parser.add_argument('-bu', '--bug-understanding', metavar='MODEL',
                             default=BUModel.PERFECT, type=BUModel.from_string,
@@ -453,155 +594,69 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'FLITSR with evaluation calculations. Multiple of the following '
                 'arguments can be given in the same call')
 
-        # check type of general weffort
-        def check_fault_type(nth):
-            if (int(nth) > 0):
-                return int(nth)
+        for calc_name, calc_fn in calcs.items():
+            # initialize argparse args
+            argument_args: Dict[str, Any] = {'metavar': [], 'nargs': 0,
+                                             'dest': 'calcs'}
+            argument_names = {f'--{calc_name}'}
+            help_ = ''
+            if (hasattr(calc_fn, '__doc__')):
+                argument_args['help'] = getattr(calc_fn, '__doc__')
+            if (hasattr(calc_fn, '__arg_names__')):
+                for arg_name in getattr(calc_fn, '__arg_names__'):
+                    if (len(arg_name) == 1):
+                        argument_names.add(f'-{arg_name}')
+                    elif (arg_name.startswith('-')):
+                        argument_names.add(arg_name)
+                    else:
+                        argument_names.add(f'--{arg_name}')
+            # parse the parameters
+            pp = ParameterParser(calc_fn)
+            type_funcs = []
+            for param, parser_args in pp:
+                argument_args['metavar'].append(param)
+                argument_args['nargs'] += 1
+                # print(param, parser_args)
+                if (parser_args.get('required', False) is True):
+                    if ('type' in parser_args):
+                        type_funcs.append(parser_args['type'])
+                    else:
+                        type_funcs.append(str)
+                elif ('action' in parser_args and
+                      parser_args['action'] in ['store_true', 'store_false']):
+                    type_funcs.append(Args.boolConv)
+
+            if (len(argument_args['metavar']) == 0):
+                argument_args['action'] = Args.bundler_action(None, None,
+                                                              calc_name)
+                # Do not add empty metavar
+                del argument_args['metavar']
             else:
-                raise argparse.ArgumentTypeError(f'Invalid fault number {nth}')
+                tb = Args.type_bundler(type_funcs[0], *type_funcs[1:])
+                if (len(argument_args['metavar']) == 1):
+                    ids = argument_args['metavar'][0]
+                    argument_args['nargs'] = None
+                else:
+                    ids = argument_args['metavar']
+                argument_args['action'] = Args.bundler_action(tb, ids,
+                                                              calc_name)
+                argument_args['metavar'] = tuple(argument_args['metavar'])
+            # sort argument names by length and then alphabetical
+            def sort_len_alph(s): return (len(s), s.lower())
+            # print(sorted(argument_names, key=sort_len_alph), argument_args,
+            #       type_funcs)
+            calc_grp.add_argument(*sorted(argument_names, key=sort_len_alph),
+                                  **argument_args)
 
-        # Wasted effort calcuation options
-        calc_grp.add_argument('--first', dest='weff', action='append_const',
-                default=[], const='first',
-                help='Display the wasted effort to the first fault')
-        calc_grp.add_argument('--avg', '--average', dest='weff',
-                action='append_const', const='avg',
-                help='Display the wasted effort to the average fault')
-        calc_grp.add_argument('--med', '--median', dest='weff',
-                action='append_const', const='med',
-                help='Display the wasted effort to the median fault')
-        calc_grp.add_argument('--last', dest='weff', action='append_const',
-                const='last', help='Display the wasted effort to the last fault')
-        calc_grp.add_argument('--weffort', dest='weff', action='append', metavar='N',
-                type=check_fault_type, help='Display the wasted effort to the Nth fault')
-
-        # TOP1 calculation options
-        def all_top(value):
-            return ('all', pr(value))
-        def one_top(value):
-            return ('one', pr(value))
-        def perc_top(value):
-            return ('perc', pr(value))
-
-        calc_grp.add_argument('--one-top', dest='top1', metavar='x',
-                action='append', type=one_top, default=[],
-                help='Display the expected value of finding at least one '
-                'fault in the top `x` elements (elements with the '
-                'highest suspiciousness).')
-        calc_grp.add_argument('--all-top', dest='top1', metavar='x',
-                action='append', type=all_top,
-                help='Display the expected value of the total number of '
-                'faults found in the top `x` elements (elements with the '
-                'highest suspiciousness)')
-        calc_grp.add_argument('--perc-top', dest='top1', metavar='x',
-                action='append', type=perc_top,
-                help='Display the expected value of the percentage of faults '
-                'found in the top `x` elements (elements with the highest '
-                'suspiciousness)')
         self._deprecations['--one-top1'] = ('`--one-top1` is deprecated and '
                                             'will be removed in an upcomming '
                                             'release. Use `--one-top` instead')
-        calc_grp.add_argument('--one-top1', dest='top1',
-                action='append_const', const=('one', 1),
-                help='(Deprecated: Use `--one-top` instead) Display the '
-                'expected value of finding at least one fault in the first '
-                'element in the ranking.')
         self._deprecations['--all-top1'] = ('`--all-top1` is deprecated and '
                                             'will be removed in an upcomming '
                                             'release. Use `--all-top` instead')
-        calc_grp.add_argument('--all-top1', dest='top1',
-                action='append_const', const=('all', 1),
-                help='(Deprecated: Use `--all-top` instead) Display the '
-                'expected value of the total number of faults found in the '
-                'first element in the ranking')
         self._deprecations['--perc-top1'] = ('`--perc-top1` is deprecated and '
-                                            'will be removed in an upcomming '
-                                            'release. Use `--perc-top` instead')
-        calc_grp.add_argument('--perc-top1', dest='top1',
-                action='append_const', const=('perc', 1),
-                help='(Deprecated: Use `--perc-top` instead) Display the '
-                'percentage of faults found in the first element in the '
-                'ranking')
-
-        # Percent at n calculation options
-        calc_grp.add_argument('--perc@n', '--percent-at-n', dest='perc_at_n',
-                action='append_const', const='perc', default=[],
-                help='Produces the percentage-at-N values (i.e. the percentage of '
-                'faults found at N%% of code inspected). The output of the perc@n '
-                'calculation is a list of ranks of all found faults, preceded by '
-                'the number of elements in the system, which can be used to '
-                'generate percentage-at-N/recall graphs')
-        calc_grp.add_argument('--auc', '--area-under-curve', dest='perc_at_n',
-                action='append_const', const='auc',
-                help='Dislpays the area under the curve produced by the '
-                'percentage-at-N calculation')
-        calc_grp.add_argument('--pauc', '--percent-area-under-curve',
-                dest='perc_at_n', action='append_const', const='pauc',
-                help='Dislpays the area under the curve '
-                'produced by the percentage-at-N calculation as a percentage of '
-                'the maximum possible value (i.e. closest to perfect recall)')
-        calc_grp.add_argument('--lauc', '--log-area-under-curve',
-                dest='perc_at_n', action='append_const', const='lauc',
-                help='Dislpays the area under the curve '
-                'produced by the percentage-at-N calculation as a logarithmic '
-                'percentage of the maximum possible value (i.e. closest to perfect '
-                'recall). The logarithmic effect causes lower ranks to have a '
-                'greater effect on the value, which corresponds to the lower ranks '
-                'being more useful to the developer')
-
-        # Precision recall type functions
-        def pr(value):
-            if (value == "b" or value == "f"):
-                return value
-            elif (value.isdigit()):
-                return int(value)
-            else:
-                raise ValueError(str(value)+" is not a valid precision/recall "
-                                 "string value")
-        def precision(value):
-            return ('p', pr(value))
-        def recall(value):
-            return ('r', pr(value))
-
-        # Precision recall calculation options
-        calc_grp.add_argument('--precision-at', dest='prec_rec', metavar='x',
-                action='append', default=[], type=precision,
-                help='Displays precision values at a given rank `x`. Precision '
-                'is the amount of faults f found within the cut-off point `x`, '
-                'out of the number of elements seen (i.e. f/x). Can be specified '
-                'multiple times')
-        calc_grp.add_argument('--recall-at', dest='prec_rec', metavar='x',
-                action='append', default=[], type=recall,
-                help='Displays recall values at a given rank `x`. Recall '
-                'is the amount of faults f found within the cut-off point `x`, '
-                'out of the total number of faults n (i.e. f/n). Can be specified '
-                'multiple times')
-
-        # Fault output options
-        calc_grp.add_argument('--fault-num', dest='faults', action='append_const',
-                              const='num', default=[],
-                              help='Display the number of faults in the program')
-        calc_grp.add_argument('--fault-ids', dest='faults', action='append_const',
-                              const='ids',
-                              help='Display the IDs of the faults in the program')
-        calc_grp.add_argument('--fault-elems', dest='faults',
-                              action='append_const', const='elems',
-                              help='Display the elements that are faulty in the program')
-        calc_grp.add_argument('--fault-all', dest='faults', action='append_const',
-                              const='all',
-                              help='Display all info of the faults in the program')
-
-        # parser.add_argument('-p', '--parallel', action='store',
-        #          choices=parallel_opts, metavar='ALGORITHM',
-        #          help='Run one of the parallel debugging algorithms on the spectrum '
-        #          'to produce multiple spectrums, and process all other options on '
-        #          'each spectrum. Allowed values are: ['+', '.join(parallel_opts)+']')
-
-        # parser.add_argument('--artemis', action='store_true',
-        #                     help='Run the ARTEMIS technique on the spectrum to '
-        #                     'produce the ranked lists. This option may be '
-        #                     'combined with FLITSR and parallel to produce a '
-        #                     'hybrid technique.')
+                                             'will be removed in an upcomming '
+                                             'release. Use `--perc-top` instead')
 
         # TODO: Add OBA and worst args if necessary
         cut_eval_opts=['worst', 'best', 'resolve']

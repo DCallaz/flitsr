@@ -1,13 +1,12 @@
 import exrex
 
+
 def gen_strings(regex, num):
-    ret = set()
+    prev = set()
     i = 0
-    while(i < num):
+    while (i < num):
         entry = exrex.getone(regex, limit=100)
-        if (entry not in ret):
-            ret.add(entry)
+        if (entry not in prev):
+            prev.add(entry)
             i += 1
-        else:
-            print(entry, "already in list")
-    return list(ret)
+            yield entry

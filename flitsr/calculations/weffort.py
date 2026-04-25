@@ -1,58 +1,68 @@
 from flitsr.tie import Ties
-from flitsr.calculations import calculation
+from flitsr.calculations.calc_decorator import calculation, parameter
+import argparse
 
 
 @calculation("wasted effort (first)",
              "Display the wasted effort to the first fault", "first")
-def first(ties: Ties, c: bool):
+def first(ties: Ties, collapse: bool):
     if (len(ties.faults) == 0):
         return 0
-    return method(ties, 1, collapse=c)
+    return method(ties, 1, collapse=collapse)
 
 
 @calculation("wasted effort (average)",
              "Display the wasted effort to the average fault",
              "average", "avg")
-def average(ties: Ties, c: bool):
+def average(ties: Ties, collapse: bool):
     if (len(ties.faults) == 0):
         return 0
-    return method(ties, len(ties.faults), avg=True, collapse=c)
+    return method(ties, len(ties.faults), avg=True, collapse=collapse)
 
 
 @calculation("wasted effort (median)",
              "Display the wasted effort to the median fault",
              "median", "med")
-def median(ties: Ties, c: bool):
+def median(ties: Ties, collapse: bool):
     if (len(ties.faults) == 0):
         return 0
     if (len(ties.faults) % 2 == 1):
-        return method(ties, int((len(ties.faults)+1)/2), False, c)
+        return method(ties, int((len(ties.faults)+1)/2), False, collapse)
     else:
-        m1 = method(ties, int(len(ties.faults)/2), False, c)
-        m2 = method(ties, int(len(ties.faults)/2)+1, False, c)
+        m1 = method(ties, int(len(ties.faults)/2), False, collapse)
+        m2 = method(ties, int(len(ties.faults)/2)+1, False, collapse)
         return (m1+m2)/2
 
 
 @calculation("wasted effort (last)",
              "Display the wasted effort to the last fault",
              "last")
-def last(ties: Ties, c: bool):
+def last(ties: Ties, collapse: bool):
     if (len(ties.faults) == 0):
         return 0
-    return method(ties, len(ties.faults), collapse=c)
+    return method(ties, len(ties.faults), collapse=collapse)
 
 
-def nth_print_name(ties: Ties, n: int, c: bool):
+def check_fault_type(nth: str):
+    """check type of general weffort"""
+    if (nth.isdigit() and int(nth) > 0):
+        return int(nth)
+    else:
+        raise argparse.ArgumentTypeError(f'Invalid fault number {nth}')
+
+
+def nth_print_name(ties: Ties, collapse: bool, n: int):
     return f"wasted effort ({n})"
 
 
 @calculation(nth_print_name,
              "Display the wasted effort to the Nth fault",
-             "weffort")
-def nth(ties: Ties, n: int, c: bool):
+             "weffort", "wasted-effort")
+@parameter('n', type=check_fault_type)
+def nth(ties: Ties, collapse: bool, n: int):
     if (len(ties.faults) == 0):
         return 0
-    return method(ties, min(len(ties.faults), n), collapse=c)
+    return method(ties, min(len(ties.faults), n), collapse=collapse)
 
 # <---------------- Helper functions --------------->
 
