@@ -1,7 +1,7 @@
 from fractions import Fraction
-from itertools import permutations, chain, combinations
+from itertools import permutations, chain
 from collections import defaultdict
-from math import factorial, ceil, comb
+from math import factorial, ceil
 from typing import List, Any, Optional, Set, Dict, Tuple, Iterable, \
         Collection, NamedTuple, Union, overload, Literal
 from flitsr.spectrum import Spectrum
@@ -193,6 +193,57 @@ class Tie:
                 ret_dict[loc].add(fault)
         return dict(ret_dict)
 
+    @versionadded(version='2.5.0', reason='Added support for multiple bug '
+                  'understanding models')
+    def fault_identify_nums(self, collapse=False) -> Dict[Any, int]:
+        """
+        Return a dictionary with the number of locations that must be inspected
+        (according to the bug understanding model) to identify each of the
+        active faults in this tie.
+
+        Returns:
+          A dictionary with keys being each of the active faults, and values
+          being the number of locations of that fault in this tie that must
+          be inspected to conclusively identify the fault.
+        """
+        if (collapse is False):
+            return self._active_faults.copy()
+        else:
+            active_fault_group_nums: Dict[Any, int] = dict()
+            for fault in self._active_faults:
+                num_groups = self._get_identify_group_num(fault)
+                # add this num to dict
+                active_fault_group_nums[fault] = num_groups
+            return active_fault_group_nums
+
+    @versionadded(version='2.5.0', reason='Added support for multiple bug '
+                  'understanding models')
+    def fault_identify_num(self, fault: Any, collapse=False) -> int:
+        """
+        Return the number of locations that must be inspected (according to the
+        bug understanding model) to identify the given fault in this tie.
+
+        Raises:
+          ValueError: If `fault` is not an active fault in this tie.
+        """
+        try:
+            if (collapse is False):
+                return self._active_faults[fault]
+            else:
+                return self._get_identify_group_num(fault)
+        except KeyError as e:
+            raise ValueError(f"{fault} is not an active fault in this tie!") \
+                    from e
+
+    def _get_identify_group_num(self, fault: Any) -> int:
+        """Get the number of groups necessary to identify the given fault"""
+        num_locs = self._active_faults[fault]
+        # calculate the estimated num groups to be inspected
+        loc_ratio = Fraction(num_locs, self.num_faults())
+        num_fault_groups = self.num_active_fault_locs(True)
+        num_groups = ceil(loc_ratio * num_fault_groups)
+        return num_groups
+
     def old_expected_value(self, q, weffort: bool, collapse=False) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
@@ -236,140 +287,6 @@ class Tie:
                 dist[tot] += 1
             frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l_a))
             return float(expval*frac)
-
-    def expected_value(self, q: int, weffort: bool, collapse=False) -> float:
-        """
-        Calculates the expected value of the qth fault in this tie. The
-        expected value can either be in terms of wasted effort (not
-        counting fault inspection) or actual position in the ranking.
-
-        Args:
-          q: The number of faults that need inspection in the tie.
-          weffort: Whether to count fault inspections (False) or not (True).
-          collapse: By default, the number of elements is counted, if this
-            option is given, the number of ambiguity groups is counted instead.
-        """
-        if (self.num_faults() == 1):  # single-fault shortcut
-            assert (self._single_fault_exp_value(q, weffort, collapse) ==
-                    self._multi_fault_exp_value(q, weffort, collapse))
-            return self._single_fault_exp_value(q, weffort, collapse)
-        elif ((all(len(ls) == 1 for ls in self.active_faults().values()) and
-               all(len(fs) == 1 for fs in self.active_fault_locations().values()))):
-            assert (self._single_loc_exp_value(q, weffort, collapse) ==
-                    self._multi_fault_exp_value(q, weffort, collapse))
-            # single-loc shortcut
-            return self._single_loc_exp_value(q, weffort, collapse)
-        else:
-            return self._multi_fault_exp_value(q, weffort, collapse)
-
-    def _single_fault_exp_value(self, q: int, weffort: bool,
-                                collapse=False) -> float:
-        # print("single fault")
-        assert (self.num_faults() == 1)
-        l = self.num_active_fault_locs(collapse)
-        m = self.len(collapse)
-        # should be only one key in _active_faults, so just get it (the next)
-        x = self._active_faults[next(iter(self._active_faults))]
-        return float(x*Fraction(m-l, l+1))
-
-    def _single_loc_exp_value(self, q: int, weffort: bool,
-                              collapse=False) -> float:
-        # print("single loc")
-        l = self.num_active_fault_locs(collapse)
-        assert (self.num_faults() == l)
-        m = self.len()
-        return float(q*Fraction(m-l, l+1))
-
-    def _multi_fault_exp_value(self, q: int, weffort: bool,
-                               collapse=False) -> float:
-        # print("multi fault")
-        l = self.num_active_fault_locs(collapse)
-        nums = self._active_faults
-        locs = self._fault_groups if collapse else self._fault_locs
-        k = min(q, self.num_faults())
-        m = self.len(collapse)
-        exp_val = Fraction(m-l, l+1)
-        if (all(num == 1 for num in nums.values())):  # perfect BU
-            e_vk = self._perfect_bu(self.active_faults(collapse), l, k)
-        elif (all(nums[f] == len(locs[f]) for f in nums.keys())):  # inept BU
-            e_vk = self._inept_bu(self.active_faults(collapse), l, k)
-        else:  # defective BU
-            e_vk = self._defective_bu(self.active_faults(collapse), l, k,
-                                      self._active_faults)
-        return float(exp_val * e_vk)
-
-    @staticmethod
-    def _perfect_bu(fs: AnyEntitiesDict, l: int, k: int) -> Fraction:
-        res = Fraction(l+1)
-        for i in range(1, l+1):  # iterate over each fault loc
-            numerator = comb(l, i)
-            # num_str = f'{numerator}'
-            for j in range(k-1, 0, -1):  # iterate over number of faults found
-                factor = comb(len(fs) - (j+1), (k-1) - j)
-                # num_str += f' {factor}*('
-                # iterate over selection
-                for subset in combinations(fs.keys(), j):
-                    non_chosen = set().union(*[fs[f] for f in fs
-                                               if f not in subset])
-                    subset_no_ovrlp = (set().union(*[fs[f] for f in subset])
-                                       .difference(non_chosen))
-                    cur = comb(len(subset_no_ovrlp), i)
-                    numerator += factor * (-1)**(k-j) * cur
-                    # num_str += f' {"-" if (k-j) % 2 == 1 else "+"} {cur}'
-                # num_str += ')'
-            # print(f"({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
-            res -= Fraction(numerator, comb(l, i))
-        return res
-
-    @staticmethod
-    def _inept_bu(fs: AnyEntitiesDict, l: int, k: int) -> Fraction:
-        res = Fraction(l+1)
-        for i in range(1, l+1):  # iterate over each fault loc
-            numerator = 0
-            # num_str = f'{numerator}'
-            # iterate over number of faults found
-            for size_k in range(k, len(fs)+1):
-                factor = comb(size_k-1, k-1)
-                # num_str += f' {"-" if (size_k-k) % 2 == 1 else "+"} {factor}*('
-                # iterate over selection
-                for subset in combinations(fs.values(), size_k):
-                    size = len(set().union(*subset))
-                    cur = comb(l - size, l - i)
-                    numerator += (-1)**(size_k-k) * factor * cur
-                    # num_str += f' + {cur}'
-                # num_str += ')'
-            # print(f"{i}: ({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
-            res -= Fraction(numerator, comb(l, i))
-        return res
-
-    @staticmethod
-    def _defective_bu(fs: AnyEntitiesDict, l: int, k: int,
-                      nums: Dict[Any, int]) -> Fraction:
-        # l = len(set().union(*fs.values()))
-        # numerator = 0
-        # num_str = f'{numerator}'
-        # # iterate over number of faults found
-        # for size_k in range(k, len(fs)+1):
-        #     factor = comb(size_k-1, k-1)
-        #     num_str += f' {"-" if (size_k-k) % 2 == 1 else "+"} {factor}*('
-        #     # iterate over selection
-        #     for subset in combinations(fs.keys(), size_k):
-        #         cur = 1
-        #         sum_xi = 0
-        #         cur_str = ''
-        #         for fault in subset:
-        #             xi = x.strategy(len(fs[fault]))
-        #             cur *= comb(len(fs[fault]), xi)
-        #             cur_str += f'{comb(len(fs[fault]), xi)}*'
-        #             sum_xi += xi
-        #         numerator += ((-1)**(size_k-k) * factor * cur *
-        #                       comb(l-sum_xi, l-i))
-        #         num_str += f' + {cur_str}{comb(l-sum_xi, l-i)}'
-        #     num_str += ')'
-        # print(f"{i}: ({num_str})/{comb(l, i)} = {Fraction(numerator, comb(l, i))}")
-        # return Fraction(numerator, comb(l, i))
-        x_avg = sum(nums.values())/len(nums)
-        return Fraction(x_avg * k)
 
     def __str__(self):
         return str(self._elems)
@@ -513,10 +430,10 @@ class Ties:
         for tie in self:
             active: Dict[Any, int] = {}
             for fault, fault_locs in self.faults.items():
-                if (len(tie._fault_locs[fault]) >= to_inspect[fault] and
-                        to_inspect[fault] > 0):
+                if (len(tie._fault_locs.get(fault, [])) >= to_inspect[fault]
+                        and to_inspect[fault] > 0):
                     active[fault] = to_inspect[fault]
-                to_inspect[fault] -= len(tie._fault_locs[fault])
+                to_inspect[fault] -= len(tie._fault_locs.get(fault, []))
             tie.set_active(active)
 
     def __iter__(self):

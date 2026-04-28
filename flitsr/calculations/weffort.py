@@ -1,46 +1,52 @@
+import argparse
 from flitsr.tie import Ties
 from flitsr.calculations.calc_decorator import calculation, parameter
-import argparse
+from flitsr.calculations.exp_values import effort_exp_val
 
 
 @calculation("wasted effort (first)",
              "Display the wasted effort to the first fault", "first")
-def first(ties: Ties, collapse: bool):
+def first(ties: Ties, collapse: bool) -> float:
     if (len(ties.faults) == 0):
-        return 0
-    return method(ties, 1, collapse=collapse)
+        return 0.0
+    return effort_exp_val(ties, 1, weffort=True, collapse=collapse)
 
 
 @calculation("wasted effort (average)",
              "Display the wasted effort to the average fault",
              "average", "avg")
-def average(ties: Ties, collapse: bool):
+def average(ties: Ties, collapse: bool) -> float:
     if (len(ties.faults) == 0):
-        return 0
-    return method(ties, len(ties.faults), avg=True, collapse=collapse)
+        return 0.0
+    return effort_exp_val(ties, len(ties.faults), weffort=True, avg=True,
+                          collapse=collapse)
 
 
 @calculation("wasted effort (median)",
              "Display the wasted effort to the median fault",
              "median", "med")
-def median(ties: Ties, collapse: bool):
+def median(ties: Ties, collapse: bool) -> float:
     if (len(ties.faults) == 0):
-        return 0
+        return 0.0
     if (len(ties.faults) % 2 == 1):
-        return method(ties, int((len(ties.faults)+1)/2), False, collapse)
+        return effort_exp_val(ties, int((len(ties.faults)+1)/2), weffort=True,
+                              collapse=collapse)
     else:
-        m1 = method(ties, int(len(ties.faults)/2), False, collapse)
-        m2 = method(ties, int(len(ties.faults)/2)+1, False, collapse)
+        m1 = effort_exp_val(ties, int(len(ties.faults)/2), weffort=True,
+                            collapse=collapse)
+        m2 = effort_exp_val(ties, int(len(ties.faults)/2)+1, weffort=True,
+                            collapse=collapse)
         return (m1+m2)/2
 
 
 @calculation("wasted effort (last)",
              "Display the wasted effort to the last fault",
              "last")
-def last(ties: Ties, collapse: bool):
+def last(ties: Ties, collapse: bool) -> float:
     if (len(ties.faults) == 0):
-        return 0
-    return method(ties, len(ties.faults), collapse=collapse)
+        return 0.0
+    return effort_exp_val(ties, len(ties.faults), weffort=True,
+                          collapse=collapse)
 
 
 def check_fault_type(nth: str):
@@ -59,35 +65,8 @@ def nth_print_name(ties: Ties, collapse: bool, n: int):
              "Display the wasted effort to the Nth fault",
              "weffort", "wasted-effort")
 @parameter('n', type=check_fault_type)
-def nth(ties: Ties, collapse: bool, n: int):
+def nth(ties: Ties, collapse: bool, n: int) -> float:
     if (len(ties.faults) == 0):
-        return 0
-    return method(ties, min(len(ties.faults), n), collapse=collapse)
-
-# <---------------- Helper functions --------------->
-
-
-def method(ties: Ties, target, avg=False, collapse=False,
-           worst_effort=False) -> float:
-    found = False
-    actual = 0
-    effort = 0
-    efforts = []
-    tie_iter = iter(ties)
-    while (not found):
-        tie = next(tie_iter)
-        # print(tie)
-        actual += tie.num_faults(active=True)
-        found = (actual >= target)
-        if (avg):
-            for j in range(1, tie.num_faults()+1):
-                efforts.append(effort + tie.expected_value(j, True, collapse))
-        if (not found):
-            effort += tie.len(collapse) - tie.num_fault_locs(collapse)
-        else:
-            k = target + tie.num_faults(active=True) - actual
-            effort += tie.expected_value(k, True, collapse)
-    if (avg):
-        return sum(efforts)/target
-    else:
-        return effort
+        return 0.0
+    return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
+                          collapse=collapse)

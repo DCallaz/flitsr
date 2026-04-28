@@ -12,6 +12,7 @@ from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
 from flitsr.calculations.calc_decorator import calculation
+from flitsr.calculations.exp_values import effort_exp_val
 
 
 @calculation('auc', 'Dislpays the area under the curve produced by the '
@@ -72,7 +73,7 @@ def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
         while (True):
             tie = next(tie_iter)
             for f in range(1, tie.num_faults()+1):
-                expect_value = tie.expected_value(f, False, collapse)
+                expect_value = effort_exp_val(tie, f, False, collapse)
                 bumps.append(total+expect_value)
             total += tie.len(collapse)
     except StopIteration:

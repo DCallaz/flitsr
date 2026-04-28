@@ -1,7 +1,7 @@
 from typing import Any
 from flitsr.tie import Ties
-from flitsr.calculations.precision_recall import method
 from flitsr.calculations.calc_decorator import calculation
+from flitsr.calculations.exp_values import cut_off_exp_val
 
 
 def print_name(name: str):
@@ -12,9 +12,9 @@ def print_name(name: str):
 
 @calculation(print_name('one'), 'Display the expected value of finding at '
              'least one fault in the top `x` elements (elements with the '
-             'highest suspiciousness).', 'one-top')
+             'highest suspiciousness).', 'one-top', 'hit-at', 'accuracy-at')
 def one_top_n(ties: Ties, x: int, collapse=False) -> float:
-    k, _ = method(x, ties, collapse=collapse)
+    k = cut_off_exp_val(ties, x, collapse=collapse)
     return min(1.0, k)
 
 
@@ -22,7 +22,7 @@ def one_top_n(ties: Ties, x: int, collapse=False) -> float:
              'number of faults found in the top `x` elements (elements with '
              'the highest suspiciousness)', 'all-top')
 def all_top_n(ties: Ties, x: int, collapse=False) -> float:
-    k, _ = method(x, ties, collapse=collapse)
+    k = cut_off_exp_val(ties, x, collapse=collapse)
     return k
 
 
@@ -33,5 +33,5 @@ def perc_top_n(ties: Ties, x: int, collapse=False) -> float:
     if (len(ties.faults) == 0):
         return 100
     else:
-        k, _ = method(x, ties, collapse=collapse)
+        k = cut_off_exp_val(ties, x, collapse=collapse)
         return (k/len(ties.faults))*100
