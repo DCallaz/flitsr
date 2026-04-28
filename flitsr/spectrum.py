@@ -93,14 +93,16 @@ class Spectrum:
             return hash(self.name)
 
     class Entity(ABC, Iterable):
-        """A generic spectrum `Spectrum.Entity`. This is the base class for `Spectrum.Element`
-        and `Spectrum.Group` in the spectrum.
+        """A generic spectrum `Spectrum.Entity`. This is the base class for
+        `Spectrum.Element` and `Spectrum.Group` in the spectrum.
         """
         __slots__ = ()
 
         @abstractmethod
         def isFaulty(self) -> bool:
-            """Returns whether or not this `Spectrum.Entity` pertains to a fault"""
+            """
+            Returns whether or not this `Spectrum.Entity` pertains to a fault
+            """
             pass
 
         @abstractmethod
@@ -113,7 +115,7 @@ class Spectrum:
             pass
 
         @abstractmethod
-        def __iter__(self) -> Iterator:
+        def __iter__(self) -> Iterator[Spectrum.Element]:
             pass
 
         @abstractmethod
@@ -125,7 +127,8 @@ class Spectrum:
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        __slots__ = ('_index', 'details', 'faults', 'tup', 'hash')
+        __slots__ = ('_index', 'details', 'method', 'path', 'line', 'faults',
+                     'tup', 'hash')
 
         def __init__(self, details: Union[Details, List[str]], index: int,
                      faults: List[Any]):
@@ -134,13 +137,18 @@ class Spectrum:
             if (not isinstance(details, Details)):
                 details = Details.constructDetails(details)
             self.details = details
+            self.method = self.details.method
+            self.path = self.details.pname
+            self.line = self.details.line_no
 
             self.faults = faults
             self.tup = tuple(self.details)
             self.hash = hash(self.tup)
 
         def isFaulty(self) -> bool:
-            """Returns whether or not this `Spectrum.Element` pertains to a fault"""
+            """
+            Returns whether or not this `Spectrum.Element` pertains to a fault
+            """
             return len(self.faults) > 0
 
         def index(self) -> int:
@@ -153,7 +161,7 @@ class Spectrum:
             else:
                 raise IndexError("list index out of range")
 
-        def __iter__(self) -> Iterator:
+        def __iter__(self) -> Iterator[Spectrum.Element]:
             return iter((self,))
 
         def __len__(self) -> int:
@@ -269,19 +277,21 @@ class Spectrum:
 
         def isFaulty(self) -> bool:
             """
-            Returns whether or not an element in this `Spectrum.Group` pertains to a
-            fault
+            Returns whether or not an element in this `Spectrum.Group` pertains
+            to a fault
             """
             return self._is_faulty
 
         def is_subgroup(self, group: Spectrum.Group) -> bool:
             """
-            Return whether the given `group` is a subgroup of this `Spectrum.Group`.
+            Return whether the given `group` is a subgroup of this
+            `Spectrum.Group`.
             Args:
               group: Spectrum.Group: The group to check.
 
             Returns:
-              True if `group` is a subgroup of this `Spectrum.Group`, False otherwise.
+              True if `group` is a subgroup of this `Spectrum.Group`, False
+                otherwise.
             """
             return group._elem_set < self._elem_set
 
@@ -291,7 +301,7 @@ class Spectrum:
         def __len__(self):
             return len(self._elems)
 
-        def __iter__(self):
+        def __iter__(self) -> Iterator[Spectrum.Element]:
             return iter(self._elems)
 
         def __str__(self) -> str:
@@ -467,16 +477,16 @@ class Spectrum:
         return len(self._tests)
 
     def elements(self) -> List[Spectrum.Element]:
-        """Get a list of a all the elements in this spectrum"""
-        return self._elements
+        """Returns a copy of the list of all elements in this spectrum"""
+        return [*self._elements]
 
     def groups(self) -> List[Spectrum.Group]:
-        """Get a list of a all the groups in this spectrum"""
-        return self._groups
+        """Returns a copy of all the groups in this spectrum"""
+        return [*self._groups]
 
     def tests(self, outcome: Optional[Outcome] = None) -> List[Spectrum.Test]:
         """
-        Get a list of all the tests (passing and failing) in this spectrum.
+        Get a copy of all the tests (passing and failing) in this spectrum.
         If the optional `outcome` parameter is given, return only the tests
         matching the given outcome, e.g., only passing or failing.
 
@@ -493,13 +503,13 @@ class Spectrum:
           outcome (if given).
         """
         if (outcome is None):
-            return self._tests
+            return [*self._tests]
         else:
             return list(filter(lambda t: t.outcome is outcome, self._tests))
 
     def failing(self) -> List[Spectrum.Test]:
-        """Get a list of a all the failing tests in this spectrum"""
-        return self._failing
+        """Returns a copy of all the failing tests in this spectrum"""
+        return [*self._failing]
 
     def locs(self) -> int:
         """Get the number of groups in this spectrum"""
@@ -772,7 +782,7 @@ class Spectrum:
         if (bucket is None):
             return self._all_removed_tests()
         else:
-            return self._removed_tests[bucket][:]
+            return [*self._removed_tests[bucket]]
 
     def _get_executed_entities(self, test: Spectrum.Test, groups=True):
         """
