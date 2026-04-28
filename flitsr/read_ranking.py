@@ -1,12 +1,14 @@
 import re
-from typing import Tuple, List, Set, Union, Any, Dict
+from typing import Tuple, List, Set, Union, Any, Dict, TextIO
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, Rankings
 
 
-def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
+def read_any_ranking(ranking_file: Union[str, TextIO],
+                     method_level=False) -> Rankings:
     """
     Guess the ranking from the contents of the `ranking_file` and read it in.
+    Closes the file after reading (even if an open file handle is given).
 
     Args:
       ranking_file: str: The ranking input file to read in.
@@ -17,18 +19,25 @@ def read_any_ranking(ranking_file: str, method_level=False) -> Rankings:
       A `Rankings <flitsr.ranking.Rankings>` object containing the single
       read-in ranking.
     """
-    f = open(ranking_file)
-    if (f.readline().startswith("Faulty grouping")):
-        return read_flitsr_ranking(ranking_file)
-    else:
-        return read_gzoltar_ranking(ranking_file, method_level)
+    with (open(ranking_file) if isinstance(ranking_file, str)
+          else ranking_file) as f:
+        line = f.readline()
+        f.seek(0)
+        if (line.startswith("Faulty grouping")):
+            return read_flitsr_ranking(f)
+        else:
+            return read_gzoltar_ranking(f, method_level)
 
 
-def read_gzoltar_ranking(ranking_file: str, method_level=False) -> Rankings:
+def read_gzoltar_ranking(ranking_file: Union[str, TextIO],
+                         method_level=False) -> Rankings:
     """
     Read in a GZoltar formatted ranking.
     """
-    f = open(ranking_file)
+    if (isinstance(ranking_file, str)):
+        f: TextIO = open(ranking_file)
+    else:
+        f = ranking_file
     ranking = Ranking()
     bugs = 0
     methods: Dict[Tuple[str, str], Spectrum.Element] = {}
@@ -78,11 +87,14 @@ def read_gzoltar_ranking(ranking_file: str, method_level=False) -> Rankings:
     return Rankings(all_faults, elements, [ranking])
 
 
-def read_flitsr_ranking(ranking_file: str) -> Rankings:
+def read_flitsr_ranking(ranking_file: Union[str, TextIO]) -> Rankings:
     """
     Read in a ``flitsr`` formatted ranking.
     """
-    f = open(ranking_file)
+    if (isinstance(ranking_file, str)):
+        f: TextIO = open(ranking_file)
+    else:
+        f = ranking_file
     ranking = Ranking()
     all_faults: Dict[Any, Set[Spectrum.Element]] = {}
     elements: List[Spectrum.Element] = []
