@@ -386,6 +386,7 @@ class Ties:
             fault.
         """
         self.faults = rankings.faults()
+        self.bu_model = bu
         to_inspect: Dict[Any, int] = bu.get_dict(self.faults)
         # set keeping track of seen entities - no repetitions
         seen_entities: Set[Spectrum.Entity] = set()

@@ -1,7 +1,7 @@
 from fractions import Fraction
 from math import comb
 from itertools import combinations
-from typing import Any, Set, Dict, Union
+from typing import Any, Set, Dict, Union, Callable, Optional
 from flitsr.tie import Tie, Ties
 from flitsr.spectrum import Spectrum
 AnyEntitiesDict = Union[Dict[Any, Set[Spectrum.Element]],
@@ -9,49 +9,8 @@ AnyEntitiesDict = Union[Dict[Any, Set[Spectrum.Element]],
 
 # ----------------------------- Effort calculations ---------------------------
 
-
-def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
-                   collapse=False) -> float:
-    """
-    Calculates the expected value of the nth fault (given by `target`) in the
-    ranking given by `ties`. The expected value can either be in terms of
-    wasted effort (not counting fault inspection) or actual position in the
-    ranking, depending on whether `weffort` is True or False respectively.
-
-    Args:
-      ties: The `Ties` object representing the ranking.
-      target: The number of faults to inspect up until.
-      weffort: Whether to count fault inspections (False) or not (True).
-      avg: When True, computes an average of the expected values of all the
-        faults up until the target, instead of just the expected value at the
-        target.
-      collapse: By default, the number of elements is counted, if this
-        option is given, the number of ambiguity groups is counted instead.
-    """
-    found = False
-    actual = 0
-    effort = 0.0
-    efforts = []
-    tie_iter = iter(ties)
-    while (not found):
-        tie = next(tie_iter)
-        # print(tie)
-        actual += tie.num_faults(active=True)
-        found = (actual >= target)
-        if (avg):
-            for j in range(1, tie.num_faults()+1):
-                efforts.append(effort + effort_exp_val_tie(tie, j, weffort, collapse))
-        if (not found):
-            effort += tie.len(collapse)
-            if (weffort):
-                effort -= tie.num_fault_locs(collapse)
-        else:
-            k = target + tie.num_faults(active=True) - actual
-            effort += effort_exp_val_tie(tie, k, weffort, collapse)
-    if (avg):
-        return sum(efforts)/target
-    else:
-        return effort
+# type hint for function computing the expected value for the effort in a tie
+Eff_tie_exp = Callable[[Tie, int, bool, bool], float]
 
 
 def effort_exp_val_tie(tie: Tie, q: int, weffort: bool,
@@ -79,6 +38,54 @@ def effort_exp_val_tie(tie: Tie, q: int, weffort: bool,
         return _single_loc_exp_value(tie, q, weffort, collapse)
     else:
         return _multi_fault_exp_value(tie, q, weffort, collapse)
+
+
+def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
+                   collapse=False, tie_exp_func: Eff_tie_exp =
+                   effort_exp_val_tie) -> float:
+    """
+    Calculates the expected value of the nth fault (given by `target`) in the
+    ranking given by `ties`. The expected value can either be in terms of
+    wasted effort (not counting fault inspection) or actual position in the
+    ranking, depending on whether `weffort` is True or False respectively.
+
+    Args:
+      ties: The `Ties` object representing the ranking.
+      target: The number of faults to inspect up until.
+      weffort: Whether to count fault inspections (False) or not (True).
+      avg: When True, computes an average of the expected values of all the
+        faults up until the target, instead of just the expected value at the
+        target.
+      collapse: By default, the number of elements is counted, if this
+        option is given, the number of ambiguity groups is counted instead.
+      tie_exp_func: Supplying this optional argument will use the given
+        function to calculate the expected value of the effort in the tie,
+        instead of the default calculation.
+    """
+    found = False
+    actual = 0
+    effort = 0.0
+    efforts = []
+    tie_iter = iter(ties)
+    while (not found):
+        tie = next(tie_iter)
+        # print(tie)
+        actual += tie.num_faults(active=True)
+        found = (actual >= target)
+        if (avg):
+            for j in range(1, tie.num_faults()+1):
+                efforts.append(effort + tie_exp_func(tie, j, weffort, collapse))
+        if (not found):
+            effort += tie.len(collapse)
+            if (weffort):
+                effort -= tie.num_fault_locs(collapse)
+        else:
+            k = target + tie.num_faults(active=True) - actual
+            effort += tie_exp_func(tie, k, weffort, collapse)
+    if (avg):
+        return sum(efforts)/target
+    else:
+        return effort
 
 
 def _exp_effort_in_tie(tie: Tie, e_vk: Union[int, Fraction], weffort: bool,
@@ -203,41 +210,63 @@ def _eff_defective_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
     x_avg = sum(nums.values())/len(nums)
     return Fraction(x_avg * k)
 
-# ----------------------------- Effort calculations ---------------------------
+# ---------------------------- Cut-off calculations ---------------------------
 
 
-def cut_off_exp_val(ties: Ties, target: int, perc: bool = False,
-                    collapse: bool = False) -> float:
+def cut_off_exp_val(ties: Ties, target: int, collapse: bool = False) -> float:
+    """
+    Calculate the expected number of faults found when randomly inspecting the
+    first `target` elements of the ranking given by `ties`.
+
+    Args:
+      ties: The `Ties` object representing the ranking.
+      target: The number of elements to inspect up until.
+      collapse: By default, the number of elements is counted, if this
+        option is given, the number of ambiguity groups is counted instead.
+    """
     tie_iter = iter(ties)
     total = 0
     fault_num = 0.0
     try:
         while (total < target):
             tie = next(tie_iter)
-            add = 0.0
-            if (total+tie.len(collapse) > target):
-                p = int(target - total)  # num of statements to inspect in tie
-                n = tie.len(collapse)  # total num of statements in the tie
-                faults = tie.active_faults(collapse)
-                # sum the expected values of finding each fault
-                for f in faults:
-                    l_bi = len(faults[f])
-                    u_bi = tie.fault_identify_num(f, collapse)
-                    if (u_bi == 1):  # perfect BU
-                        e_I_bi = _cut_perfect_bu(n, l_bi, p)
-                    elif (u_bi == l_bi):  # inept BU
-                        e_I_bi = _cut_inept_bu(n, l_bi, p)
-                    else:  # defective BU
-                        e_I_bi = _cut_defective_bu(n, l_bi, p, u_bi)
-                add += float(e_I_bi)  # add the expected # of faults found in p
-                total += p
-            else:
-                add = tie.num_faults(active=True)
-                total += tie.len(collapse)
-            fault_num += add
+            p = min(target - total, tie.len(collapse))
+            # add the expected # of faults found in p
+            fault_num += cut_off_exp_val_tie(tie, p, collapse)
+            total += p
     except StopIteration:
         pass
     return fault_num
+
+
+def cut_off_exp_val_tie(tie: Tie, p: int, collapse: bool = False) -> float:
+    """
+    Calculate the expected number of faults found when randomly inspecting the
+    first `p` elements of the tie.
+
+    Args:
+      tie: The tie to inspect.
+      p: The number of statements to inspect in tie.
+      collapse: Whether the count the number of statements or ambiguity groups.
+    """
+    n = tie.len(collapse)  # total num of statements in the tie
+    # short-cut for cut-off not in this tie
+    if (p >= n):
+        return tie.num_faults(active=True)
+    faults = tie.active_faults(collapse)
+    tot_found = 0.0
+    # sum the expected values of finding each fault
+    for f in faults:
+        l_bi = len(faults[f])
+        u_bi = tie.fault_identify_num(f, collapse)
+        if (u_bi == 1):  # perfect BU
+            e_I_bi = _cut_perfect_bu(n, l_bi, p)
+        elif (u_bi == l_bi):  # inept BU
+            e_I_bi = _cut_inept_bu(n, l_bi, p)
+        else:  # defective BU
+            e_I_bi = _cut_defective_bu(n, l_bi, p, u_bi)
+        tot_found += e_I_bi
+    return float(tot_found)
 
 
 def _cut_perfect_bu(n: int, l_bi: int, xs: int) -> Fraction:

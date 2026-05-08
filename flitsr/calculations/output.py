@@ -1,5 +1,5 @@
 import sys
-from typing import TextIO, Union, Any, Dict, List, Optional, Iterable
+from typing import TextIO, Union, Any, Dict, List, Optional, Sequence
 from numbers import Number
 from flitsr.ranking import Rankings
 from flitsr.calculations import BUModel, calcs
@@ -27,18 +27,17 @@ def calculate(rankings: Rankings,
                 parameters.update(values)
             parameters['ties'] = ties
             parameters['collapse'] = collapse
-            computed = calc_fn(**parameters)
+            # get print name
             print_name = getattr(calc_fn, '__print_name__')
             if (not isinstance(print_name, str)):
                 print_name = print_name(**parameters)
+            # get value & format (to decimal place)
+            computed = calc_fn(**parameters)
             if (isinstance(computed, Number)):
-                print(f'{print_name}: {computed:.{decimals}f}', file=file)
-            elif (isinstance(computed, Iterable) and
+                formatted = f'{computed:.{decimals}f}'
+            elif (isinstance(computed, Sequence) and
                   all(isinstance(comp, Number) for comp in computed)):
-                all_form: List[str] = []
-                for comp in computed:
-                    all_form.append(f'{comp:.{decimals}f}')
-                computed = ','.join(all_form)
-                print(f'{print_name}: {computed}', file=file)
+                formatted = ','.join(f'{c:.{decimals}f}' for c in computed)
             else:
-                print(f'{print_name}: {computed}', file=file)
+                formatted = str(computed)
+            print(f'{print_name}: {formatted}', file=file)
