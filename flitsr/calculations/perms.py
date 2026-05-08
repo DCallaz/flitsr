@@ -5,12 +5,14 @@ from enum import Enum, auto
 from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError
-from typing import Dict, Iterable, Collection, Set, Any
+from typing import Dict, Iterable, Collection, Set, Any, TypeVar, Generic
 from numpy import random, fromiter
 import ast
 import re
 from flitsr.calculations import BUModel
 from functools import partial
+
+T = TypeVar('T')
 
 MAX_ITERS = math.factorial(10)
 
@@ -31,9 +33,9 @@ class Calc(Enum):
         return getattr(Calc, s)
 
 
-class Randomizer:
+class Randomizer(Generic[T]):
     # 10! => 95% confidence in a 0.05% margin of error (unlimited pop.)
-    def __init__[T](self, seq: Collection[T], max_iters: int = MAX_ITERS):
+    def __init__(self, seq: Collection[T], max_iters: int = MAX_ITERS):
         self.seq = seq
         self.max_iters = min(max_iters, math.factorial(len(seq)))
         # only store permutations (for de-duplication) if not so big
@@ -62,7 +64,7 @@ class Randomizer:
             raise StopIteration
 
 
-class Faults[T]:
+class Faults(Generic[T]):
     def __init__(self, fs: Dict[T, Collection[Any]]):
         self._by_locs = fs
         self._by_faults: Dict[Any, Set[T]] = {}
@@ -106,8 +108,8 @@ def get_func(calc: Calc):
         return partial(prec_rec, precision=True)
 
 
-def exact_method[T](fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
-                    calc: Calc, bu=BUModel.PERFECT):
+def exact_method(fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
+                 calc: Calc, bu=BUModel.PERFECT):
     fs = Faults(fs)
     x = bu.get_dict(fs.get_by_faults())
     dist: Dict[float, int] = {}
@@ -127,8 +129,8 @@ def exact_method[T](fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
     return sum(v*c for v, c in dist.items())/mtot
 
 
-def wasted_effort[T](rank: Iterable[T], fs: Faults[T], k: int,
-                     x: Dict[Any, int], weffort=False) -> int:
+def wasted_effort(rank: Iterable[T], fs: Faults[T], k: int,
+                  x: Dict[Any, int], weffort=False) -> int:
     to_inspect = x.copy()
     seen: Set[int] = set()
     tot = 0
@@ -147,8 +149,8 @@ def wasted_effort[T](rank: Iterable[T], fs: Faults[T], k: int,
     return tot
 
 
-def prec_rec[T](rank: Iterable[T], fs: Faults[T], n: int,
-                x: Dict[Any, int], precision=False) -> float:
+def prec_rec(rank: Iterable[T], fs: Faults[T], n: int,
+             x: Dict[Any, int], precision=False) -> float:
     to_inspect = x.copy()
     seen: Set[int] = set()
     try:

@@ -73,8 +73,8 @@ def get_flitsr_func(calc: Calc):
         return rec
 
 
-def experiment[T](m: int, f: int, l_max: int, o: int, q: int, calc: Calc,
-                  x: BUModel, fs: Optional[Dict[int, Set[int]]] = None):
+def experiment(m: int, f: int, l_max: int, o: int, q: int, calc: Calc,
+               x: BUModel, fs: Optional[Dict[int, Set[int]]] = None):
     """
     Runs an experiment with the given parameters.
 
@@ -240,7 +240,6 @@ def exp_iter(args):
             continue
         try:
             for i in range(args.iterations):
-                print(i)
                 exact, formula, fs, e_dur, \
                         f_dur = experiment(m, f, l, o, q, args.calculation,
                                            x=x, fs=args.faults)
