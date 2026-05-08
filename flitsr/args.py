@@ -739,14 +739,20 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     args.types = [Config(**ts),
                                   Config(advanced.RankerType['FLITSR'], **ts),
                                   Config(advanced.RankerType['MULTI'], **ts)]
-            if (len(args.weff) == 0 and len(args.top1) == 0 and
-                    len(args.perc_at_n) == 0 and len(args.prec_rec) == 0):
-                args.weff = ["first", "avg", "med", "last", 2, 3, 5]
-                args.perc_at_n = ["perc"]
-                args.prec_rec = [('p', 1), ('p', 5), ('p', 10), ('p', "f"),
-                                 ('r', 1), ('r', 5), ('r', 10), ('r', "f")]
-                args.faults = ["num"]
-                args.top1 = [('all', 1), ('all', 5), ('all', 10), ('one', 5)]
+            if (len(args.calcs) == 0):
+                args.calcs = {
+                    "first": [],
+                    "avgerage": [],
+                    "median": [],
+                    "last": [],
+                    "weffort": [2, 3, 5],
+                    "perc@n": [],
+                    "precision-at": [1, 5, 10, "f"],
+                    "recall-at": [1, 5, 10, "f"],
+                    "fault-num": [],
+                    "all-top": [1, 5, 10],
+                    "one-top": [5]
+                        }
         elif (args.types is None):
             args.types = [Config(args.ranker, getattr(args, 'cluster', None),
                                  getattr(args, 'refiner', None))]
