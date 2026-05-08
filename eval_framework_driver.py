@@ -291,8 +291,9 @@ if __name__ == "__main__":
                         help='Print to the given file (default stdout).')
     args = parser.parse_args()
     # check if something to run
-    if ((args.output_file is None or os.stat(args.output_file).st_size == 0)
-            and (any(x is None for x in [args.m, args.f, args.l_max, args.q]))):
+    if ((args.output_file is None or not os.path.isfile(args.output_file) or
+         os.stat(args.output_file).st_size == 0) and
+            (any(x is None for x in [args.m, args.f, args.l_max, args.q]))):
         reqs_a = []
         for s, v in [('m', args.m), ('f', args.f), ('l', args.l_max),
                      ('q', args.q)]:
