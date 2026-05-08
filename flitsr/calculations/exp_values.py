@@ -277,11 +277,13 @@ def _cut_perfect_bu(n: int, l_bi: int, xs: int) -> Fraction:
 
 
 def _cut_inept_bu(n: int, l_bi: int, xs: int) -> Fraction:
-    return Fraction(comb(n - l_bi, xs - l_bi), comb(n, xs))
+    return Fraction(comb(n - l_bi, n - xs), comb(n, xs))
 
 
 def _cut_defective_bu(n: int, l_bi: int, xs: int, u_bi: int) -> Fraction:
     e_I_bi = Fraction(0)
     for j in range(u_bi, l_bi+1):
+        if (xs - j < 0):
+            continue
         e_I_bi += Fraction(comb(n - l_bi, xs - j) * comb(l_bi, j), comb(n, xs))
     return e_I_bi
