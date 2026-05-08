@@ -14,7 +14,7 @@ from flitsr.spectrum import Spectrum
 from flitsr.calculations import BUModel
 from itertools import combinations, chain, product
 from functools import partial
-from calc_experiments import ExpConfig, Exp, Setup, read_exp_file, combine
+from calc_experiments import Setup, read_exp_file, combine
 from collections import Counter
 from datetime import timedelta
 import sys
