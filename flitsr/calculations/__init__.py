@@ -1,6 +1,7 @@
 import pkgutil
 import sys
 import importlib
+import inspect
 from typing import Dict
 from collections.abc import Callable
 if sys.version_info < (3, 10):
@@ -12,10 +13,12 @@ from flitsr.calculations.bu_model import BUModel  # noqa
 from flitsr import calculations
 
 calcs: Dict[str, Callable] = {}
+calcs_base: Dict[str, Callable] = {}
 
 
-def register_calc(cls, name: str):
-    calcs[name] = cls
+def register_calc(func, name: str):
+    calcs[name] = func
+    calcs_base[name] = inspect.unwrap(func)
 
 
 # load local calculations

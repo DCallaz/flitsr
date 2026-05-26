@@ -2,7 +2,7 @@ import sys
 from typing import TextIO, Union, Any, Dict, List, Optional, Sequence
 from numbers import Number
 from flitsr.ranking import Rankings
-from flitsr.calculations import BUModel, calcs
+from flitsr.calculations import BUModel, calcs, calcs_base
 from flitsr.tie import Ties
 
 
@@ -28,7 +28,7 @@ def calculate(rankings: Rankings,
             parameters['ties'] = ties
             parameters['collapse'] = collapse
             # get print name
-            print_name = getattr(calc_fn, '__print_name__')
+            print_name = getattr(calcs_base[calc], '__print_name__')
             if (not isinstance(print_name, str)):
                 print_name = print_name(**parameters)
             # get value & format (to decimal place)

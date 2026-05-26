@@ -5,7 +5,8 @@ from enum import Enum, auto
 from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError
-from typing import Dict, Iterable, Collection, Set, Any, TypeVar, Generic
+from typing import Dict, Iterable, Collection, Set, Any, TypeVar, Generic, \
+        Optional
 from numpy import random, fromiter
 import ast
 import re
@@ -109,18 +110,22 @@ def get_func(calc: Calc):
 
 
 def exact_method(fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
-                 calc: Calc, bu=BUModel.PERFECT):
+                 calc: Calc, bu=BUModel.PERFECT,
+                 samples: Optional[int] = None):
     fs = Faults(fs)
     x = bu.get_dict(fs.get_by_faults())
     dist: Dict[float, int] = {}
     perms: Iterable
     mtot: int
     func = get_func(calc)
-    if (len(elems) <= 11):
+    if (samples is None and len(elems) <= 11):
         perms = permutations(elems)
         mtot = math.factorial(len(elems))
     else:
-        perms = Randomizer(elems)
+        if (samples is None):
+            perms = Randomizer(elems)
+        else:
+            perms = Randomizer(elems, samples)
         mtot = perms.max_iters
     for rank in perms:
         value = func(rank, fs, q, x)

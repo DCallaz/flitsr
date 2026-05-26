@@ -1,29 +1,11 @@
 import argparse
 from functools import partial
-from datetime import timedelta
-import time
-from functools import wraps
-from collections import defaultdict
-from typing import Dict
 from flitsr.tie import Ties, Tie
 from flitsr.calculations.bu_model import BUModel
-from flitsr.calculations.calc_decorator import calculation, parameter
+from flitsr.calculations.calc_decorator import calculation, parameter, \
+        timing, get_runtime
 from flitsr.calculations.exp_values import effort_exp_val
 from flitsr.calculations.perms import exact_method, Calc
-
-
-runtimes: Dict[str, Dict[int, float]] = defaultdict(defaultdict)
-
-
-def timing(f):
-    @wraps(f)
-    def wrap(ties: Ties, collapse: bool, n: int):
-        start = time.time()
-        result = f(ties, collapse, n)
-        end = time.time()
-        runtimes[f.__name__][n] = (end - start)
-        return result
-    return wrap
 
 
 @calculation("wasted effort (first)",
@@ -98,6 +80,7 @@ def nth(ties: Ties, collapse: bool, n: int) -> float:
 @calculation(partial(nth_print_name, name='steimann effort'),
              "Display the (steimann) wasted effort to the Nth fault",
              "steimann", "steimann-wasted-effort")
+@parameter('n', type=check_fault_type)
 @timing
 def steimann(ties: Ties, collapse: bool, n: int) -> float:
     return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
@@ -113,35 +96,66 @@ def _steimann(tie: Tie, k: int, weffort: bool, collapse=False) -> float:
 @calculation(partial(nth_print_name, name='steimann runtime'),
              "Display the runtime for (steimann) wasted effort to the Nth fault",
              "steimann-time")
+@parameter('n', type=check_fault_type)
 def steimann_rt(ties: Ties, collapse: bool, n: int) -> float:
-    return runtimes['steimann'][n]
+    return get_runtime('steimann', {'n': n})
 
 
 @calculation(partial(nth_print_name, name='wasted effort runtime'),
              "Display the runtime for calculating the wasted effort to the "
              "Nth fault", "weffort-time")
+@parameter('n', type=check_fault_type)
 def weffort_rt(ties: Ties, collapse: bool, n: int) -> float:
-    return runtimes['nth'][n]
+    return get_runtime('nth', {'n': n})
 
 
-@calculation(partial(nth_print_name, name='sampled effort'),
-             "Display the (sampled) wasted effort to the Nth fault",
-             "sampled", "sampled-wasted-effort")
+@calculation(partial(nth_print_name, name='full sampled effort'),
+             "Display the (full sampled) wasted effort to the Nth fault",
+             "f-sampled", "full-sampled-wasted-effort")
+@parameter('n', type=check_fault_type)
 @timing
-def sampled(ties: Ties, collapse: bool, n: int) -> float:
+def full_sampled(ties: Ties, collapse: bool, n: int) -> float:
     return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
                           collapse=collapse,
                           tie_exp_func=partial(_sampled, bu=ties.bu_model))
 
 
+def nth_sampled_print_name(name: str, ties: Ties, collapse: bool, n: int,
+                           samples: int):
+    return f"{samples} {name} ({n})"
+
+
+@calculation(partial(nth_sampled_print_name, name='partial sampled effort'),
+             "Display the (partial sampled) wasted effort to the Nth fault",
+             "p-sampled", "partial-sampled-wasted-effort")
+@parameter('n', type=check_fault_type)
+@timing
+def partial_sampled(ties: Ties, collapse: bool, n: int, samples: int) -> float:
+    return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
+                          collapse=collapse,
+                          tie_exp_func=partial(_sampled, bu=ties.bu_model,
+                                               samples=samples))
+
+
 def _sampled(tie: Tie, k: int, weffort: bool, collapse=False,
-             bu: BUModel = BUModel.PERFECT) -> float:
-    return exact_method(tie.active_fault_locations(), k, tie.elems(),
-                        Calc.WEFFORT, bu=bu)
+             bu: BUModel = BUModel.PERFECT, samples=None) -> float:
+    return exact_method(tie.active_fault_locations(collapse), k,
+                        tie.elems(collapse, no_passive=True), Calc.WEFFORT,
+                        bu=bu, samples=samples)
 
 
-@calculation(partial(nth_print_name, name='sampled runtime'),
-             "Display the runtime for (sampled) wasted effort to the Nth fault",
-             "sampled-time")
-def sampled_rt(ties: Ties, collapse: bool, n: int) -> float:
-    return runtimes['sampled'][n]
+@calculation(partial(nth_print_name, name='full sampled runtime'),
+             "Display the runtime for (full sampled) wasted effort to the Nth "
+             "fault", "full-sampled-time")
+@parameter('n', type=check_fault_type)
+def full_sampled_rt(ties: Ties, collapse: bool, n: int) -> float:
+    return get_runtime('full_sampled', {'n': n})
+
+
+@calculation(partial(nth_sampled_print_name, name='partial sampled runtime'),
+             "Display the runtime for (partial sampled) wasted effort to the "
+             "Nth fault", "partial-sampled-time")
+@parameter('n', type=check_fault_type)
+def partial_sampled_rt(ties: Ties, collapse: bool, n: int,
+                       samples: int) -> float:
+    return get_runtime('partial_sampled', {'n': n, 'samples': samples})
