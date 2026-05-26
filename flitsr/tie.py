@@ -24,7 +24,7 @@ class Tie:
     def __init__(self, entities: Collection[Spectrum.Entity], all_faults:
                  Dict[Any, _CollapsableFault],
                  active_faults: Dict[Any, int]):
-        self._group_len = len(entities)
+        self._groups = entities
         self._active_faults = active_faults
         self._fault_locs: Dict[Any, Set[Spectrum.Element]] = {}
         self._fault_groups: Dict[Any, Set[Spectrum.Entity]] = {}
@@ -54,7 +54,7 @@ class Tie:
         elements in this tie (if not collapsed).
         """
         if (collapse):
-            return self._group_len
+            return len(self._groups)
         else:
             return len(self._elems)
 
@@ -67,11 +67,36 @@ class Tie:
     @overload
     def elems(self, collapse: Literal[True]) -> Set[Spectrum.Entity]: ...
 
-    @versionchanged(version='2.5.0', reason='Added the `collapse` optional '
-                    'parameter')
-    def elems(self, collapse=False) -> AnyEntities:
-        """Return the set of all the elements (or entities) in this tie"""
-        return self._elems
+    @overload
+    def elems(self, collapse: Literal[False],
+              no_passive: bool) -> Set[Spectrum.Element]: ...
+
+    @overload
+    def elems(self, collapse: Literal[True],
+              no_passive: bool) -> Set[Spectrum.Entity]: ...
+
+    @versionchanged(version='2.5.0', reason='Added the `collapse` and '
+                    '`no_passive` optional parameters')
+    def elems(self, collapse=False, no_passive=False) -> AnyEntities:
+        """
+        Return the set of all the elements (or entities) in this tie. When
+        `no_passive` is True, only return elements that are not passive faults.
+        """
+        if (not no_passive):
+            if (collapse):
+                return set(self._groups)
+            else:
+                return self._elems
+        else:
+            passive_faults = (set(self._fault_locs.keys())
+                              .difference(self._active_faults.keys()))
+            if (collapse):
+                passive_locs = set().union(*chain(self._fault_groups[p] for p
+                                                  in passive_faults))
+            else:
+                passive_locs = set().union(*chain(self._fault_locs[p] for p
+                                                  in passive_faults))
+            return {e for e in self._elems if e not in passive_locs}
 
     @staticmethod
     def _get_fault_locs(fault_dict: AnyEntitiesDict,
