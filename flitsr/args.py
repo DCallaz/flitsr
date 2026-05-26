@@ -2,7 +2,6 @@ from __future__ import annotations
 import argparse
 import argcomplete
 import inspect
-from inspect import FullArgSpec
 import sys
 import re
 from warnings import warn
@@ -18,7 +17,7 @@ from flitsr.ranking import Tiebrk
 from flitsr import advanced
 from flitsr.advanced import Config
 from flitsr.input.duplicates import DuplicateStrategy
-from flitsr.calculations import BUModel, calcs
+from flitsr.calculations import BUModel, calcs_base
 
 
 class ParameterParser(Iterator, Iterable):
@@ -43,12 +42,13 @@ class ParameterParser(Iterator, Iterable):
             self.fn = getattr(object.__new__(class_), fn.__name__)
         else:
             self.fn = fn
+        self.fn = inspect.unwrap(self.fn)
         self.ismethod = inspect.ismethod(self.fn)
         if (ext_name is None):
             self.name = self.fn.__name__
         else:
             self.name = ext_name
-        self._argspec = inspect.getfullargspec(fn)
+        self._argspec = inspect.getfullargspec(self.fn)
         if (self._argspec.defaults is None):
             num_defaults = 0
         else:
@@ -115,22 +115,25 @@ class ParameterParser(Iterator, Iterable):
         # add types
         if (paramTypes is not None):
             # function to deal with non-primitives
-            def non_primitive(name, param):
+            def get_type_conv(name, param):
                 if (hasattr(self.class_, f'_{param}')):
                     return getattr(self.class_, f'_{param}')
                 elif (hasattr(self.fn, '__types__') and
                       param in self.fn.__types__):
                     return getattr(self.fn, '__types__')[param]
                 else:
-                    err = ('Could not find type conversion '
-                           f'for {param} in {name}')
-                    raise NameError(err)
+                    return None
 
             # only add automatic type conversion for single types
             if (len(paramTypes) == 1):
                 paramType = paramTypes[0]
+                type_conv = get_type_conv(self.name, param)
+                if (type_conv is not None):
+                    paramType = type_conv
+                    parser_args['type'] = paramType
+                    parser_args['metavar'] = param
                 # specially handle bools
-                if (paramType is bool):
+                elif (paramType is bool):
                     if ('default' in parser_args):
                         # check if default is True
                         if (parser_args['default']):
@@ -147,14 +150,21 @@ class ParameterParser(Iterator, Iterable):
                     else:
                         parser_args['type'] = \
                           argparse.FileType('r', encoding='UTF-8')
-                else:
-                    if (paramType not in ParameterParser._primitives):
-                        paramType = non_primitive(self.name, param)
+                elif (paramType in ParameterParser._primitives):
                     parser_args['type'] = paramType
                     parser_args['metavar'] = param
+                else:
+                    err = ('Could not find type conversion '
+                           f'for {param} in {self.name}')
+                    raise NameError(err)
             # deal with multiple parameter types
             else:
-                parser_args['type'] = non_primitive(self.name, param)
+                type_conv = get_type_conv(self.name, param)
+                if (type_conv is None):
+                    err = ('Could not find type conversion '
+                           f'for {param} in {self.name}')
+                    raise NameError(err)
+                parser_args['type'] = type_conv
                 parser_args['metavar'] = param
         return parser_args
 
@@ -293,14 +303,14 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 for i in range(len(all_functions)):
                     try:
                         ret.append(all_functions[i](lst[i]))
-                    except ValueError as e:
+                    except (TypeError, ValueError,
+                            argparse.ArgumentTypeError) as e:
                         if (len(e.args) > 0):
                             updated_args = (f'argument {i+1}: '+e.args[0],
                                             *e.args[1:])
                         else:
                             updated_args = (f'argument {i+1}',)
                         raise ValueError(*updated_args)
-
                 return ret
             return bundler
 
@@ -331,7 +341,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 else:
                     try:
                         typed_values = bundler(values)
-                    except ValueError as e:
+                    except (TypeError, ValueError,
+                            argparse.ArgumentTypeError) as e:
                         raise argparse.ArgumentError(self, str(e))
                     args = {}
                     if (isinstance(ids, str)):
@@ -594,7 +605,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'FLITSR with evaluation calculations. Multiple of the following '
                 'arguments can be given in the same call')
 
-        for calc_name, calc_fn in calcs.items():
+        for calc_name, calc_fn in calcs_base.items():
             # initialize argparse args
             argument_args: Dict[str, Any] = {'metavar': [], 'nargs': 0,
                                              'dest': 'calcs'}
@@ -616,7 +627,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             for param, parser_args in pp:
                 argument_args['metavar'].append(param)
                 argument_args['nargs'] += 1
-                # print(param, parser_args)
+                # print(calc_name, param, parser_args)
                 if (parser_args.get('required', False) is True):
                     if ('type' in parser_args):
                         type_funcs.append(parser_args['type'])
