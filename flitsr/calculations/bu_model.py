@@ -5,7 +5,7 @@ from argparse import ArgumentTypeError
 
 class BUModelEnum(Enum):
     PERFECT = auto()
-    DEFECTIVE = auto()
+    IMPERFECT = auto()
     INEPT = auto()
 
     def __str__(self):
@@ -18,7 +18,7 @@ class BUModelEnum(Enum):
 class BUModel:
     PERFECT: 'BUModel'
     INEPT: 'BUModel'
-    DEFECTIVE: 'BUModel'
+    IMPERFECT: 'BUModel'
 
     def __init__(self, model: Union['BUModel', BUModelEnum],
                  strategy: Optional[Callable[[int], int]] = None):
@@ -44,9 +44,9 @@ class BUModel:
             def func(x): return 1
         elif (self.model is BUModelEnum.INEPT):  # inept
             def func(x): return x
-        elif (not self.strategy):            # default defective (mid-point)
+        elif (not self.strategy):            # default imperfect (mid-point)
             def func(x): return x//2
-        else:                                # custom defective
+        else:                                # custom imperfect
             func = self.strategy
         bu_dict: Dict[Any, int] = {}
         for fault, fault_locs in faults.items():
@@ -55,7 +55,7 @@ class BUModel:
 
     def __repr__(self) -> str:
         src = ''
-        if (self.strategy is not None and self.model is BUModelEnum.DEFECTIVE):
+        if (self.strategy is not None and self.model is BUModelEnum.IMPERFECT):
             from inspect import getsource
             try:
                 src = f' ({getsource(self.strategy).strip()})'
@@ -65,7 +65,7 @@ class BUModel:
 
     @classmethod
     def get_types(cls):
-        return [cls.PERFECT, cls.INEPT, cls.DEFECTIVE]
+        return [cls.PERFECT, cls.INEPT, cls.IMPERFECT]
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -82,4 +82,4 @@ class BUModel:
 
 BUModel.PERFECT = BUModel(BUModelEnum.PERFECT)
 BUModel.INEPT = BUModel(BUModelEnum.INEPT)
-BUModel.DEFECTIVE = BUModel(BUModelEnum.DEFECTIVE)
+BUModel.IMPERFECT = BUModel(BUModelEnum.IMPERFECT)

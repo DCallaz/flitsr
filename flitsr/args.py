@@ -579,7 +579,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                             'fault location to identify a fault. Inept bug '
                             'understanding instead specifies that all fault '
                             'locations must be inspected to localize a fault. '
-                            'Finally, defective is when only some (by default '
+                            'Finally, imperfect is when only some (by default '
                             'half) of the locations must be inspected. '
                             f'Choices: {BUModel.get_types()}')
 

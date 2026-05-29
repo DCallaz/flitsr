@@ -1,14 +1,18 @@
 from datetime import datetime, timedelta
-import sys
+import argparse
 import re
+import sys
+from os import path as osp
 import time
 from ast import literal_eval
 from fractions import Fraction
 from typing import Dict, Set, Any, List, Optional, NamedTuple, Tuple, Union, \
-        Iterator
+        Iterator, TextIO
 from functools import total_ordering
-from itertools import chain, product
+from itertools import product
 from collections import defaultdict
+from flitsr.calculations.perms import exact_method, Calc
+from flitsr.calculations import BUModel
 # from matplotlib import pyplot as plt
 
 
@@ -139,7 +143,7 @@ def read_exp_file(file: str) -> Tuple[Dict[ExpConfig, List[Exp]],
                     cur_exp_conf = expConf
                     exps[cur_exp_conf] = list()
             else:
-                m = re.fullmatch("(Passed|FAILED) ([0-9.]+) = ([0-9.]+) "
+                m = re.fullmatch("(Passed|FAILED) ([0-9.e-]+) !?= ([0-9.e-]+) "
                                  "\\[([0-9.:]+);([0-9.:]+)\\] \\(({.+})\\)",
                                  line)
                 if (m is None):
@@ -152,10 +156,6 @@ def read_exp_file(file: str) -> Tuple[Dict[ExpConfig, List[Exp]],
                                          f"read in line {i}: \"{line}\"")
                     exps[cur_exp_conf].append(exp)
     return exps, setup
-
-
-def steimann(tie_size: int, num_faults: int, target: int) -> Fraction:
-    return target * Fraction(tie_size-num_faults, num_faults+1)
 
 
 def combine(exps1: Optional[Dict[ExpConfig, List[Exp]]],
@@ -189,32 +189,146 @@ def combine(exps1: Optional[Dict[ExpConfig, List[Exp]]],
     return exps_comb, setup_comb
 
 
-if __name__ == "__main__":
-    exps, setup = None, None
-    for arg in sys.argv[1:]:
-        exps, setup = combine(exps, setup, *read_exp_file(arg))
+def steimann(tie_size: int, num_faults: int, target: int) -> Fraction:
+    return target * Fraction(tie_size-num_faults, num_faults+1)
 
-    # print(setup)
-    if (exps is not None):
-        for exp_config in exps:
-            # print(exp_config)
-            for exp in exps[exp_config]:
-                num_faulty = len(set().union(*exp.faults.values()))
-                # print(exp)
-                steimann_start = time.time()
-                steimann_val = float(steimann(exp_config.m, num_faulty,
-                                              exp_config.q))
-                steimann_end = time.time()
-                s_dur = steimann_end - steimann_start
-                steimann_time = timedelta(seconds=s_dur)
-                print(exp.expect_time - exp.formula_time,
-                      exp.expect_time - steimann_time)
-                # print(exp.expect_val, exp.formula_val,
-                #       steimann_val, sep='\t')
-    # print(exps, setup)
-    # points = []
-    # while ((line := sys.stdin.readline()) != ""):
-    #     formula, expected = (convert(s) for s in line.split())
-    #     points.append((expected - formula)/expected)
-    # plt.hist(points)
-    # plt.show()
+
+def comp_steimann(exp_config: ExpConfig, exp: Exp):
+    """ compute steimann """
+    num_faulty = len(set().union(*exp.faults.values()))
+    steimann_start = time.time()
+    steimann_val = float(steimann(exp_config.m, num_faulty,
+                                  exp_config.q))
+    steimann_end = time.time()
+    s_dur = steimann_end - steimann_start
+    steimann_time = timedelta(seconds=s_dur)
+    return steimann_val, steimann_time
+
+
+def comp_sample_100(config: ExpConfig, exp: Exp, calc: Calc,
+                    bu_model: BUModel):
+    elems = set(range(1, config.m+1))
+    start_100 = time.time()
+    val_100 = exact_method(exp.faults, config.q, elems=elems, calc=calc,
+                           bu=bu_model, samples=100)
+    end_100 = time.time()
+    time_100 = timedelta(seconds=(end_100 - start_100))
+    return val_100, time_100
+
+
+def time_diff(t1: timedelta, t2: timedelta, perc=True) -> float:
+    if (not perc):
+        return (t1 - t2).total_seconds()
+    if (t1 > t2):
+        return min(100, ((t1 - t2)/t2)*100)
+    else:
+        return (- (t2 - t1)/t2)*100
+
+
+def val_diff(v1, v2, perc=True):
+    if (not perc):
+        return abs(v1 - v2)
+    if (v1 == 0 and v2 == 0):
+        return 0.0
+    elif (v1 == 0 or v2 == 0):
+        return 100.0
+    elif (v1 < 1e-3 and v2 < 1e-3):
+        return 0.0
+    else:
+        return abs(v1 - v2)*100/v2
+
+
+def cut_off(input_, bu_model: BUModel, output: TextIO = sys.stdout):
+    exps_orig, _ = read_exp_file(input_)
+    for config in exps_orig:
+        q = config.q
+        for exp in exps_orig[config]:
+            val_100, time_100 = comp_sample_100(config, exp, Calc.PRECISION,
+                                                bu_model)
+            print(exp.expect_val*q, exp.formula_val*q,
+                  val_diff(exp.formula_val*q, exp.expect_val*q),
+                  val_diff(exp.formula_val*q, exp.expect_val*q, False),
+                  val_100*q, val_diff(val_100*q, exp.expect_val*q),
+                  val_diff(val_100*q, exp.expect_val*q, False),
+                  exp.expect_time.total_seconds(),
+                  exp.formula_time.total_seconds(),
+                  time_diff(exp.formula_time, exp.expect_time),
+                  time_diff(exp.formula_time, exp.expect_time, False),
+                  time_100.total_seconds(),
+                  time_diff(time_100, exp.expect_time),
+                  time_diff(time_100, exp.expect_time, False))
+
+
+def effort(input_, bu_model: BUModel, output: TextIO = sys.stdout):
+    exps_orig, _ = read_exp_file(input_)
+    for config in exps_orig:
+        # if (config.l != 1 or config.o != 0):
+        #     continue
+        for exp in exps_orig[config]:
+            val_100, time_100 = comp_sample_100(config, exp, Calc.WEFFORT,
+                                                bu_model)
+            val_steimann, time_steimann = comp_steimann(config, exp)
+            print(exp.expect_val,
+                  exp.formula_val, val_diff(exp.formula_val, exp.expect_val),
+                  val_100, val_diff(val_100, exp.expect_val),
+                  val_steimann, val_diff(val_steimann, exp.expect_val),
+                  exp.expect_time.total_seconds(),
+                  exp.formula_time.total_seconds(),
+                  time_diff(exp.formula_time, exp.expect_time),
+                  time_100.total_seconds(),
+                  time_diff(time_100, exp.expect_time),
+                  time_steimann.total_seconds(),
+                  time_diff(time_steimann, exp.expect_time))
+
+
+def type_file(input_: str) -> str:
+    if (osp.isfile(input_)):
+        return input_
+    else:
+        raise argparse.ArgumentTypeError(f"can't open {input_}: No such file "
+                                         "or directory.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', type=type_file)
+    calc_choices = [Calc.WEFFORT, Calc.PRECISION]
+    parser.add_argument('-c', '--calculation', choices=calc_choices,
+                        type=Calc.from_string, default=Calc.WEFFORT,
+                        help='Specifies the calculation to perform (default '
+                        'Wasted Effort)', required=True)
+    parser.add_argument('-x', '--bug-understanding-model',
+                        choices=BUModel.get_types(), type=BUModel.from_string,
+                        help='The bug understanding model to use. Note: the '
+                        'default imperfect strategy is l/2.',
+                        default=BUModel.PERFECT, required=True)
+    parser.add_argument('-o', '--output-file', type=argparse.FileType('r'),
+                        help='Specify the output file to print the results to')
+    args = parser.parse_args()
+    if (args.calculation in [Calc.WEFFORT, Calc.EXAM]):
+        effort(args.input, args.bug_understanding_model,
+               output=args.output_file)
+    elif (args.calculation in [Calc.PRECISION, Calc.RECALL]):
+        cut_off(args.input, args.bug_understanding_model,
+                output=args.output_file)
+    # exps, setup = None, None
+    # for arg in sys.argv[1:]:
+    #     exps, setup = combine(exps, setup, *read_exp_file(arg))
+
+    # # print(setup)
+    # if (exps is not None):
+    #     for exp_config in exps:
+    #         # print(exp_config)
+    #         for exp in exps[exp_config]:
+    #             # print(exp)
+    #             print(exp.expect_val, exp.expect_time.total_seconds())
+    #             if (exp.expect_val == 0 and exp.formula_val == 0):
+    #                 print(0.0, time_diff(exp.formula_time, exp.expect_time))
+    #             else:
+    #                 print(abs(exp.expect_val -
+    #                           exp.formula_val)*100/exp.formula_val,
+    #                       time_diff(exp.formula_time, exp.expect_time))
+    #             # print(exp.expect_time - exp.formula_time,
+    #             #       exp.expect_time - steimann_time)
+    #             # print(exp.expect_val, exp.formula_val,
+    #             #       steimann_val, sep='\t')

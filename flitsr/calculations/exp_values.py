@@ -129,8 +129,8 @@ def _multi_fault_exp_value(tie: Tie, q: int, weffort: bool,
         e_vk = _eff_perfect_bu(tie.active_faults(collapse), l, k)
     elif (all(nums[f] == len(locs[f]) for f in nums.keys())):  # inept BU
         e_vk = _eff_inept_bu(tie.active_faults(collapse), l, k)
-    else:  # defective BU
-        e_vk = _eff_defective_bu(tie.active_faults(collapse), l, k,
+    else:  # imperfect BU
+        e_vk = _eff_imperfect_bu(tie.active_faults(collapse), l, k,
                                  tie._active_faults)
     return _exp_effort_in_tie(tie, e_vk, weffort, collapse)
 
@@ -181,7 +181,7 @@ def _eff_inept_bu(fs: AnyEntitiesDict, l: int, k: int) -> Fraction:  # noqa
     return res
 
 
-def _eff_defective_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
+def _eff_imperfect_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
                   nums: Dict[Any, int]) -> Fraction:
     # l = len(set().union(*fs.values()))
     # numerator = 0
@@ -263,8 +263,8 @@ def cut_off_exp_val_tie(tie: Tie, p: int, collapse: bool = False) -> float:
             e_I_bi = _cut_perfect_bu(n, l_bi, p)
         elif (u_bi == l_bi):  # inept BU
             e_I_bi = _cut_inept_bu(n, l_bi, p)
-        else:  # defective BU
-            e_I_bi = _cut_defective_bu(n, l_bi, p, u_bi)
+        else:  # imperfect BU
+            e_I_bi = _cut_imperfect_bu(n, l_bi, p, u_bi)
         tot_found += e_I_bi
     return float(tot_found)
 
@@ -280,7 +280,7 @@ def _cut_inept_bu(n: int, l_bi: int, xs: int) -> Fraction:
     return Fraction(comb(n - l_bi, n - xs), comb(n, xs))
 
 
-def _cut_defective_bu(n: int, l_bi: int, xs: int, u_bi: int) -> Fraction:
+def _cut_imperfect_bu(n: int, l_bi: int, xs: int, u_bi: int) -> Fraction:
     e_I_bi = Fraction(0)
     for j in range(u_bi, l_bi+1):
         if (xs - j < 0):

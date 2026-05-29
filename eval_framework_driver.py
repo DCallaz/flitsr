@@ -220,8 +220,8 @@ def exp_iter(args):
     if (exps is None):
         exps = dict()
     print(setup, file=out)
-    if (args.bug_understanding_model == 'DEFECTIVE'):
-        x = BUModel(BUModel.DEFECTIVE, args.defective_strategy)
+    if (args.bug_understanding_model == 'IMPERFECT'):
+        x = BUModel(BUModel.IMPERFECT, args.imperfect_strategy)
     else:
         x = args.bug_understanding_model
     for expConfig in setup:
@@ -229,17 +229,18 @@ def exp_iter(args):
                          expConfig.q)
         if ((args.calculation in [Calc.WEFFORT, Calc.EXAM] and q > f) or
             (args.calculation in [Calc.RECALL, Calc.PRECISION] and q > m) or
-            (f == 1 and o > 0) or (min(l, m)*(f-1) <= o and o > 0)
+            (f == 1 and o > 0) or (min(l, m)*(f-1) < o and o > 0)
                 or f-o > m or l > m or f > m):
             continue
         print(expConfig, file=out)
+        iters = args.iterations
         if (expConfig in exps):
+            iters -= len(exps[expConfig])
             print("recovered", expConfig)
             for exp in exps[expConfig]:
                 print(exp, file=out)
-            continue
         try:
-            for i in range(args.iterations):
+            for i in range(iters):
                 exact, formula, fs, e_dur, \
                         f_dur = experiment(m, f, l, o, q, args.calculation,
                                            x=x, fs=args.faults)
@@ -277,12 +278,12 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--bug-understanding-model',
                         choices=BUModel.get_types(), type=BUModel.from_string,
                         help='The bug understanding '
-                        'model to use. Note: the default defective strategy '
+                        'model to use. Note: the default imperfect strategy '
                         'is l/2, to use a different strategy, see '
-                        '`--defective-strategy`.', default=BUModel.PERFECT)
-    parser.add_argument('-s', '--defective-strategy', action='store',
+                        '`--imperfect-strategy`.', default=BUModel.PERFECT)
+    parser.add_argument('-s', '--imperfect-strategy', action='store',
                         help='Specify an alternate strategy to use for '
-                        'defective bug understanding.', type=type_def_strt)
+                        'imperfect bug understanding.', type=type_def_strt)
     parser.add_argument('-c', '--calculation', choices=list(Calc),
                         type=Calc.from_string, default=Calc.WEFFORT,
                         help='Specifies the calculation to perform (default '

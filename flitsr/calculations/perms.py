@@ -5,8 +5,9 @@ from enum import Enum, auto
 from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError
-from typing import Dict, Iterable, Collection, Set, Any, TypeVar, Generic, \
+from typing import Dict, Iterable, Set, Any, TypeVar, Generic, \
         Optional
+from collections.abc import Collection, KeysView
 from numpy import random, fromiter
 import ast
 import re
@@ -14,6 +15,9 @@ from flitsr.calculations import BUModel
 from functools import partial
 
 T = TypeVar('T')
+INT_COLLECTION = TypeVar('INT_COLLECTION', bound=Collection[int],
+                         covariant=True)
+COLLECTION = TypeVar('COLLECTION', bound=Collection, covariant=True)
 
 MAX_ITERS = math.factorial(10)
 
@@ -65,27 +69,27 @@ class Randomizer(Generic[T]):
             raise StopIteration
 
 
-class Faults(Generic[T]):
-    def __init__(self, fs: Dict[T, Collection[Any]]):
+class Faults(Generic[T, COLLECTION]):
+    def __init__(self, fs: Dict[T, COLLECTION]):
         self._by_locs = fs
         self._by_faults: Dict[Any, Set[T]] = {}
         for loc in fs.keys():
             for fault in fs[loc]:
                 self._by_faults.setdefault(fault, set()).add(loc)
 
-    def get_locs(self, fault: Any):
+    def get_locs(self, fault: Any) -> Set[T]:
         return self._by_faults[fault]
 
-    def get_faults(self, loc: T):
+    def get_faults(self, loc: T) -> COLLECTION:
         return self._by_locs[loc]
 
-    def get_by_faults(self) -> Dict[int, Set[T]]:
+    def get_by_faults(self) -> Dict[Any, Set[T]]:
         return self._by_faults.copy()
 
-    def locs(self):
+    def locs(self) -> KeysView[T]:
         return self._by_locs.keys()
 
-    def faults(self):
+    def faults(self) -> KeysView[Any]:
         return self._by_faults.keys()
 
 
@@ -109,7 +113,7 @@ def get_func(calc: Calc):
         return partial(prec_rec, precision=True)
 
 
-def exact_method(fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
+def exact_method(fs: Dict[T, INT_COLLECTION], q: int, elems: Collection[T],
                  calc: Calc, bu=BUModel.PERFECT,
                  samples: Optional[int] = None):
     fs = Faults(fs)
@@ -134,7 +138,7 @@ def exact_method(fs: Dict[T, Collection[int]], q: int, elems: Collection[T],
     return sum(v*c for v, c in dist.items())/mtot
 
 
-def wasted_effort(rank: Iterable[T], fs: Faults[T], k: int,
+def wasted_effort(rank: Iterable[T], fs: Faults[T, COLLECTION], k: int,
                   x: Dict[Any, int], weffort=False) -> int:
     to_inspect = x.copy()
     seen: Set[int] = set()
@@ -154,7 +158,7 @@ def wasted_effort(rank: Iterable[T], fs: Faults[T], k: int,
     return tot
 
 
-def prec_rec(rank: Iterable[T], fs: Faults[T], n: int,
+def prec_rec(rank: Iterable[T], fs: Faults[T, COLLECTION], n: int,
              x: Dict[Any, int], precision=False) -> float:
     to_inspect = x.copy()
     seen: Set[int] = set()
@@ -236,20 +240,20 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--bug-understanding', type=BUModel.from_string,
                         choices=BUModel.get_types(), help='The bug '
                         'understanding model to use. Note: the default '
-                        'defective strategy is l/2, to use a different '
-                        'strategy, see `--defective-strategy`.',
+                        'imperfect strategy is l/2, to use a different '
+                        'strategy, see `--imperfect-strategy`.',
                         default=BUModel.PERFECT)
-    parser.add_argument('-s', '--defective-strategy', action='store',
+    parser.add_argument('-s', '--imperfect-strategy', action='store',
                         help='Specify an alternate strategy to use for '
-                        'defective bug understanding.', type=type_def_strt)
+                        'imperfect bug understanding.', type=type_def_strt)
     args = parser.parse_args()
 
     fs = args.faults
     q = args.q
     m = args.m
-    if (args.bug_understanding == 'DEFECTIVE' and
-            args.defective_strategy):
-        args.bug_understanding = BUModel(BUModel.DEFECTIVE,
-                                         args.defective_strategy)
+    if (args.bug_understanding == 'IMPERFECT' and
+            args.imperfect_strategy):
+        args.bug_understanding = BUModel(BUModel.IMPERFECT,
+                                         args.imperfect_strategy)
     print(exact_method(fs, q, range(1, m+1), calc=args.calculation,
                        bu=args.bug_understanding))
