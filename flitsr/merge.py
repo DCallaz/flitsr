@@ -1,13 +1,12 @@
 # PYTHON_ARGCOMPLETE_OK
 import re
-from flitsr.percent_at_n import combine
+from flitsr.calculations.percent_at_n import combine
 import os
 import locale
 from functools import cmp_to_key
 from os import path as osp
 from io import TextIOWrapper
 from scipy.stats import wilcoxon
-from math import isclose
 from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
 import argcomplete
 from flitsr.file import File
@@ -15,21 +14,20 @@ from flitsr.suspicious import Suspicious
 from flitsr.errors import warning
 from flitsr import advanced
 from typing import Set, Dict, List, Tuple, Collection, Optional
-from numbers import Number
+from numbers import Real
+from collections import namedtuple
 
 PERC_N = "percentage at n"
 
 
 class Avg:
     """Holds a partially constructed average"""
-    def __init__(self, size=None, percn=False, sum_only=False, perc=False):
+    def __init__(self, size=None, percn=False):
         self.all = []
         self.adds = 0
-        self.sum_only = sum_only
         self.top = False
         self.percn = percn
         self.rel = False
-        self.perc = perc
         if (size is not None):
             self.rel = True
             self.size = size
@@ -41,7 +39,7 @@ class Avg:
         self.all.append(val)
         self.adds += 1
 
-    def eval(self):
+    def eval(self, sum_only=False, perc=False):
         # check if percent-at-n
         if (self.percn):
             return self.all
@@ -51,9 +49,9 @@ class Avg:
         else:
             sum_ = sum(self.all)
         # check if only sum (not average)
-        if (self.sum_only):
+        if (sum_only):
             return sum_
-        elif (self.perc):
+        elif (perc):
             return 100 * (sum_/self.adds)
         else:
             return sum_/self.adds
@@ -130,189 +128,185 @@ def get_tex_heading_len(zipped: List[Tuple[str, str]]) -> int:
     return max_len
 
 
-def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
-          excl: List[Tuple[str, str]], rel: bool,
-          output_file: TextIOWrapper, perc_file: TextIOWrapper,
-          tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
-          percs=None, only_sums=None, incl_metrics=None, incl_advs=None,
-          adv_metrics=None, sign=None, sign_type=[],
-          base_types: Optional[List] = None, thrs=[], keep_order=False,
-          find_top=False):
-    # Set up the include and exclude dir names dicts
-    incl_dict: Dict[str, List[str]] = {}
-    excl_dict: Dict[str, List[str]] = {}
-    for d, n in incl:
-        incl_dict.setdefault(d, []).append(n)
-    for d, n in excl:
-        excl_dict.setdefault(d, []).append(n)
-    # set up other variables
-    if (base_types is None):
-        base_types = ['base']
-    temp_metrics: Set[str] = set()
-    temp_modes: Set[str] = set()
-    temp_calcs: Set[str] = set()
-    #           dir       mode      metric
-    files: Dict[str, Dict[str, Dict[str, File]]] = {}
-    #          mode      metric    calc
-    avgs: Dict[str, Dict[str, Dict[str, Avg]]] = {}
-    if (rel):
-        if (not recurse):
-            size = int(open("../size").readline())
-    # Find the directories and results files
-    dirs = [""]
-    if (recurse):
-        dirs = []
-        find_dirs(dirs, ".", max=max, incl=incl_dict, excl=excl_dict)
-    # Read in all results
-    if (rel):
-        sizes = {}
-    results_check = re.compile("^(?:([\\w_-]*)_)?(\\w+)\\.results$")
-    for d in dirs:
-        files.setdefault(d, {})
-        for file in os.scandir(osp.normpath(d)):
-            m = results_check.match(file.name)
-            if (m):
-                mode = m.group(1) or ""
-                temp_modes.add(mode)
-                metric = m.group(2)
-                temp_metrics.add(metric)
-                files[d].setdefault(mode, {})[metric] = File(file)
-                avgs.setdefault(mode, {}).setdefault(metric, {})
+def suffix_cmp(s1, s2):  # compare with common suffixes removed
+    i = 0
+    while ((i < len(s1) and i < len(s2)) and s1[-(i+1)] == s2[-(i+1)]):
+        i += 1
+    return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
+
+
+Files = namedtuple('Files', ['output', 'perc', 'tex'])
+
+
+class Merge:
+    def __init__(self):
+        #           dir       mode      metric
+        self.files: Dict[str, Dict[str, Dict[str, File]]] = {}
+        #          mode      metric    calc
+        self.avgs: Dict[str, Dict[str, Dict[str, Avg]]] = {}
+        self.metrics: Set[str] = set()
+        self.modes: Set[str] = set()
+        self.calcs: Set[str] = set()
+        self.sizes: Dict[str, int] = dict()
+
+    @staticmethod
+    def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
+              excl: List[Tuple[str, str]], rel: bool,
+              output_file: TextIOWrapper, perc_file: TextIOWrapper,
+              tex_file: TextIOWrapper, dec=2, group='metric', incl_calcs=None,
+              percs=None, only_sums=None, incl_metrics=None, incl_advs=None,
+              adv_metrics=None, sign=None, sign_type=[],
+              base_types: Optional[List] = None, thrs=[], keep_order=False,
+              find_top=False):
+        merge = Merge()
+        merge.read_results(recurse, max, incl, excl, rel)
+        merge.print_results(output_file, perc_file, tex_file, dec, group,
+                            incl_calcs, percs, only_sums, incl_metrics,
+                            incl_advs, adv_metrics, sign, sign_type,
+                            base_types, thrs, keep_order, find_top)
+
+    # <--------------------------- reading results --------------------------->
+
+    def read_results(self, recurse: bool = False, max: Optional[int] = None,
+                     incl: List[Tuple[str, str]] = [],
+                     excl: List[Tuple[str, str]] = [], rel: bool = False):
+        # Set up the include and exclude dir names dicts
+        incl_dict: Dict[str, List[str]] = {}
+        excl_dict: Dict[str, List[str]] = {}
+        for d, n in incl:
+            incl_dict.setdefault(d, []).append(n)
+        for d, n in excl:
+            excl_dict.setdefault(d, []).append(n)
         if (rel):
-            sizes[d] = int(open(osp.join(d, "../size")).readline())
+            if (not recurse):
+                self.sizes[""] = int(open("../size").readline())
+        # Find the directories and results files
+        dirs = [""]
+        if (recurse):
+            dirs = []
+            find_dirs(dirs, ".", max=max, incl=incl_dict, excl=excl_dict)
+        # Read in all results
+        self._get_results_files(dirs, rel)
+        # Collect all the results
+        self._collect_results(recurse, dirs, rel)
 
-    # Collect all the results
-    for d in dirs:
-        for mode in temp_modes:
-            for metric in temp_metrics:
-                try:
-                    block = readBlock(files[d][mode][metric])
-                except Exception:
-                    warning('Could not find results for '
-                            f'{mode.replace("_", " ").title()} '
-                            f'{metric.replace("_", " ").title()} in dir {d}')
-                    continue
-                warn_empty = 0
-                while (block != [] or files[d][mode][metric].hasline()):
-                    for line in block:
-                        line_s = line.split(": ")
-                        calc = line_s[0]
-                        temp_calcs.add(calc)
-                        if (calc == PERC_N):
-                            vals = line_s[1].split(",")
-                            avgs[mode][metric].setdefault(calc, Avg(percn=True)).add(
-                                (float(vals[0]), [float(x) for x in vals[1:]]))
-                        else:
-                            s = None
-                            perc = False
-                            if (rel):
-                                s = sizes[d] if recurse else size
-                            elif (percs is not None and ci_in(calc, percs)):
-                                perc = True
-                            sum_only = (ci_in(calc, only_sums)
-                                        if only_sums is not None else False)
-                            avg = Avg(size=s, sum_only=sum_only, perc=perc)
-                            avgs[mode][metric].setdefault(calc, avg).add(
-                                    float(line_s[1]))
-                    block = readBlock(files[d][mode][metric])
-                    if (block == [] and files[d][mode][metric].hasline()):
-                        warn_empty += 1
-                if (warn_empty > 0):
-                    warning(f"File {mode}_{metric}.results in the "
-                            f"{d or 'current'} directory has "
-                            f"{warn_empty} empty runs!")
-    # calculate thresholds
-    for thr in thrs:
-        thr_key = str(thr).lower()
-        temp_calcs.add(thr_key)
-        incl_calcs.append(thr_key)
-        percs.append(thr_key)
-        for mode in temp_modes:
-            for metric in temp_metrics:
-                vals = avgs[mode][metric][thr.calc].all
-                count = 0.0
-                for val in vals:
-                    if (thr.comp(val, thr.threshold)):
-                        count += 1
-                avgs[mode][metric][thr_key] = Avg()
-                avgs[mode][metric][thr_key].adds = len(vals)
-                avgs[mode][metric][thr_key].all = [count]
+    def _get_results_files(self, dirs, rel):
+        results_check = re.compile("^(?:([\\w_-]*)_)?(\\w+)\\.results$")
+        for d in dirs:
+            self.files.setdefault(d, {})
+            for file in os.scandir(osp.normpath(d)):
+                m = results_check.match(file.name)
+                if (m):
+                    mode = m.group(1) or ""
+                    self.modes.add(mode)
+                    metric = m.group(2)
+                    self.metrics.add(metric)
+                    self.files[d].setdefault(mode, {})[metric] = File(file)
+                    self.avgs.setdefault(mode, {}).setdefault(metric, {})
+            if (rel):
+                self.sizes[d] = int(open(osp.join(d, "../size")).readline())
 
-    def suffix_cmp(s1, s2):  # compare with common suffixes removed
-        i = 0
-        while ((i < len(s1) and i < len(s2)) and s1[-(i+1)] == s2[-(i+1)]):
-            i += 1
-        return locale.strcoll(s1[:len(s1)-i], s2[:len(s2)-i])
-    k = cmp_to_key(suffix_cmp)
+    def _collect_results(self, recurse: bool, dirs: List[str], rel: bool):
+        for d in dirs:
+            for mode in self.modes:
+                for metric in self.metrics:
+                    try:
+                        block = readBlock(self.files[d][mode][metric])
+                    except Exception:
+                        warning('Could not find results for '
+                                f'{mode.replace("_", " ").title()} '
+                                f'{metric.replace("_", " ").title()} in dir {d}')
+                        continue
+                    warn_empty = 0
+                    while (block != [] or self.files[d][mode][metric].hasline()):
+                        for line in block:
+                            line_s = line.split(": ")
+                            calc = line_s[0]
+                            self.calcs.add(calc)
+                            if (calc == PERC_N):
+                                vals = line_s[1].split(",")
+                                self.avgs[mode][metric].setdefault(calc, Avg(percn=True)).add(
+                                    (float(vals[0]), [float(x) for x in vals[1:]]))
+                            else:
+                                s = None
+                                if (rel):
+                                    s = (self.sizes[d] if recurse else
+                                         self.sizes[""])
+                                avg = Avg(size=s)
+                                (self.avgs[mode][metric].setdefault(calc, avg)
+                                     .add(float(line_s[1])))
+                        block = readBlock(self.files[d][mode][metric])
+                        if (block == [] and self.files[d][mode][metric].hasline()):
+                            warn_empty += 1
+                    if (warn_empty > 0):
+                        warning(f"File {mode}_{metric}.results in the "
+                                f"{d or 'current'} directory has "
+                                f"{warn_empty} empty runs!")
 
-    # select only included calcs
-    if (incl_calcs is not None):
-        # preserves the order of calcs from cmd line
-        calcs = [c for c in incl_calcs if ci_in(c, temp_calcs)]
-    else:
-        calcs = list(temp_calcs)
-    # select only included modes
-    if (incl_advs is not None):
-        modes = [m for m in incl_advs if ci_in(m, temp_modes)]
-    else:
-        modes = list(temp_modes)
-    # select only included metrics
-    if (incl_metrics is not None):
-        # preserves the order of metrics from cmd line
-        metrics = [m for m in incl_metrics if ci_in(m, temp_metrics)]
-    else:
-        metrics = list(temp_metrics)
-    # sort metrics or keep cmd line order
-    if (not keep_order):
-        calcs = sorted(calcs)
-        metrics = sorted(metrics)
-        modes = sorted(modes, key=k)
+    # <-------------------------- calculating avgs --------------------------->
 
-    def print_heading(name, tabs):
+    def eval(self, mode: str, metric: str, calc: str, only_sums: List[str],
+             percs: List[str]):
+        perc = False
+        only_sum = False
+        if (percs and calc in percs):
+            perc = True
+        if (only_sums and calc in only_sums):
+            only_sum = True
+        return self.avgs[mode][metric][calc].eval(sum_only=only_sum, perc=perc)
+
+    def _print_heading(self, name, tabs, calcs, outfiles: Files):
         name_disp = name.replace("_", " ").title()
-        print('\t'*tabs, name_disp, sep='', file=output_file)
-        if (ci_in(PERC_N, calcs) and perc_file is not None and
-                perc_file != output_file):
-            print('\t'*tabs, name_disp, sep='', file=perc_file)
+        print('\t'*tabs, name_disp, sep='', file=outfiles.output)
+        if (ci_in(PERC_N, calcs) and outfiles.perc is not None and
+                outfiles.perc != outfiles.output):
+            print('\t'*tabs, name_disp, sep='', file=outfiles.perc)
 
-    def print_tex_heading(mode: str, metric: str, tex_heading_len: int):
+    def _print_tex_heading(self, mode: str, metric: str, tex_heading_len: int,
+                           tex_file: TextIOWrapper):
         metric_disp = metric.replace("_", " ").title()
         mode_disp = mode.replace("_", " ").title()
         print(f'%{tex_heading_len}s' % (metric_disp + " " + mode_disp),
               end=" & ", file=tex_file)
 
-    def print_results(mode, metric):
+    def _print_results(self, mode: str, metric: str, metrics: List[str],
+                       modes: List[str], calcs: List[str], dec: int,
+                       only_sums: List[str], percs: List[str], sign: str,
+                       sign_type: Dict[str, str], base_types: List[str],
+                       outfiles: Files):
         for j, calc in enumerate(calcs):
             if (ci_eq(calc, PERC_N)):
-                if (perc_file is not None):
-                    comb = combine(avgs[mode][metric][calc].eval())
-                    print("\t\t", calc+": ", comb, sep='', file=perc_file)
+                if (outfiles.perc is not None):
+                    comb = combine(self.eval(mode, metric, calc, only_sums,
+                                             percs))
+                    print("\t\t", calc+": ", comb, sep='', file=outfiles.perc)
             else:
-                avg = avgs[mode][metric][calc]
-                result = round(avg.eval(), dec)
+                avg = self.avgs[mode][metric][calc]
+                result = round(self.eval(mode, metric, calc, only_sums, percs),
+                               dec)
                 sign_disp = ""
                 if (sign is not None):
                     signis: Dict[str, List[Tuple[str, float]]] = {}
                     if (sign == 'type'):
                         for m_alt in modes:
                             if (m_alt == mode or not
-                                (ci_in(m_alt, avgs) and
-                                 ci_in(metric, avgs[m_alt]))):
+                                (ci_in(m_alt, self.avgs) and
+                                 ci_in(metric, self.avgs[m_alt]))):
                                 continue
-                            r, p = avg.significance(avgs[m_alt][metric][calc])
+                            r, p = avg.significance(self.avgs[m_alt][metric][calc])
                             signis.setdefault(r, []).append((m_alt, p))
                     else:
                         for m_alt in metrics:
                             if (m_alt == metric or not
-                                (ci_in(mode, avgs) and
-                                 ci_in(m_alt, avgs[mode]))):
+                                (ci_in(mode, self.avgs) and
+                                 ci_in(m_alt, self.avgs[mode]))):
                                 continue
-                            r, p = avg.significance(avgs[mode][m_alt][calc])
+                            r, p = avg.significance(self.avgs[mode][m_alt][calc])
                             signis.setdefault(r, []).append((m_alt, p))
                     sign_disp = f" (significantly {signis})"
                 print("\t\t", calc+": ", result, " (Top)" if avg.top else "",
-                      sign_disp, sep='', file=output_file)
-                if (tex_file):
+                      sign_disp, sep='', file=outfiles.output)
+                if (outfiles.tex):
                     # process TeX significance only for advanced types
                     sign_color = 0
                     for i, base_type in enumerate(base_types):
@@ -320,7 +314,7 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                         if (sign == 'type' and not ci_eq(mode, base)):
                             try:
                                 r, p = avg.significance(
-                                        avgs[base][metric][calc])
+                                        self.avgs[base][metric][calc])
                                 if ((calc in sign_type and sign_type[calc] == r) or
                                     (calc not in sign_type and r == 'greater')):
                                     sign_color += 2**i
@@ -337,83 +331,142 @@ def merge(recurse: bool, max: int, incl: List[Tuple[str, str]],
                     print('{: <9}'.format(sign_disp+top_disp),
                           '{: >{}.{}f}'.format(result, 6+min(dec, 8),
                                                min(dec, 8)),
-                          end=end, file=tex_file)
+                          end=end, file=outfiles.tex)
 
-    # Get the metric and mode order
-    if (ci_eq(group, 'metric')):
-        zipped = [(mo, me) for me in metrics for mo in modes]
-    else:
-        zipped = [(mo, me) for mo in modes for me in metrics]
+    def _calculate_thresholds(self, thrs: List['Threshold'],
+                              incl_calcs: List[str]):
+        for thr in thrs:
+            thr_key = str(thr).lower()
+            self.calcs.add(thr_key)
+            incl_calcs.append(thr_key)
+            for mode in self.modes:
+                for metric in self.metrics:
+                    vals = self.avgs[mode][metric][thr.calc].all
+                    count = 0.0
+                    for val in vals:
+                        if (thr.comp(val, thr.threshold)):
+                            count += 1
+                    self.avgs[mode][metric][thr_key] = Avg()
+                    self.avgs[mode][metric][thr_key].adds = len(vals)
+                    self.avgs[mode][metric][thr_key].all = [count]
 
-    # Determine and set top results
-    if (find_top):
-        for calc in calcs:
-            top: Optional[float] = None
-            top_avgs = []
-            for (mode, metric) in zipped:
-                if (not ci_in(mode, avgs) or not ci_in(metric, avgs[mode])):
-                    continue
-                av = avgs[mode][metric][calc].eval()
-                if (not isinstance(av, Number)):
-                    break
-                if (top is None or
-                    (calc in sign_type and sign_type[calc] == 'less'
-                     and av < top) or
-                    ((calc not in sign_type or sign_type[calc] == 'greater')
-                     and av > top)):
-                    top = av
-                    top_avgs = [avgs[mode][metric][calc]]
-                elif (round(top, dec) == round(av, dec)):
-                    top_avgs.append(avgs[mode][metric][calc])
-            for top_avg in top_avgs:
-                top_avg.set_top()
+    def print_results(self, output_file: TextIOWrapper,
+                      perc_file: TextIOWrapper, tex_file: TextIOWrapper, dec=2,
+                      group='metric', incl_calcs=None, percs=None,
+                      only_sums=None, incl_metrics=None, incl_advs=None,
+                      adv_metrics=None, sign=None, sign_type=dict(),
+                      base_types: Optional[List[str]] = None, thrs=[],
+                      keep_order=False, find_top=False):
+        # calculate thresholds
+        self._calculate_thresholds(thrs, incl_calcs)
+        # set up other variables
+        if (base_types is None):
+            base_types = ['base']
+        k = cmp_to_key(suffix_cmp)
+        # select only included calcs
+        if (incl_calcs is not None):
+            # preserves the order of calcs from cmd line
+            calcs = [c for c in incl_calcs if ci_in(c, self.calcs)]
+        else:
+            calcs = list(self.calcs)
+        # select only included modes
+        if (incl_advs is not None):
+            modes = [m for m in incl_advs if ci_in(m, self.modes)]
+        else:
+            modes = list(self.modes)
+        # select only included metrics
+        if (incl_metrics is not None):
+            # preserves the order of metrics from cmd line
+            metrics = [m for m in incl_metrics if ci_in(m, self.metrics)]
+        else:
+            metrics = list(self.metrics)
+        # sort metrics or keep cmd line order
+        if (not keep_order):
+            calcs = sorted(calcs)
+            metrics = sorted(metrics)
+            modes = sorted(modes, key=k)
 
-    # Print out merged results
-    cur = None
-    tex_len = get_tex_heading_len(zipped)
-    # Set up tex file
-    if (tex_file):
-        print("\\documentclass{standalone}", file=tex_file)
-        print("\\usepackage[table]{xcolor}", file=tex_file)
+        # Get the metric and mode order
+        if (ci_eq(group, 'metric')):
+            zipped = [(mo, me) for me in metrics for mo in modes]
+        else:
+            zipped = [(mo, me) for mo in modes for me in metrics]
 
-        print("\\colorlet{tpc1}{yellow!50}", file=tex_file)
-        print("\\colorlet{tpc2}{blue!30}", file=tex_file)
-        print("\\colorlet{tpc3}{green!40}", file=tex_file)
-        print("\\colorlet{tpc4}{red!50}", file=tex_file)
-        print("\\colorlet{tpc5}{orange!50}", file=tex_file)
-        print("\\colorlet{tpc6}{purple!60}", file=tex_file)
-        print("\\colorlet{tpc7}{brown!60}", file=tex_file)
-        print("\\newcommand{\\tp}[1][1]{\\cellcolor{tpc#1}}", file=tex_file)
-        # print("\\usepackage{longtable}", file=tex_file)
-        print("\\begin{document}", file=tex_file)
-        # print("\\begin{longtable}", file=tex_file)
-        print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
-              file=tex_file)
-        print("Metric & "+' & '.join([c for c in calcs if not
-                                      ci_eq(c, PERC_N)])+"\\\\",
-              file=tex_file)
-    for (mode, metric) in zipped:
-        # check if this mode should be displayed
-        if ((ci_eq(mode, 'base') or adv_metrics is None
-             or ci_in(metric, adv_metrics))
-            and (ci_in(mode, avgs) and ci_in(metric, avgs[mode]))):
-            if (ci_eq(group, 'metric')):
-                if (metric != cur):
-                    print_heading(metric, 0)
-                    cur = metric
-                print_heading(mode, 1)
-            else:
-                if (mode != cur):
-                    print_heading(mode, 0)
-                    cur = mode
-                print_heading(metric, 1)
-            if (tex_file):
-                print_tex_heading(mode, metric, tex_len)
-            print_results(mode, metric)
-    if (tex_file):
-        print("\\end{tabular}", file=tex_file)
-        # print("\\end{longtable}", file=tex_file)
-        print("\\end{document}", file=tex_file)
+        outfiles = Files(output_file, perc_file, tex_file)
+
+        # Determine and set top results
+        if (find_top):
+            for calc in calcs:
+                top: Optional[float] = None
+                top_avgs = []
+                for (mode, metric) in zipped:
+                    if (not ci_in(mode, self.avgs) or not
+                            ci_in(metric, self.avgs[mode])):
+                        continue
+                    av = self.eval(mode, metric, calc, only_sums, percs)
+                    if (not isinstance(av, Real)):
+                        break
+                    if (top is None or
+                        (calc in sign_type and sign_type[calc] == 'less'
+                         and av < top) or
+                        ((calc not in sign_type or sign_type[calc] == 'greater')
+                         and float(av) > top)):
+                        top = float(av)
+                        top_avgs = [self.avgs[mode][metric][calc]]
+                    elif (round(top, dec) == round(av, dec)):
+                        top_avgs.append(self.avgs[mode][metric][calc])
+                for top_avg in top_avgs:
+                    top_avg.set_top()
+
+        # Print out merged results
+        cur = None
+        tex_len = get_tex_heading_len(zipped)
+        # Set up tex file
+        if (tex_file):
+            print("\\documentclass{standalone}", file=tex_file)
+            print("\\usepackage[table]{xcolor}", file=tex_file)
+
+            print("\\colorlet{tpc1}{yellow!50}", file=tex_file)
+            print("\\colorlet{tpc2}{blue!30}", file=tex_file)
+            print("\\colorlet{tpc3}{green!40}", file=tex_file)
+            print("\\colorlet{tpc4}{red!50}", file=tex_file)
+            print("\\colorlet{tpc5}{orange!50}", file=tex_file)
+            print("\\colorlet{tpc6}{purple!60}", file=tex_file)
+            print("\\colorlet{tpc7}{brown!60}", file=tex_file)
+            print("\\newcommand{\\tp}[1][1]{\\cellcolor{tpc#1}}",
+                  file=tex_file)
+            # print("\\usepackage{longtable}", file=tex_file)
+            print("\\begin{document}", file=tex_file)
+            # print("\\begin{longtable}", file=tex_file)
+            print("\\begin{tabular}{"+'|'.join(['c']*(len(calcs)+1))+"}",
+                  file=tex_file)
+            print("Metric & "+' & '.join([c for c in calcs if not
+                                          ci_eq(c, PERC_N)])+"\\\\",
+                  file=tex_file)
+        for (mode, metric) in zipped:
+            # check if this mode should be displayed
+            if ((ci_eq(mode, 'base') or adv_metrics is None
+                 or ci_in(metric, adv_metrics))
+                and (ci_in(mode, self.avgs) and ci_in(metric, self.avgs[mode]))):
+                if (ci_eq(group, 'metric')):
+                    if (metric != cur):
+                        self._print_heading(metric, 0, calcs, outfiles)
+                        cur = metric
+                    self._print_heading(mode, 1, calcs, outfiles)
+                else:
+                    if (mode != cur):
+                        self._print_heading(mode, 0, calcs, outfiles)
+                        cur = mode
+                    self._print_heading(metric, 1, calcs, outfiles)
+                if (tex_file):
+                    self._print_tex_heading(mode, metric, tex_len, tex_file)
+                self._print_results(mode, metric, metrics, modes, calcs,
+                                    dec, only_sums, percs, sign, sign_type,
+                                    base_types, outfiles)
+        if (tex_file):
+            print("\\end{tabular}", file=tex_file)
+            # print("\\end{longtable}", file=tex_file)
+            print("\\end{document}", file=tex_file)
 
 
 def parse_dir_arg(dir_arg: str) -> Tuple[str, str]:
@@ -658,14 +711,15 @@ def main(argv: Optional[List[str]] = None):
     for calc in args.sign_eq:
         sign_type[calc] = 'equal'
 
-    merge(args.recurse, args.max, args.incl, args.excl, args.relative,
-          args.output, args.perc_at_n, args.tex, dec=args.decimals,
-          group=args.group, incl_calcs=args.calcs, percs=args.percentage,
-          only_sums=args.sum, incl_metrics=args.metrics,
-          incl_advs=args.advanced_types, adv_metrics=args.advanced_metrics,
-          sign=args.sign, sign_type=sign_type, base_types=args.base_types,
-          thrs=args.threshold, keep_order=args.keep_order,
-          find_top=args.top_results)
+    Merge.merge(args.recurse, args.max, args.incl, args.excl, args.relative,
+                args.output, args.perc_at_n, args.tex, dec=args.decimals,
+                group=args.group, incl_calcs=args.calcs, percs=args.percentage,
+                only_sums=args.sum, incl_metrics=args.metrics,
+                incl_advs=args.advanced_types,
+                adv_metrics=args.advanced_metrics, sign=args.sign,
+                sign_type=sign_type, base_types=args.base_types,
+                thrs=args.threshold, keep_order=args.keep_order,
+                find_top=args.top_results)
 
 
 if __name__ == "__main__":
