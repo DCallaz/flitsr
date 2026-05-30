@@ -78,7 +78,8 @@ class Exp:
 
     def __str__(self):
         res = 'Passed' if self.result else 'FAILED'
-        return (f"{res} {self.formula_val} = {self.expect_val} "
+        eq = '=' if self.result else '!='
+        return (f"{res} {self.formula_val} {eq} {self.expect_val} "
                 f"[{self.formula_time};{self.expect_time}] ({self.faults})")
 
 
