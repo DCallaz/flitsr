@@ -114,6 +114,9 @@ class Tie:
     def active_faults(self, collapse: Literal[True]) \
         -> Dict[Any, Set[Spectrum.Entity]]: ...
 
+    @overload
+    def active_faults(self, collapse: bool) -> AnyEntitiesDict: ...
+
     @versionadded(version='2.4.0')
     def active_faults(self, collapse=False) \
             -> AnyEntitiesDict:

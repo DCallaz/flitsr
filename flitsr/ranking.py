@@ -73,16 +73,17 @@ class Ranking:
         except KeyError as keyerror:
             if (check_sub_group):
                 # Before exiting, first check if we can find a super-group
-                is_group = isinstance(entity, Spectrum.Group)
-                for key in self.entity_map:
+                if (isinstance(entity, Spectrum.Group)):
                     # If a group, check if it is a sub-group
-                    if (is_group):
+                    for key in self.entity_map:
                         if (isinstance(key, Spectrum.Group) and
-                            key.is_subgroup(entity)):  # type:ignore
+                                key.is_subgroup(entity)):
                             return self.entity_map[key]
+                else:
                     # If an element, check if in any group
-                    elif (entity in key):
-                        return self.entity_map[key]
+                    for key in self.entity_map:
+                        if (entity in key):
+                            return self.entity_map[key]
             # if no super-group can be found, raise the KeyError
             raise keyerror
 
