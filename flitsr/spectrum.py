@@ -119,6 +119,10 @@ class Spectrum:
             pass
 
         @abstractmethod
+        def __contains__(self, item) -> bool:
+            pass
+
+        @abstractmethod
         def __getitem__(self, index: int) -> Spectrum.Element:
             pass
 
@@ -163,6 +167,9 @@ class Spectrum:
 
         def __iter__(self) -> Iterator[Spectrum.Element]:
             return iter((self,))
+
+        def __contains__(self, item) -> bool:
+            return self.__eq__(item)
 
         def __len__(self) -> int:
             return 1
@@ -303,6 +310,9 @@ class Spectrum:
 
         def __iter__(self) -> Iterator[Spectrum.Element]:
             return iter(self._elems)
+
+        def __contains__(self, item) -> bool:
+            return item in self._elems
 
         def __str__(self) -> str:
             if (len(self._elems) > 10):
