@@ -73,7 +73,7 @@ def nth_print_name(name: str, ties: Ties, collapse: bool, n: int):
 def nth(ties: Ties, collapse: bool, n: int) -> float:
     if (len(ties.faults) == 0):
         return 0.0
-    return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
+    return effort_exp_val(ties, n, weffort=True,
                           collapse=collapse)
 
 

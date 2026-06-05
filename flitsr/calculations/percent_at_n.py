@@ -7,7 +7,6 @@ from argparse import ArgumentParser
 import argcomplete
 from enum import Enum
 from typing import Dict, List, Tuple, Optional, Collection, Iterable
-from numbers import Number
 from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
@@ -51,7 +50,7 @@ def pauc(ties: Ties, collapse: bool):
              'found faults, preceded by the number of elements in the system, '
              'which can be used to generate percentage-at-N/recall graphs',
              'perc@n', 'percent-at-n')
-def perc(ties: Ties, collapse: bool) -> Iterable[Number]:
+def perc(ties: Ties, collapse: bool) -> Iterable[float]:
     bumps = getBumps(ties, collapse=collapse)
     return bumps
 

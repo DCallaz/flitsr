@@ -1,7 +1,7 @@
 from fractions import Fraction
 from math import comb
 from itertools import combinations
-from typing import Any, Set, Dict, Union, Callable, Optional
+from typing import Any, Set, Dict, Union, Callable, Iterable
 from flitsr.tie import Tie, Ties
 from flitsr.spectrum import Spectrum
 AnyEntitiesDict = Union[Dict[Any, Set[Spectrum.Element]],
@@ -48,6 +48,8 @@ def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
     ranking given by `ties`. The expected value can either be in terms of
     wasted effort (not counting fault inspection) or actual position in the
     ranking, depending on whether `weffort` is True or False respectively.
+    Where `target` is greater than the number of faults in the ranking, this
+    method returns the expected value to the last fault.
 
     Args:
       ties: The `Ties` object representing the ranking.
@@ -67,6 +69,7 @@ def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
     effort = 0.0
     efforts = []
     tie_iter = iter(ties)
+    target = min(target, len(ties.faults))
     while (not found):
         tie = next(tie_iter)
         # print(tie)
@@ -169,7 +172,8 @@ def _eff_inept_bu(fs: AnyEntitiesDict, l: int, k: int) -> Fraction:  # noqa
             factor = comb(size_k-1, k-1)
             # num_str += f' {"-" if (size_k-k) % 2 == 1 else "+"} {factor}*('
             # iterate over selection
-            for subset in combinations(fs.values(), size_k):
+            values: Iterable[Set] = fs.values()
+            for subset in combinations(values, size_k):
                 size = len(set().union(*subset))
                 cur = comb(l - size, l - i)
                 numerator += (-1)**(size_k-k) * factor * cur
@@ -182,7 +186,7 @@ def _eff_inept_bu(fs: AnyEntitiesDict, l: int, k: int) -> Fraction:  # noqa
 
 
 def _eff_imperfect_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
-                  nums: Dict[Any, int]) -> Fraction:
+                      nums: Dict[Any, int]) -> Fraction:
     # l = len(set().union(*fs.values()))
     # numerator = 0
     # num_str = f'{numerator}'
@@ -216,7 +220,9 @@ def _eff_imperfect_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
 def cut_off_exp_val(ties: Ties, target: int, collapse: bool = False) -> float:
     """
     Calculate the expected number of faults found when randomly inspecting the
-    first `target` elements of the ranking given by `ties`.
+    first `target` elements of the ranking given by `ties`. Where `target` is
+    greater than the number of elements in the ranking, inspects up until the
+    end of the ranking.
 
     Args:
       ties: The `Ties` object representing the ranking.
