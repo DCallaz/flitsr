@@ -1,6 +1,6 @@
 import sys
 from os import path as osp
-from io import TextIOWrapper
+from typing import TextIO
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
@@ -16,7 +16,7 @@ class TCM(Input):
     def get_run_file_name(input_path: str):
         return re.sub("\\.\\w+$", ".run", input_path)
 
-    def construct_details(self, f: TextIOWrapper):
+    def construct_details(self, f: TextIO):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -51,7 +51,7 @@ class TCM(Input):
                 self.sb.addElement(details, faults)
                 line = f.readline()
 
-    def construct_tests(self, f: TextIOWrapper):
+    def construct_tests(self, f: TextIO):
         line = f.readline()
         while (not line == '\n'):
             m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?',
@@ -63,7 +63,7 @@ class TCM(Input):
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
             line = f.readline()
 
-    def fill_spectrum(self, f: TextIOWrapper):
+    def fill_spectrum(self, f: TextIO):
         for t, test in enumerate(self.sb.get_tests()):
             line = f.readline()
             if (line == ''):

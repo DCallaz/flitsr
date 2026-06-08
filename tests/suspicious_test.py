@@ -2,8 +2,9 @@ from flitsr.suspicious import Suspicious
 from pytest import mark as pytestr
 
 
-@pytestr.parametrize('metric', Suspicious.getNames())
-@pytestr.randomize(ef=int, nf=int, ep=int, np=int, min_num=0, max_num=10000)
+@pytestr.parametrize('metric', Suspicious.getNames(True))
+@pytestr.randomize(ef=int, nf=int, ep=int, np=int, min_num=0, max_num=10000,
+                   ncalls=4)
 def test_metrics(metric, ef, nf, ep, np):
     try:
         sus = Suspicious(ef, ef+nf, ep, ep+np)
