@@ -5,7 +5,7 @@ name: Python test
 
 on:
   push:
-    branches: [ "master", "eval-framework" ]
+    branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
 
