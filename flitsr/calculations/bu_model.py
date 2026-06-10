@@ -74,7 +74,7 @@ class BUModel:
     def from_string(cls, s):
         try:
             return getattr(cls, s)
-        except KeyError:
+        except AttributeError:
             choices = ', '.join(f"'{d}'" for d in list(BUModelEnum))
             raise ArgumentTypeError(f"invalid choice: '{s}' "
                                     f"(choose from {choices})")

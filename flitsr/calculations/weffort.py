@@ -130,7 +130,7 @@ def nth_sampled_print_name(name: str, ties: Ties, collapse: bool, n: int,
              "p-sampled", "partial-sampled-wasted-effort")
 @parameter('n', type=check_fault_type)
 @timing
-def partial_sampled(ties: Ties, collapse: bool, n: int, samples: int) -> float:
+def partial_sampled(ties: Ties, collapse: bool, samples: int, n: int) -> float:
     return effort_exp_val(ties, min(len(ties.faults), n), weffort=True,
                           collapse=collapse,
                           tie_exp_func=partial(_sampled, bu=ties.bu_model,
@@ -156,6 +156,6 @@ def full_sampled_rt(ties: Ties, collapse: bool, n: int) -> float:
              "Display the runtime for (partial sampled) wasted effort to the "
              "Nth fault", "partial-sampled-time")
 @parameter('n', type=check_fault_type)
-def partial_sampled_rt(ties: Ties, collapse: bool, n: int,
-                       samples: int) -> float:
-    return get_runtime('partial_sampled', {'n': n, 'samples': samples})
+def partial_sampled_rt(ties: Ties, collapse: bool, samples: int,
+                       n: int) -> float:
+    return get_runtime('partial_sampled', {'samples': samples, 'n': n})

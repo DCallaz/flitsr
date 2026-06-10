@@ -57,4 +57,6 @@ def _get_n(x: Any, ties: Ties, perc=False, collapse=False) -> int:
         n = len(ties.faults)
     elif (perc):
         n = x * size
+    else:
+        n = x
     return n

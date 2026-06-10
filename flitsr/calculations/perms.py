@@ -122,15 +122,16 @@ def exact_method(fs: Dict[T, INT_COLLECTION], q: int, elems: Collection[T],
     perms: Iterable
     mtot: int
     func = get_func(calc)
-    if (samples is None and len(elems) <= 11):
+    if (samples is None and len(elems) <= 11):  # exact - all permutations
         perms = permutations(elems)
         mtot = math.factorial(len(elems))
-    else:
-        if (samples is None):
+    else:  # approximate - samples/MAX_ITER permutations
+        if (samples is None):  # MAX_ITER permutations
             perms = Randomizer(elems)
-        else:
+        else:  # samples permutations
             perms = Randomizer(elems, samples)
         mtot = perms.max_iters
+    # iterate over all chosen permutations and average
     for rank in perms:
         value = func(rank, fs, q, x)
         dist.setdefault(value, 0)

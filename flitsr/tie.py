@@ -439,13 +439,14 @@ class Ties:
         not_seen: Set[Spectrum.Element] = set(rankings.elements())
         for entity in seen_entities:
             not_seen.difference_update(entity)
-        # Form the tie
-        fs, active = self._get_faults(not_seen, self.faults, to_inspect)
-        tie = Tie(not_seen, fs, active)
-        # update counters
-        for fault in fs:
-            to_inspect[fault] -= len(fs[fault])
-        self.ties.append(tie)
+        if (len(not_seen) > 0):
+            # Form the tie
+            fs, active = self._get_faults(not_seen, self.faults, to_inspect)
+            tie = Tie(not_seen, fs, active)
+            # update counters
+            for fault in fs:
+                to_inspect[fault] -= len(fs[fault])
+            self.ties.append(tie)
         self._num_entities = len(seen_entities)
         self._num_elems = len(rankings.elements())
 

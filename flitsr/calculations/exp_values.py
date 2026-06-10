@@ -2,6 +2,7 @@ from fractions import Fraction
 from math import comb
 from itertools import combinations
 from typing import Any, Set, Dict, Union, Callable, Iterable
+from flitsr.errors import warning
 from flitsr.tie import Tie, Ties
 from flitsr.spectrum import Spectrum
 AnyEntitiesDict = Union[Dict[Any, Set[Spectrum.Element]],
@@ -217,32 +218,8 @@ def _eff_imperfect_bu(fs: AnyEntitiesDict, l: int, k: int,  # noqa
 # ---------------------------- Cut-off calculations ---------------------------
 
 
-def cut_off_exp_val(ties: Ties, target: int, collapse: bool = False) -> float:
-    """
-    Calculate the expected number of faults found when randomly inspecting the
-    first `target` elements of the ranking given by `ties`. Where `target` is
-    greater than the number of elements in the ranking, inspects up until the
-    end of the ranking.
-
-    Args:
-      ties: The `Ties` object representing the ranking.
-      target: The number of elements to inspect up until.
-      collapse: By default, the number of elements is counted, if this
-        option is given, the number of ambiguity groups is counted instead.
-    """
-    tie_iter = iter(ties)
-    total = 0
-    fault_num = 0.0
-    try:
-        while (total < target):
-            tie = next(tie_iter)
-            p = min(target - total, tie.len(collapse))
-            # add the expected # of faults found in p
-            fault_num += cut_off_exp_val_tie(tie, p, collapse)
-            total += p
-    except StopIteration:
-        pass
-    return fault_num
+# type hint for function computing expected value for the faults found in a tie
+Cut_tie_exp = Callable[[Tie, int, bool], float]
 
 
 def cut_off_exp_val_tie(tie: Tie, p: int, collapse: bool = False) -> float:
@@ -273,6 +250,43 @@ def cut_off_exp_val_tie(tie: Tie, p: int, collapse: bool = False) -> float:
             e_I_bi = _cut_imperfect_bu(n, l_bi, p, u_bi)
         tot_found += e_I_bi
     return float(tot_found)
+
+
+def cut_off_exp_val(ties: Ties, target: int, collapse: bool = False,
+                    tie_exp_func: Cut_tie_exp = cut_off_exp_val_tie) -> float:
+    """
+    Calculate the expected number of faults found when randomly inspecting the
+    first `target` elements of the ranking given by `ties`. Where `target` is
+    greater than the number of elements in the ranking, inspects up until the
+    end of the ranking.
+
+    Args:
+      ties: The `Ties` object representing the ranking.
+      target: The number of elements to inspect up until.
+      collapse: By default, the number of elements is counted, if this
+        option is given, the number of ambiguity groups is counted instead.
+      tie_exp_func: Supplying this optional argument will use the given
+        function to calculate the expected value of the number of faults in the
+        tie, instead of the default calculation.
+    """
+    tie_iter = iter(ties)
+    total = 0
+    fault_num = 0.0
+    try:
+        while (total < target):
+            tie = next(tie_iter)
+            p = min(target - total, tie.len(collapse))
+            if (p == 0):
+                warning("Empty tie group in ranking.")
+            elif (p == tie.len(collapse)):
+                fault_num += tie.num_faults(active=True)
+            else:
+                # add the expected # of faults found in p
+                fault_num += tie_exp_func(tie, p, collapse)
+            total += p
+    except StopIteration:
+        pass
+    return fault_num
 
 
 def _cut_perfect_bu(n: int, l_bi: int, xs: int) -> Fraction:
