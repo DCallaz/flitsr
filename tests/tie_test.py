@@ -7,7 +7,7 @@ from flitsr.tie import Ties, Tie
 from flitsr.calculations import BUModel, exp_values
 from flitsr.calculations.perms import exact_method, Calc
 from flitsr.ranking import Rankings
-from helper import list_strings
+from tests.helper import list_strings
 from io import StringIO
 
 
@@ -72,7 +72,7 @@ def test_effort(bu, seed):
     rankings = create_ranking(seed, tie_size=5)
     # rankings = read_flitsr_ranking("ranking.txt")
     ties = Ties(rankings, bu)
-    eff_func = partial(_effort_sampled, bu=bu, samples=10000)
+    eff_func = partial(_effort_sampled, bu=bu, samples=15000)
     for n in range(1, len(rankings.faults())+1):
         act = exp_values.effort_exp_val(ties=ties, target=n, weffort=True)
         exp = exp_values.effort_exp_val(ties=ties, target=n, weffort=True,
@@ -96,7 +96,7 @@ def _cutoff_sampled(tie: Tie, q: int, collapse=False,
 def test_cutoff(bu, seed):
     rankings = create_ranking(seed, tie_size=5)
     ties = Ties(rankings, bu)
-    cutoff_func = partial(_cutoff_sampled, bu=bu, samples=10000)
+    cutoff_func = partial(_cutoff_sampled, bu=bu, samples=15000)
     for n in CUT_OFFS:
         act = exp_values.cut_off_exp_val(ties=ties, target=n)
         exp = exp_values.cut_off_exp_val(ties=ties, target=n,

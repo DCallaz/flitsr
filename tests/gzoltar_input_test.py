@@ -3,7 +3,7 @@ import io
 import random
 from pytest import nonempty_list_of  # type:ignore
 from pytest import mark as pytestr
-from helper import list_strings
+from tests.helper import list_strings
 from flitsr.input.gzoltar_input import Gzoltar
 from flitsr.spectrum import Outcome
 

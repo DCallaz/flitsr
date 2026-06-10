@@ -1,8 +1,7 @@
 import importlib
 from importlib.resources import files
-import pytest
 from pytest import mark as pytestr
-from resources import parameter_parser_routines as pp_routines
+from tests.resources import parameter_parser_routines as pp_routines
 from flitsr.args import ParameterParser
 
 
