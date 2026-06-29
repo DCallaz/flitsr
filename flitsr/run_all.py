@@ -5,6 +5,7 @@ import importlib
 from importlib.util import find_spec
 import sys
 import os
+from itertools import chain
 from os import path as osp
 from pathlib import Path
 import shutil
@@ -53,10 +54,10 @@ def find(directory: str, type: Optional[str] = None,
         to_check = (dirs+files if (type is None) else dirs if (type == 'd')
                     else files if (type == 'f') else [])
         for filename in to_check:
+            path = osp.join(root, filename)
             # check the name and emptiness
             if ((name is None or fnmatch(filename, name)) and
-                (empty is None or empty == (osp.getsize(filename) == 0))):
-                path = osp.join(root, filename)
+                    (empty is None or empty == (osp.getsize(path) == 0))):
                 # Check for action
                 if (action is not None):
                     yield action(path)
@@ -157,14 +158,13 @@ class Runall:
     def run(self, input_type: InputType, include: Optional[List[str]] = [],
             exclude: Optional[List[str]] = [], depth: Optional[int] = None,
             base: Optional[str] = None):
-        def del_tell(file: str):
-            os.remove(file)
-            print(f'Deleting empty results file: {file}\n')
         # Firstly delete all empty results
-        find('.', type='f', name='*results*', empty=True, action=del_tell)
+        emp_res = find('.', type='f', name='*results*', empty=True)
         # Also delete all empty runs, as this could cause problems for recover
-        find('.', type='f', name="*.run", empty=True, action=del_tell)
-
+        emp_runs = find('.', type='f', name="*.run", empty=True)
+        for file in chain(emp_res, emp_runs):
+            os.remove(file)
+            print(f'Deleting empty results file: {file}')
         # get inputs
         if (base is None):  # Sanity check
             base = '*'

@@ -29,9 +29,9 @@ def main(argv: List[str]):
         from flitsr.read_ranking import read_any_ranking
         rankings = read_any_ranking(args.input,
                                     method_level=args.method)
-        output(rankings, args.weff, args.top1, args.perc_at_n,
-               args.prec_rec, args.faults, args.collapse, csv=args.csv,
-               decimals=args.decimals, file=args.output)
+        output(rankings, args.calcs, decimals=args.decimals,
+               file=args.output, bu_model=args.bug_understanding,
+               collapse=args.collapse, csv=args.csv)
         return
     # Else, run the full process
     try:
@@ -110,9 +110,9 @@ def main(argv: List[str]):
                                                  args.cutoff_eval)
                     rankings.append(ranking)
                 # Compute and print output
-                output(rankings, args.weff, args.top1, args.perc_at_n,
-                       args.prec_rec, args.faults, args.collapse, csv=args.csv,
-                       decimals=args.decimals, file=output_file)
+                output(rankings, args.calcs, decimals=args.decimals,
+                       file=output_file, bu_model=args.bug_understanding,
+                       collapse=args.collapse, csv=args.csv)
                 spectrum.reset()
 
 

@@ -1,16 +1,58 @@
 # PYTHON_ARGCOMPLETE_OK
 import math
-import sys
+from math import log
 import ast
 import numpy as np
 from argparse import ArgumentParser
 import argcomplete
 from enum import Enum
-from typing import Dict, List, Tuple, Optional, Collection
-from flitsr.spectrum import Spectrum
+from typing import Dict, List, Tuple, Optional, Collection, Iterable
 from flitsr.tie import Ties
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
+from flitsr.calculations.calc_decorator import calculation
+from flitsr.calculations.exp_values import effort_exp_val
+
+
+@calculation('auc', 'Dislpays the area under the curve produced by the '
+             'percentage-at-N calculation', 'auc', 'area-under-curve')
+def auc(ties: Ties, collapse: bool):
+    bumps = getBumps(ties, collapse=collapse)
+    return auc_calc(combine([(bumps[0], bumps[1:])]))
+
+
+@calculation('lauc', 'Dislpays the area under the curve produced by the '
+             'percentage-at-N calculation as a logarithmic percentage of the '
+             'maximum possible value (i.e. closest to perfect recall). The '
+             'logarithmic effect causes lower ranks to have a greater effect '
+             'on the value, which corresponds to the lower ranks being more '
+             'useful to the developer', 'lauc', 'log-area-under-curve')
+def lauc(ties: Ties, collapse: bool):
+    auc_ = auc(ties, collapse)
+    optimal = auc_calc([(0.0, 100.0)])+1
+    lauc = abs(1-log(optimal-auc_, optimal))
+    return lauc
+
+
+@calculation('pauc', 'Dislpays the area under the curve produced by the '
+             'percentage-at-N calculation as a percentage of the maximum '
+             'possible value (i.e. closest to perfect recall)', 'pauc',
+             'percent-area-under-curve')
+def pauc(ties: Ties, collapse: bool):
+    auc_ = auc(ties, collapse)
+    optimal = auc_calc([(0.0, 100.0)])
+    return auc_/optimal
+
+
+@calculation('percentage at n', 'Produces the percentage-at-N values (i.e. '
+             'the percentage of faults found at N%% of code inspected). The '
+             'output of the perc@n calculation is a list of ranks of all '
+             'found faults, preceded by the number of elements in the system, '
+             'which can be used to generate percentage-at-N/recall graphs',
+             'perc@n', 'percent-at-n')
+def perc(ties: Ties, collapse: bool) -> Iterable[float]:
+    bumps = getBumps(ties, collapse=collapse)
+    return bumps
 
 
 def ci_in(str1: str, col: Collection[str]):
@@ -30,7 +72,7 @@ def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
         while (True):
             tie = next(tie_iter)
             for f in range(1, tie.num_faults()+1):
-                expect_value = tie.expected_value(f, False, collapse)
+                expect_value = effort_exp_val(tie, f, False, collapse)
                 bumps.append(total+expect_value)
             total += tie.len(collapse)
     except StopIteration:

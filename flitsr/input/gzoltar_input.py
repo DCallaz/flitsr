@@ -2,7 +2,7 @@ import sys
 import re
 import os
 from os import path as osp
-from io import TextIOWrapper
+from typing import TextIO
 from shutil import rmtree
 from flitsr.split_faults import split_spectrum_faults, NoFaultsError
 from flitsr.spectrum import Spectrum, Outcome
@@ -16,7 +16,7 @@ class Gzoltar(Input):
     def get_run_file_name(input_path: str):
         return input_path.split("/")[0] + ".run"
 
-    def construct_details(self, f: TextIOWrapper):
+    def construct_details(self, f: TextIO):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -42,7 +42,7 @@ class Gzoltar(Input):
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
                 self.sb.addElement(details, faults)
 
-    def construct_tests(self, tests_reader: TextIOWrapper):
+    def construct_tests(self, tests_reader: TextIO):
         tests_reader.readline()
         for line in tests_reader:
             m = re.fullmatch('([^,]+),(PASS|FAIL|ERROR)(,.*)?', line.rstrip())
@@ -52,7 +52,7 @@ class Gzoltar(Input):
             else:
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
 
-    def fill_spectrum(self, bin_file: TextIOWrapper):
+    def fill_spectrum(self, bin_file: TextIO):
         for t, line in enumerate(bin_file):
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t+1})',

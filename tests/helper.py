@@ -1,13 +1,18 @@
 import exrex
+from typing import List
+from collections.abc import Generator
 
-def gen_strings(regex, num):
-    ret = set()
+
+def gen_strings(regex, num) -> Generator[str]:
+    prev = set()
     i = 0
-    while(i < num):
+    while (i < num):
         entry = exrex.getone(regex, limit=100)
-        if (entry not in ret):
-            ret.add(entry)
+        if (entry not in prev):
+            prev.add(entry)
             i += 1
-        else:
-            print(entry, "already in list")
-    return list(ret)
+            yield entry
+
+
+def list_strings(regex, num) -> List[str]:
+    return list(gen_strings(regex, num))
