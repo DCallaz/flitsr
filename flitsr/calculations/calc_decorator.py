@@ -69,6 +69,7 @@ def parameter(name: str, type: Optional[Callable[[str], Any]] = None,
         method signature.
       type: A function to convert the given parameter from a string into the
         type required. Will be used by the command-line parser.
+      choices: A `Collection` of values which the given parameter can take on.
     """
     def register_param(fn):
         fn_unw = inspect.unwrap(fn)

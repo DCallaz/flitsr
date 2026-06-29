@@ -10,6 +10,7 @@ else:
     from importlib.metadata import entry_points
 
 from flitsr.calculations.bu_model import BUModel  # noqa
+from flitsr.calculations.calc_decorator import calculation, parameter  # noqa
 from flitsr import calculations
 
 calcs: Dict[str, Callable] = {}
