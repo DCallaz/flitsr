@@ -77,13 +77,14 @@ class Gzoltar(DirInput):
                         error('Incorrect number of matrix lines',
                               f'({t+1})', 'in input file, terminating...')
 
-    def _read_spectrum(self, input_path: str):
+    def _read_spectrum(self, input_path: str) -> Spectrum:
         # Getting the details of the elements
         self._construct_details(open(input_path+"/spectra.csv"))
         # Getting the details of the tests
         self._construct_tests(open(input_path+"/tests.csv"))
         # Constructing the spectrum
         self._fill_spectrum(open(input_path+"/matrix.txt"))
+        return self.sb.get_spectrum()
 
     @staticmethod
     def check_format(input_path: str) -> bool:

@@ -96,7 +96,7 @@ class TCM(FileInput):
                     error('Incorrect number of matrix lines', f'({t})',
                           'in input file, terminating...')
 
-    def _read_spectrum(self, input_path: str):
+    def _read_spectrum(self, input_path: str) -> Spectrum:
         file = open(input_path)
         exec_checks = {'#tests': False, '#uuts': False, '#matrix': False}
         while (True):
@@ -135,6 +135,7 @@ class TCM(FileInput):
         if (sum(exec_checks.values()) != 3):
             missing = [e[0] for e in exec_checks.items() if e[1] is False]
             error(f"Input file missing components: {missing}, terminating...")
+        return self.sb.get_spectrum()
 
     @staticmethod
     def check_format(input_path: str) -> bool:

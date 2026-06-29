@@ -102,6 +102,18 @@ To create an :doc:`input type <adv_types>` plugin, use the ``flitsr.input``
   [project.entry-points.'flitsr.input']
   test_inp = "my_flitsr_plugin.plugin:CustomInput"
 
+Calculations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create a :doc:`calculation <calc_ext>` plugin, use the ``flitsr.calculation``
+*entry point*:
+
+.. code-block:: toml
+  :caption: pyproject.toml
+
+  [project.entry-points.'flitsr.calculation']
+  my_calc = "my-package.custom_calc"
+
 Drivers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

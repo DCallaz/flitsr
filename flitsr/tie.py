@@ -75,6 +75,9 @@ class Tie:
     def elems(self, collapse: Literal[True],
               no_passive: bool) -> Set[Spectrum.Entity]: ...
 
+    @overload
+    def elems(self, collapse: bool, no_passive: bool) -> AnyEntities: ...
+
     @versionchanged(version='2.5.0', reason='Added the `collapse` and '
                     '`no_passive` optional parameters')
     def elems(self, collapse=False, no_passive=False) -> AnyEntities:
@@ -113,6 +116,9 @@ class Tie:
     @overload
     def active_faults(self, collapse: Literal[True]) \
         -> Dict[Any, Set[Spectrum.Entity]]: ...
+
+    @overload
+    def active_faults(self, collapse: bool) -> AnyEntitiesDict: ...
 
     @versionadded(version='2.4.0')
     def active_faults(self, collapse=False) \
@@ -183,6 +189,10 @@ class Tie:
     def fault_groups(self, collapse: Literal[True]) \
         -> Dict[Spectrum.Entity, Any]: ...
 
+    @overload
+    def fault_groups(self, collapse: bool) \
+        -> RevAnyEntitiesDict: ...
+
     @deprecated(version='2.4.0', reason='This function has been renamed to '
                 '`Tie.active_fault_locations`.')
     def fault_groups(self, collapse=False) -> RevAnyEntitiesDict:
@@ -203,6 +213,9 @@ class Tie:
     @overload
     def active_fault_locations(self, collapse: Literal[True]) \
         -> Dict[Spectrum.Entity, Any]: ...
+
+    @overload
+    def active_fault_locations(self, collapse: bool) -> RevAnyEntitiesDict: ...
 
     @versionadded(version='2.4.0', reason='Renamed from `Tie.fault_groups`.')
     def active_fault_locations(self, collapse=False) -> RevAnyEntitiesDict:

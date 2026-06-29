@@ -59,14 +59,18 @@ extracts this information, automatically producing the command line option
 automatically created to have a parameter with type ``str``, which has the
 default value of ``'msp'``.
 
-``flitsr`` uses `argparse <https://docs.python.org/3/library/argparse.html>`__
-for its command line processing, which will automatically support conversion to
-any primitive type. For conversion to a non-primitive type, you must implement a
-method named ``_<param>`` in your advanced type class, where ``<param>`` is the
-name of the ``__init__`` parameter to convert, which takes a string and converts
-it to your custom type. For example, if your technique takes a parameter ``my_date``,
-which is a date in the format ``'Jun 1 2005  1:33PM'``, you could specify the
-function:
+``flitsr`` uses `argparse` for its command line processing, which will automatically
+support conversion to any primitive type. For conversion to a non-primitive type,
+you must specify a method which takes the argument :py:class:`str` and returns
+the converted parameter. This may be done using the
+`~flitsr.advanced.attributes.parameter` decorator (see below). Alternatively,
+you may implement a method named ``_<param>`` in your advanced type class, where
+``<param>`` is the name of the ``__init__`` parameter to convert, which takes a
+string and converts it to your custom type. For example, if your technique takes
+a parameter ``my_date``, which is a date in the format ``'Jun 1 2005 1:33PM'``,
+you could specify the function:
+
+.. _adv_special_type_func:
 
 .. code-block:: python
 
@@ -130,6 +134,21 @@ following:
 This is the implementation used for the ``__init__`` method of the ``parallel``
 technique, from which ``flitsr`` automatically creates the
 :ref:`--parallel-parType <flitsr-parallel-parType>` command line option.
+
+Advanced type attributes -- ``parameter``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead of adding each of the above decorators for separately for an argument,
+it is possible to use a single decorator, `~flitsr.advanced.attributes.parameter`,
+to specify each of the properties for a single parameter. The
+`~flitsr.advanced.attributes.parameter` decorator has the following usage:
+
+.. autofunction:: flitsr.advanced.attributes.parameter
+
+This decorator can be used to set the custom type conversion function (instead
+of using the special ``_<param>`` function as mentioned :ref:`here<adv_special_type_func>`),
+`~flitsr.advanced.attributes.choices`, and `~flitsr.advanced.attributes.existing`
+properties. See the corresponding sections above for details.
 
 Advanced type attributes -- ``print_name``
 -------------------------------------------------------------------------------
