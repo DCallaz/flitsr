@@ -16,7 +16,7 @@ def test_detail_construction(entries):
     entries = set(entries)
     num_entries = len(entries)
     entries = '\n'.join(entries) + "\n\n"
-    inp.construct_details(io.StringIO(entries))
+    inp._construct_details(io.StringIO(entries))
     assert num_entries == len(inp.sb._elements)
 
 
@@ -28,7 +28,7 @@ def test_test_construction(entries):
     entries = set(entries)
     num_entries = len(entries)
     entries = '\n'.join(entries) + "\n\n"
-    inp.construct_tests(io.StringIO(entries))
+    inp._construct_tests(io.StringIO(entries))
     assert num_entries == len(inp.sb._tests)
 
 
@@ -59,7 +59,7 @@ def test_fill_spectrum(num_tests, num_elems):
         for e in execs:
             matrix += str(e) + " 1 "
         matrix += "\n"
-    inp.fill_spectrum(io.StringIO(matrix))
+    inp._fill_spectrum(io.StringIO(matrix))
     spectrum = inp.sb.get_spectrum()
     num_failed = len([t for t in test_outcomes if t is Outcome.FAILED])
     num_passed = len([t for t in test_outcomes if t is Outcome.PASSED])
