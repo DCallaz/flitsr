@@ -1,22 +1,37 @@
 import sys
 from os import path as osp
-from typing import TextIO
+from typing import TextIO, Optional
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
-from flitsr.input.input_reader import Input
-from flitsr.split_faults import split_spectrum_faults, NoFaultsError
+from flitsr.input.input_reader import FileInput
 
 
-class TCM(Input):
+class TCM(FileInput):
+    @classmethod
+    def search_pattern(self, ext: Optional[str] = None, **kwargs) -> str:
+        """
+        Returns the search pattern to use in the `run_all` script when
+        searching for inputs of the `TCM` type to run on. The format is a
+        Unix shell style pattern (see `Input.search_pattern` for more details).
 
-    @staticmethod
-    def get_run_file_name(input_path: str):
-        return re.sub("\\.\\w+$", ".run", input_path)
+        Args:
+          ext: The (optional) extension of the TCM files to search for.
 
-    def construct_details(self, f: TextIO):
+        Returns:
+          The search pattern to use. With no arguments, or when `ext` is
+          `None`, returns the default "*" pattern as in `Input.search_pattern`.
+          When `ext` is not `None`, returns a pattern matching files with the
+          given extension
+        """
+        if (ext is None):
+            return super().search_pattern()
+        else:
+            return f"*.{ext}"
+
+    def _construct_details(self, f: TextIO):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -51,7 +66,7 @@ class TCM(Input):
                 self.sb.addElement(details, faults)
                 line = f.readline()
 
-    def construct_tests(self, f: TextIO):
+    def _construct_tests(self, f: TextIO):
         line = f.readline()
         while (not line == '\n'):
             m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?',
@@ -63,7 +78,7 @@ class TCM(Input):
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
             line = f.readline()
 
-    def fill_spectrum(self, f: TextIO):
+    def _fill_spectrum(self, f: TextIO):
         for t, test in enumerate(self.sb.get_tests()):
             line = f.readline()
             if (line == ''):
@@ -81,7 +96,7 @@ class TCM(Input):
                     error('Incorrect number of matrix lines', f'({t})',
                           'in input file, terminating...')
 
-    def read_spectrum(self, input_path: str) -> Spectrum:
+    def _read_spectrum(self, input_path: str):
         file = open(input_path)
         exec_checks = {'#tests': False, '#uuts': False, '#matrix': False}
         while (True):
@@ -96,21 +111,21 @@ class TCM(Input):
                     print("WARNING: duplicate #tests component in input file",
                           file=sys.stderr)
                 # Constructing the spectrum
-                self.construct_tests(file)
+                self._construct_tests(file)
                 exec_checks['#tests'] = True
             elif (line.startswith("#uuts")):
                 if (exec_checks['#uuts'] is True):
                     print("WARNING: duplicate #uuts component in input file",
                           file=sys.stderr)
                 # Getting the details of the project
-                self.construct_details(file)
+                self._construct_details(file)
                 exec_checks['#uuts'] = True
             elif (line.startswith("#matrix")):
                 if (exec_checks['#matrix'] is True):
                     print("WARNING: duplicate #matrix component in input file",
                           file=sys.stderr)
                 # Filling the spectrum
-                self.fill_spectrum(file)
+                self._fill_spectrum(file)
                 exec_checks['#matrix'] = True
             else:
                 print("ERROR: Incorrectly formatted input file at line:", line,
@@ -120,15 +135,6 @@ class TCM(Input):
         if (sum(exec_checks.values()) != 3):
             missing = [e[0] for e in exec_checks.items() if e[1] is False]
             error(f"Input file missing components: {missing}, terminating...")
-        spectrum = self.sb.get_spectrum()
-        del self.sb
-        # Split fault groups if necessary
-        if (self.split_faults):
-            try:
-                split_spectrum_faults(spectrum)
-            except NoFaultsError:
-                error(f"No exposable faults in {input_path}, terminating...")
-        return spectrum
 
     @staticmethod
     def check_format(input_path: str) -> bool:

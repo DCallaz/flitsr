@@ -99,6 +99,8 @@ all the implemented input types is given below:
    :template: custom-class-template.rst
 
    flitsr.input.Input
+   flitsr.input.FileInput
+   flitsr.input.DirInput
    flitsr.input.TCM
    flitsr.input.Gzoltar
 

@@ -1,8 +1,10 @@
 # PYTHON_ARGCOMPLETE_OK
 from multiprocessing import Pool
-from typing import List, Optional, Set, Any, Iterator, Callable, Iterable
+from typing import List, Optional, Set, Any, Iterator, Callable, Iterable, \
+        Dict, Type
 import importlib
 from importlib.util import find_spec
+import inspect
 import sys
 import os
 from itertools import chain
@@ -12,7 +14,6 @@ import shutil
 from fnmatch import fnmatch
 import re
 from contextlib import redirect_stderr, redirect_stdout
-from enum import Enum, auto
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
 else:
@@ -25,12 +26,7 @@ from flitsr.suspicious import Suspicious
 from flitsr import advanced
 from flitsr import merge
 from flitsr.errors import warning
-
-
-class InputType(Enum):
-    DIR = auto()
-    FILE = auto()
-    DEPTH = auto()
+from flitsr.input import BaseInputType, InputType, Input, FileInput, DirInput
 
 
 def find(directory: str, type: Optional[str] = None,
@@ -155,7 +151,8 @@ class Runall:
                         os.remove(run)
                         print("--------------------------")
 
-    def run(self, input_type: InputType, include: Optional[List[str]] = [],
+    def run(self, input_type: Optional[BaseInputType],
+            include: Optional[List[str]] = [],
             exclude: Optional[List[str]] = [], depth: Optional[int] = None,
             base: Optional[str] = None):
         # Firstly delete all empty results
@@ -169,16 +166,16 @@ class Runall:
         if (base is None):  # Sanity check
             base = '*'
         inputs_us: Iterable
-        if (input_type == InputType.DIR):
+        if (input_type is None):
+            inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
+                             depth=depth)
+        elif (input_type == BaseInputType.DIR):
             inputs_us = set(find('.', type='f', name=base,
                                  excl_dirs=exclude, incl_dirs=include,
                                  depth=depth, action=osp.dirname))
-        elif (input_type == InputType.FILE):
+        elif (input_type == BaseInputType.FILE):
             inputs_us = find('.', type='f', name=base, excl_dirs=exclude,
                              incl_dirs=include, depth=depth)
-        else:
-            inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
-                             depth=depth)
         inputs = sorted(inputs_us, key=natsort)
         dirs_us = {osp.dirname(f) for f in inputs}
         dirs = sorted(dirs_us, key=natsort)
@@ -272,19 +269,79 @@ def get_parser() -> argparse.ArgumentParser:
                         'depth at which to look for inputs (starting at 0 for '
                         'the current directory)', type=int)
     typ_mu = parser.add_mutually_exclusive_group()
-    typ_mu.add_argument('-f', '--file', metavar='PAT', nargs='?',
+
+    def get_base_action(typ: BaseInputType):
+        class InputAction(argparse.Action):
+            def __call__(self, parser: argparse.ArgumentParser,
+                         args: argparse.Namespace, values, option_string=None):
+                setattr(args, 'inp_type', typ)
+                setattr(args, 'base', values)
+        return InputAction
+
+    typ_mu.add_argument('-f', '--file', metavar='PAT', nargs='?', dest='base',
                         default=None, const='*', help='Look only for single '
-                        'file inputs (that optionally match pattern PAT)')
-    typ_mu.add_argument('-D', '--dir', metavar='PAT', nargs='?',
+                        'file inputs (that optionally match pattern PAT)',
+                        action=get_base_action(BaseInputType.FILE))
+    typ_mu.add_argument('-D', '--dir', metavar='PAT', nargs='?', dest='base',
                         default=None, const='*', help='Look only for '
                         'directories as inputs (that optionally have a '
-                        'sub-file matching pattern PAT)')
-    typ_mu.add_argument('-t', '--tcm', metavar='EXT', nargs='?',
-                        default=None, const='*', help='Look only for TCM type '
-                        'inputs (with optional extension EXT)')
-    typ_mu.add_argument('-g', '--gzoltar', action='store_const',
-                        const='spectra.csv',
-                        help='Look only for GZoltar type inputs')
+                        'sub-file matching pattern PAT)',
+                        action=get_base_action(BaseInputType.DIR))
+
+    def get_input_action(typ: Type[Input], kwarg_names:
+                         Optional[List[str]] = None):
+        class InputAction(argparse.Action):
+            def __call__(self, parser: argparse.ArgumentParser,
+                         args: argparse.Namespace, values, option_string=None):
+                kwargs = {}
+                if (kwarg_names is not None):
+                    if (len(kwarg_names) == 1):
+                        kwargs[kwarg_names[0]] = values
+                    else:
+                        for i, name in enumerate(kwarg_names):
+                            kwargs[name] = values[i]
+                setattr(args, 'inp_type', typ.base_input_type())
+                setattr(args, 'base', typ.search_pattern(**kwargs))
+        return InputAction
+
+    extra_flags = {'TCM': ['-t'], 'GZOLTAR': ['-g']}
+    for input_type in list(InputType):
+        name, cls = (input_type.name, input_type.value)
+        if (not (issubclass(cls, FileInput) or issubclass(cls, DirInput))):
+            continue
+        # get list of flags
+        flags = (extra_flags.get(name, []) +
+                 [f"--{name.lower().replace('_', '-')}"])
+
+        args: Dict[str, Any] = {}
+        args['dest'] = 'base'
+        args['const'] = cls.search_pattern()
+        args['help'] = f"Look only for {name.capitalize()} type inputs"
+        # get arguments (if any)
+        argspec = inspect.getfullargspec(getattr(cls, 'search_pattern'))
+        lower_argnames = []
+        if (len(argspec.args) > 1):
+            lower_argnames = argspec.args[1:]
+            argnames = tuple([a.upper() for a in argspec.args[1:]])
+            args['metavar'] = argnames
+            if (len(argnames) == 1):
+                args['nargs'] = '?'
+                args['help'] += f" (with optional parameter {argnames[0]})"
+            else:
+                args['nargs'] = '*'
+                args['help'] += (" (with optional parameters: "
+                                 f"{', '.join(argnames)})")
+                del args['const']
+        else:
+            args['nargs'] = 0
+        args['action'] = get_input_action(cls, lower_argnames)
+        typ_mu.add_argument(*flags, default=None, **args)
+    # typ_mu.add_argument('-t', '--tcm', metavar='EXT', nargs='?',default=None,
+    #                     const='*', help='Look only for TCM type '
+    #                     'inputs (with optional extension EXT)')
+    # typ_mu.add_argument('-g', '--gzoltar', action='store_const',
+    #                     const='spectra.csv',
+    #                     help='Look only for GZoltar type inputs')
 
     parser.add_argument('-c', '--num-cpus', metavar='CPUS', type=int,
                         help='Sets the number of CPUs to run in parallel on '
@@ -312,6 +369,8 @@ def get_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None):
     parser = get_parser()
     args = parser.parse_args(argv)
+    if (not hasattr(args, 'inp_type')):
+        setattr(args, 'inp_type', None)
 
     # Process metrics
     metrics = set(args.metrics or Suspicious.getNames())
@@ -331,18 +390,9 @@ def main(argv: Optional[List[str]] = None):
         args.exclude = [path.rstrip(osp.sep) for path in args.exclude]
 
     # Process input type
-    if (args.gzoltar or args.dir):
-        inp_type = InputType.DIR
-        base = args.gzoltar or args.dir
-        if (args.depth is not None):
-            args.depth += 1
-    elif (args.tcm or args.file):
-        inp_type = InputType.FILE
-        base = args.file or "*."+args.tcm
-    elif (args.depth is not None):
-        inp_type = InputType.DEPTH
-        base = None
-    else:
+    if (args.inp_type is BaseInputType.DIR and args.depth is not None):
+        args.depth += 1
+    if (args.inp_type is None and args.depth is None):
         parser.error("Please specify a depth or input type")
 
     # check if driver exists
@@ -357,8 +407,8 @@ def main(argv: Optional[List[str]] = None):
 
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver)
-    run_all.run(inp_type, include=args.include, exclude=args.exclude,
-                depth=args.depth, base=base)
+    run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
+                depth=args.depth, base=args.base)
 
 
 if __name__ == '__main__':

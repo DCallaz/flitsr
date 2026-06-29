@@ -1,17 +1,17 @@
 # PYTHON_ARGCOMPLETE_OK
-import sys
 from os import path as osp
 from typing import List, Optional
 from argparse import ArgumentParser
 import argcomplete
-from enum import Enum
 from flitsr.errors import error
 from flitsr.input.input_reader import Input
 from flitsr.input import InputType
+from flitsr.input.duplicates import DuplicateStrategy
 
 
 def convert(input_file: str, output_format: Optional[InputType] = None,
-            output_file: Optional[str] = None):
+            output_file: Optional[str] = None,
+            allow_dups: DuplicateStrategy = DuplicateStrategy.REFUSE):
     """Convert a input file from one spectral format to another"""
     # Check the input file type and set input method
     try:
@@ -19,7 +19,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
     except ValueError as e:
         error(e)
     input_format = reader.get_type()
-    spectrum = reader().read_spectrum(input_file)
+    spectrum = reader(allow_duplicates=allow_dups).read_spectrum(input_file)
     # Set the output method if necessary
     if (output_format is None):
         if (input_format is InputType['TCM']):
@@ -34,6 +34,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
         error(f"Cannot override input file {input_file} with output")
     # Print out the spectrum in the converted format
     output_format.value.write_spectrum(spectrum, output_file)
+    print(f"Wrote spectrum to {output_file}.")
 
 
 def get_parser() -> ArgumentParser:
@@ -51,6 +52,17 @@ def get_parser() -> ArgumentParser:
                         'from the name of the input file; for example, if the '
                         'input file is "input.tcm", and the output format is '
                         'Gzoltar, the output will be "input/".')
+    parser.add_argument('--duplicates', default=DuplicateStrategy.REFUSE,
+                        choices=list(DuplicateStrategy),
+                        type=DuplicateStrategy.from_string,
+                        help='Specify the strategy for dealing with duplicate '
+                        'elements in the spectrum. ALLOW: Allow the spectrum '
+                        'to contain duplicates, which will then use a random '
+                        'index to distinguish them. IGNORE: Silently remove '
+                        'and ignore duplicate elements in the spectrum, '
+                        'merging their spectra. REFUSE: Raise an exception if '
+                        'any duplicate elements are encountered when reading '
+                        'in the spectrum.')
     argcomplete.autocomplete(parser)
     return parser
 
@@ -60,7 +72,7 @@ def main(argv: Optional[List[str]] = None):
     args = parser.parse_args(argv)
     if (args.output_type is not None):
         args.output_type = InputType[args.output_type]
-    convert(args.input, args.output_type, args.output_file)
+    convert(args.input, args.output_type, args.output_file, args.duplicates)
 
 
 if __name__ == "__main__":

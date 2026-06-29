@@ -750,20 +750,20 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     args.types = [Config(**ts),
                                   Config(advanced.RankerType['FLITSR'], **ts),
                                   Config(advanced.RankerType['MULTI'], **ts)]
-            if (len(args.calcs) == 0):
+            if (args.calcs is None or len(args.calcs) == 0):
                 args.calcs = {
                     "first": [],
-                    "avgerage": [],
+                    "average": [],
                     "median": [],
                     "last": [],
-                    "weffort": [2, 3, 5],
+                    "weffort": [{'n': 2}, {'n': 3}, {'n': 5}],
                     "perc@n": [],
-                    "precision-at": [1, 5, 10, "f"],
-                    "recall-at": [1, 5, 10, "f"],
+                    "precision-at": [{'x': 1}, {'x': 5}, {'x': 10}, {'x': "f"}],
+                    "recall-at": [{'x': 1}, {'x': 5}, {'x': 10}, {'x': "f"}],
                     "fault-num": [],
-                    "all-top": [1, 5, 10],
-                    "one-top": [5]
-                        }
+                    "all-top": [{'x': 1}, {'x': 5}, {'x': 10}],
+                    "one-top": [{'x': 5}]
+                    }
         elif (args.types is None):
             args.types = [Config(args.ranker, getattr(args, 'cluster', None),
                                  getattr(args, 'refiner', None))]

@@ -1,7 +1,6 @@
 import sys
 from flitsr.spectrum import Spectrum
 from typing import Dict, List, Set, Tuple, Any
-from flitsr.input.input_reader import Input
 from flitsr.errors import warning
 
 
@@ -81,6 +80,7 @@ def split(spectrum: Spectrum) -> Tuple[Dict[float, Set[Spectrum.Element]],
 
 
 if __name__ == "__main__":
+    from flitsr.input.input_reader import Input
     d = sys.argv[1]
     i = 2
     num_only = False

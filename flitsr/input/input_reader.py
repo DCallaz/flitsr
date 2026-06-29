@@ -1,54 +1,112 @@
-from typing import List, final, Type
+import re
+import inspect
+from os import path as osp
+from typing import List, final, Type, overload
 from abc import ABC, abstractmethod
+from deprecated.sphinx import versionadded, versionchanged, deprecated
 from flitsr.spectrum import Spectrum
 from flitsr.input.spectrumBuilder import SpectrumBuilder
+from flitsr.input import BaseInputType
+from flitsr.input.duplicates import DuplicateStrategy as DupStrat
 from flitsr import input
 
 
 class Input(ABC):
-    """ An abstract spectral input type """
-    def __init_subclass__(cls):
-        input.register_input(cls)
+    """
+    An abstract spectral input type. If extending from this type, see
+    `DirInput` and `FileInput`.
+    """
+    @final
+    def __init_subclass__(cls, /, register=True, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if (register):
+            input.register_input(cls)
 
+    @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
+                    '`method_level`, and `allow_duplicates` parameters')
     @final
     def __init__(self, split_faults=False, method_level=False,
-                 allow_duplicates=None):
+                 allow_duplicates: DupStrat = DupStrat.REFUSE):
+        """
+        Internal constructor for an `Input` type.
+
+        Caution:
+          This constructor should not be called directly. Use the `read_in`
+          method instead.
+        """
         self.method_level = method_level
         self.allow_duplicates = allow_duplicates
         self.split_faults = split_faults
         self.sb = SpectrumBuilder(method_level, allow_duplicates)
 
     @staticmethod
-    @abstractmethod
     def get_run_file_name(input_path: str):
         """
         Return the name of the run file that this input type determines for
-        the given input string.
+        the given input string. Note: this function assumes the given string is
+        a valid input of a particular type, and thus is either a file or
+        directory which represents a single program spectrum.
 
         Args:
-          input_path: str: The name of the input file.
+          input_path: str: The name of the input file representing a single
+            program spectrum.
 
         Returns:
-          The name of the run file.
+          The name of the run file. For files, this is just the input file name
+          with the extension replaced with ".run". For directories, this is the
+          name of the directory with the ".run" extension appended.
 
         """
-        pass
+        if (osp.sep in input_path or osp.isdir(input_path)):  # dir-type inputs
+            return input_path.split(osp.sep)[0] + ".run"
+        else:  # file-type inputs
+            return re.sub("\\.\\w+$", ".run", input_path)
 
+    @overload
+    @classmethod
+    def read_spectrum(cls, input_path: str) -> Spectrum: ...
+
+    @overload
+    @classmethod
+    def read_spectrum(cls, input_path: str, split_faults: bool = False,
+                      method_level: bool = False, allow_duplicates:
+                      DupStrat = DupStrat.REFUSE) -> Spectrum: ...
+
+    @classmethod
+    @deprecated(version='2.5.0', reason='This method is deprecated and will '
+                'be removed in a future release. Consider using the `read_in` '
+                'method instead.')
+    @final
+    def read_spectrum(cls, *args, **kwargs) -> Spectrum:
+        """
+        Deprecated alias of `Input.read_in`.
+        """
+        return cls.read_in(*args, **kwargs)
+
+    @versionadded(version='2.5.0')
     @abstractmethod
-    def read_spectrum(self, input_path: str) -> Spectrum:
+    def _read_spectrum(self, input_path: str) -> Spectrum:
         """
-        Read in the spectrum from the given input file using this input type.
+        Abstract method to facilitate reading in the spectrum. Any concrete
+        class extending `~flitsr.input.Input` must implement this method.
+
+        The method is called on a constructed `~flitsr.input.Input` object, which
+        contains all options, as well an initialized `~flitsr.spectrumBuilder.SpectrumBuilder`
+        object which may be used for constructing the spectrum. The
+        `~flitsr.spectrumBuilder.SpectrumBuilder` object handles any advanced
+        usage scenarios such as duplicates, method level collapsing, and fault
+        splitting. Calling `~flitsr.spectrumBuilder.SpectrumBuilder.get_spectrum`
+        will return the constructed `~flitsr.spectrum.Spectrum` object.
 
         Args:
-          input_path: str: The path string of the input spectrum.
-          split_faults: bool: Whether to split faults using FLITSR's
-                        split_faults functionality.
-          method_level:  (Default value = False) Whether to read this spectrum
-                        in as a method level spectrum.
+          input_path: The path to the input file to read in.
 
         Returns:
           The spectrum that was read in.
 
+        Note:
+          Using the SpectrumBuilder object provided in ``self.sb`` to
+          construct the Spectrum is strongly advised.
         """
         pass
 
@@ -80,6 +138,7 @@ class Input(ABC):
                                   "for output string")
 
     @classmethod
+    @final
     def get_type(cls) -> 'input.InputType':
         """ Return the InputType enum of this input type. """
         return input.InputType[cls.__name__.upper()]
@@ -103,30 +162,39 @@ class Input(ABC):
         """
         pass
 
-    @staticmethod
-    def read_in(input_path: str, split_faults=False, method_level=False,
-                allow_duplicates=None) -> Spectrum:
+    @classmethod
+    @final
+    def read_in(cls, input_path: str, split_faults: bool = False,
+                method_level: bool = False, allow_duplicates:
+                DupStrat = DupStrat.REFUSE) -> Spectrum:
         """
-        Static helper method that guesses the input type of the given input
-        path out of all available input types, and reads in the spectrum using
-        that input type.
+        Read in the spectrum from the given input file. When called from
+        a concrete `Input` class, simply reads the spectrum using that input
+        type. When called from `Input`, or any other abstract class,
+        this method guesses the input type of the given input path out of all
+        available input types, and reads in the spectrum using that input type.
 
         Args:
-          input_path: str: The spectrum input path string to read in.
-          split_faults: bool: Whether to split faults using FLITSR's
-                        split_faults functionality.
-          method_level:  (Default value = False) Whether to read this spectrum
-                        in as a method level spectrum.
+          input_path: The spectrum input path string to read in.
+          split_faults: Whether to split faults using FLITSR's split_faults
+            functionality.
+          method_level: Whether to read this spectrum in as a method level
+            spectrum.
+          allow_duplicates: The policy for allowing duplicate values in the
+            spectrum.
 
         Returns:
           The spectrum that was read in.
-
         """
-        reader = Input.get_reader(input_path)(split_faults, method_level,
-                                              allow_duplicates)
-        return reader.read_spectrum(input_path)
+        if (inspect.isabstract(cls)):
+            reader = Input.get_reader(input_path)
+        else:
+            reader = cls
+        instance = reader(split_faults, method_level, allow_duplicates)
+        return instance._read_spectrum(input_path)
 
     @staticmethod
+    @final
     def get_reader(input_path: str) -> Type['Input']:
         """
         Static helper method that guesses the input type of the given input
@@ -144,3 +212,55 @@ class Input(ABC):
             if (input_cls.check_format(input_path)):
                 return input_cls
         raise ValueError(f"Unknown input type \"{input_path}\"")
+
+    @classmethod
+    @abstractmethod
+    @versionadded(version='2.5.0')
+    def base_input_type(self) -> BaseInputType:
+        """
+        The type (file or directory) expected for this Input method. For
+        convenience in implementing this method, extend either `FileInput` or
+        `DirInput`.
+        """
+        pass
+
+    @classmethod
+    def search_pattern(self, **kwargs) -> str:
+        """
+        Returns the search pattern to use in the `run_all` script when
+        searching for inputs of the given `Input` type to run on. The format is
+        a Unix shell style pattern (see `fnmatch`).
+
+        For `FileInput` types, will be the pattern to match against the name of
+        the file, for `DirInput` types, will match against the name of any file
+        within the directory.
+
+        The default is "*", i.e., match any file, but may be overriden by any
+        `Input` sub-class. Sub-classes may also define optional arguments which
+        can be used to render specialized patterns.
+        """
+        return "*"
+
+
+class FileInput(Input, register=False):
+    """
+    An abstract spectral input type which reads in from files. This class is
+    provided as a convenience for extending `Input`, with the `base_input_type`
+    function set to return `BaseInputType.FILE`.
+    """
+    @classmethod
+    @final
+    def base_input_type(self) -> BaseInputType:
+        return BaseInputType.FILE
+
+
+class DirInput(Input, register=False):
+    """
+    An abstract spectral input type which reads in from directories. This class
+    is provided as a convenience for extending `Input`, with the
+    `base_input_type` function set to return `BaseInputType.DIR`.
+    """
+    @classmethod
+    @final
+    def base_input_type(self) -> BaseInputType:
+        return BaseInputType.DIR

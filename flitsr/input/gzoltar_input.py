@@ -4,19 +4,26 @@ import os
 from os import path as osp
 from typing import TextIO
 from shutil import rmtree
-from flitsr.split_faults import split_spectrum_faults, NoFaultsError
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
-from flitsr.input.input_reader import Input
+from flitsr.input.input_reader import DirInput
 
 
-class Gzoltar(Input):
-    @staticmethod
-    def get_run_file_name(input_path: str):
-        return input_path.split("/")[0] + ".run"
+class Gzoltar(DirInput):
+    @classmethod
+    def search_pattern(self, **kwargs):
+        """
+        Returns the search pattern to use in the `run_all` script when
+        searching for inputs of the `Gzoltar` type to run on. The format is a
+        Unix shell style pattern (see `Input.search_pattern` for more details).
 
-    def construct_details(self, f: TextIO):
+        Returns:
+          The search pattern to use, which is always "spectra.csv".
+        """
+        return 'spectra.csv'
+
+    def _construct_details(self, f: TextIO):
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -42,7 +49,7 @@ class Gzoltar(Input):
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
                 self.sb.addElement(details, faults)
 
-    def construct_tests(self, tests_reader: TextIO):
+    def _construct_tests(self, tests_reader: TextIO):
         tests_reader.readline()
         for line in tests_reader:
             m = re.fullmatch('([^,]+),(PASS|FAIL|ERROR)(,.*)?', line.rstrip())
@@ -52,7 +59,7 @@ class Gzoltar(Input):
             else:
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
 
-    def fill_spectrum(self, bin_file: TextIO):
+    def _fill_spectrum(self, bin_file: TextIO):
         for t, line in enumerate(bin_file):
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t+1})',
@@ -70,22 +77,13 @@ class Gzoltar(Input):
                         error('Incorrect number of matrix lines',
                               f'({t+1})', 'in input file, terminating...')
 
-    def read_spectrum(self, input_path: str) -> Spectrum:
+    def _read_spectrum(self, input_path: str):
         # Getting the details of the elements
-        self.construct_details(open(input_path+"/spectra.csv"))
+        self._construct_details(open(input_path+"/spectra.csv"))
         # Getting the details of the tests
-        self.construct_tests(open(input_path+"/tests.csv"))
+        self._construct_tests(open(input_path+"/tests.csv"))
         # Constructing the spectrum
-        self.fill_spectrum(open(input_path+"/matrix.txt"))
-        spectrum = self.sb.get_spectrum()
-        del self.sb
-        # Split fault groups if necessary
-        if (self.split_faults):
-            try:
-                split_spectrum_faults(spectrum)
-            except NoFaultsError:
-                error(f"No exposable faults in {input_path}, terminating...")
-        return spectrum
+        self._fill_spectrum(open(input_path+"/matrix.txt"))
 
     @staticmethod
     def check_format(input_path: str) -> bool:

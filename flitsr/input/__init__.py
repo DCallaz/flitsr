@@ -1,17 +1,22 @@
 import importlib
 import pkgutil
 import sys
-from enum import Enum
+from enum import Enum, auto
 from flitsr import input
 
 _inputs = {}
+
+
+class BaseInputType(Enum):
+    DIR = auto()
+    FILE = auto()
 
 
 def register_input(cls):
     _inputs[cls.__name__.upper()] = cls
 
 #  Exposed imports
-from flitsr.input.input_reader import Input  # noqa
+from flitsr.input.input_reader import Input, FileInput, DirInput  # noqa
 from flitsr.input.tcm_input import TCM  # noqa
 from flitsr.input.gzoltar_input import Gzoltar  # noqa
 __all__ = ['Input', 'TCM', 'Gzoltar', 'InputType']

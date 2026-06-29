@@ -1,5 +1,7 @@
-from typing import List, Dict, Any, Set, Tuple, Union, Optional
+from typing import List, Dict, Any, Set, Tuple, Union
 from flitsr.spectrum import Spectrum, Outcome, Details
+from flitsr.input.split_faults import split_spectrum_faults, NoFaultsError
+from flitsr.errors import error
 from flitsr.input.duplicates import DuplicateStrategy
 from deprecated.sphinx import versionchanged
 
@@ -11,19 +13,21 @@ class DuplicateError(ValueError):
 class SpectrumBuilder:
     """ Builds a `Spectrum <flitsr.spectrum.Spectrum>` object."""
 
-    def __init__(self, collapse_methods: bool = False, allow_duplicates:
-                 Optional[DuplicateStrategy] = None):
+    def __init__(self, collapse_methods: bool = False, split_faults:
+                 bool = False, allow_duplicates: DuplicateStrategy =
+                 DuplicateStrategy.REFUSE):
         """
         Constructs a `SpectrumBuilder` object to facilitate building a
         `Spectrum <flitsr.spectrum.Spectrum>`.
 
         Args:
-          collapse_methods: bool: (Default value = False) Whether to form a
-            method level spectrum.
+          collapse_methods: Whether to form a method level spectrum.
+          allow_duplicates: The strategy for whether duplicates are allowed,
+            and how they are handled.
         """
         self._collapse_methods = collapse_methods
-        self._allow_duplicates = (DuplicateStrategy.REFUSE if allow_duplicates
-                                  is None else allow_duplicates)
+        self._allow_duplicates = allow_duplicates
+        self._split_faults = split_faults
         self._method_map: Dict[int, Spectrum.Element] = {}
         self._methods: Dict[Tuple[str, str], Spectrum.Element] = {}
         self._elements: List[Spectrum.Element] = []
@@ -250,6 +254,12 @@ class SpectrumBuilder:
         groups = self.form_groups()
         spectrum = Spectrum(self._elements, groups, self.get_tests(),
                             self._executions)
+        # Split fault groups if necessary
+        if (self._split_faults):
+            try:
+                split_spectrum_faults(spectrum)
+            except NoFaultsError:
+                error("No exposable faults in input file, terminating...")
         return spectrum
 
 

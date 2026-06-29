@@ -30,10 +30,18 @@ Where ``CustomInput`` is a custom input type that inherits
 Abstract Input class
 -------------------------------------------------------------------------------
 
-See the `Input <flitsr.input.input_reader.Input>` class for the structure that
-your custom input type must extend.
+See the `~flitsr.input.Input` class for the structure that your custom input type
+must extend. It is advised that you extend from either `~flitsr.input.DirInput`
+or `~flitsr.input.FileInput` as a custom input type that reads in directories or
+files respectively.
 
 .. note::
    Your custom input type must implement all abstract methods, and may optionally
-   implement the :meth:`write_spectrum <flitsr.input.input_reader.Input.write_spectrum>`,
-   and :meth:`get_elem_separators <flitsr.input.input_reader.Input.get_elem_separators>` methods.
+   implement any of the non-abstract, and non-final methods such as
+   `~flitsr.input.Input.search_pattern`, `~flitsr.input.Input.write_spectrum`,
+   and `~flitsr.input.Input.get_elem_separators`.
+
+The main method to implement is the `Input._read_spectrum
+<flitsr.input.Input._read_spectrum>` method as given here:
+
+.. autofunction:: flitsr.input.Input._read_spectrum
