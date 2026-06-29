@@ -38,7 +38,7 @@ class Tie:
             # set faulty elements
             self._fault_locs[fault_num] = fault_locs.locs
 
-    def set_active(self, active: Dict[Any, int]):
+    def _set_active(self, active: Dict[Any, int]):
         """
         (Re-)set the active faults in this tie to be the ones given.
 
@@ -113,9 +113,6 @@ class Tie:
     @overload
     def active_faults(self, collapse: Literal[True]) \
         -> Dict[Any, Set[Spectrum.Entity]]: ...
-
-    @overload
-    def active_faults(self, collapse: bool) -> AnyEntitiesDict: ...
 
     @versionadded(version='2.4.0')
     def active_faults(self, collapse=False) \
@@ -272,49 +269,16 @@ class Tie:
         num_groups = ceil(loc_ratio * num_fault_groups)
         return num_groups
 
-    def old_expected_value(self, q, weffort: bool, collapse=False) -> float:
+    @deprecated(version='2.5.0', reason='Moved to `flitsr.calculations'
+                '.exp_values.effort_exp_val_tie`')
+    def expected_value(self, q, weffort: bool, collapse=False) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
         expected value can either be in terms of wasted effort (not
         counting fault inspection) or actual position in the ranking.
         """
-        fs = self.fault_groups(collapse)
-        dups = sorted(chain(*fs.values()))
-        m = self.len(collapse)
-        l = self.num_fault_locs(collapse)
-        l_a = self.num_active_fault_locs(collapse)
-        nf = self.num_faults()
-        if (weffort):
-            expval = Fraction(m-l, l_a+1)
-        else:
-            expval = Fraction(m+1, l_a+1)
-        # first fault or all 1 fault per loc
-        if (q == 1 or (l_a == nf and all(len(ls) == 1 for ls in fs.values()))):
-            return float(q*expval)
-        elif (l_a > 10 or len(dups) == len(set(dups))):  # approx. solution or all single loc
-            fpl = Fraction(nf, l_a)  # faults per (active) location
-            for i in range(1, l_a+1):
-                if (ceil(fpl*i) >= q):
-                    if (fpl*i >= q):  # exactly contained in location
-                        return float(expval*i)
-                    else:  # contained between this location and the next
-                        return float(expval*(i + (1 - ((fpl*i) % 1))))
-            raise ValueError(f"Could not find fault {q}")
-        else:
-            dist = {}
-            for rank in permutations(fs.keys()):
-                seen = set()
-                tot = 0
-                for elem in rank:
-                    tot += 1
-                    seen.update(fs[elem])
-                    if (len(seen) >= q):
-                        break
-                if (tot not in dist):
-                    dist[tot] = 0
-                dist[tot] += 1
-            frac = Fraction(sum(v*c for v, c in dist.items()), factorial(l_a))
-            return float(expval*frac)
+        from flitsr.calculations.exp_values import effort_exp_val_tie
+        return effort_exp_val_tie(self, q, weffort, collapse)
 
     def __str__(self):
         return str(self._elems)
@@ -402,16 +366,17 @@ class Ties:
                 active_faults[fault_num] = to_inspect[fault_num]
         return dict(all_faults), active_faults
 
-    def __init__(self, rankings: Rankings, bu: BUModel):
+    @versionchanged(version='2.5.0', reason='Added the `bu` parameter for '
+                    'specifying the bug understanding model')
+    def __init__(self, rankings: Rankings, bu: BUModel = BUModel.PERFECT):
         """
         Construct the ties for the given set of rankings and bug understanding
         model.
 
         Args:
           rankings: The set of rankings to construct the ties for.
-          bu: The bug understanding model; a dictionary with each fault and the
-            associated number of locations to inspect for identifying that
-            fault.
+          bu: The bug understanding model, see `.BUModel`
+            for more details.
         """
         self.faults = rankings.faults()
         self.bu_model = bu
@@ -450,6 +415,7 @@ class Ties:
         self._num_entities = len(seen_entities)
         self._num_elems = len(rankings.elements())
 
+    @versionadded(version='2.5.0')
     def set_bug_understanding(self, bu: BUModel):
         """
         Changes the bug understanding model to be the one given by `bu`. This
@@ -464,7 +430,7 @@ class Ties:
                         and to_inspect[fault] > 0):
                     active[fault] = to_inspect[fault]
                 to_inspect[fault] -= len(tie._fault_locs.get(fault, []))
-            tie.set_active(active)
+            tie._set_active(active)
 
     def __iter__(self):
         return iter(self.ties)

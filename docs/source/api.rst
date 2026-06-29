@@ -24,6 +24,7 @@ API
    flitsr.tie
    flitsr.errors
    flitsr.args
+   flitsr.calculations.bu_model
 
 .. _example:
 

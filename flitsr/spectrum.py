@@ -7,7 +7,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from flitsr.input import InputType
-from deprecated.sphinx import deprecated
+from deprecated.sphinx import deprecated, versionadded
 from recordclass import RecordClass
 
 
@@ -28,6 +28,7 @@ class Outcome(Enum):
     ERROR = 2
 
 
+@versionadded(version='2.5.0')
 class Details(RecordClass):
     """
     The information pertaining to and uniquely identifying a
@@ -48,6 +49,18 @@ class Details(RecordClass):
 
     @classmethod
     def constructDetails(cls, details: List[str]) -> Details:
+        """
+        Static factory method to construct a `Details` object from a list of
+        details strings (see `flitsr.spectrumBuilder.SpectrumBuilder.addElement`
+        for format).
+
+        Args:
+          details: A list of strings representing the details of a given
+            `Spectrum.Element`.
+
+        Returns:
+          A `Details` object for the element details given by `details`.
+        """
         if (len(details) < 1):
             raise ValueError("Unnamed element: ", *details)
         path = details[0]

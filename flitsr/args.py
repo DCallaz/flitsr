@@ -20,7 +20,7 @@ from flitsr.input.duplicates import DuplicateStrategy
 from flitsr.calculations import BUModel, calcs_base
 
 
-class ParameterParser(Iterator, Iterable):
+class _ParameterParser(Iterator, Iterable):
     def __init__(self, fn: Callable, class_: Optional[Type] = None,
                  ext_name: Optional[str] = None):
         """
@@ -150,7 +150,7 @@ class ParameterParser(Iterator, Iterable):
                     else:
                         parser_args['type'] = \
                           argparse.FileType('r', encoding='UTF-8')
-                elif (paramType in ParameterParser._primitives):
+                elif (paramType in _ParameterParser._primitives):
                     parser_args['type'] = paramType
                     parser_args['metavar'] = param
                 else:
@@ -290,8 +290,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         return adv_type
 
     @staticmethod
-    def type_bundler(function: Callable[[str], Any],
-                     *functions: Callable[[str], Any]) \
+    def _type_bundler(function: Callable[[str], Any],
+                      *functions: Callable[[str], Any]) \
             -> Union[Callable[[str], Any], Callable[[List[str]], List[Any]]]:
         if (len(functions) == 0):
             return function
@@ -316,23 +316,23 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
     @overload
     @staticmethod
-    def bundler_action(bundler: Callable[[str], Any], ids: str,
-                       name: Optional[str] = None): ...
+    def _bundler_action(bundler: Callable[[str], Any], ids: str,
+                        name: Optional[str] = None): ...
 
     @overload
     @staticmethod
-    def bundler_action(bundler: Callable[[List[str]], List[Any]],
-                       ids: List[str], name: Optional[str] = None): ...
+    def _bundler_action(bundler: Callable[[List[str]], List[Any]],
+                        ids: List[str], name: Optional[str] = None): ...
 
     @overload
     @staticmethod
-    def bundler_action(bundler: None, ids: None,
-                       name: Optional[str] = None): ...
+    def _bundler_action(bundler: None, ids: None,
+                        name: Optional[str] = None): ...
 
     @staticmethod
-    def bundler_action(bundler: Union[None, Callable[[str], Any],
-                       Callable[[List[str]], List[Any]]], ids: Union[None, str,
-                       List[str]], name: Optional[str] = None):
+    def _bundler_action(bundler: Union[None, Callable[[str], Any],
+                        Callable[[List[str]], List[Any]]], ids: Union[None,
+                        str, List[str]], name: Optional[str] = None):
         class BundlerAction(argparse.Action):
             def __call__(self, parser, namespace, values, option_string=None):
                 args: Union[Any, Dict[str, Any]]
@@ -361,7 +361,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         return BundlerAction
 
     @staticmethod
-    def boolConv(x: str) -> bool:
+    def _boolConv(x: str) -> bool:
         if (x not in ['True', 'False']):
             raise ValueError('invalid literal for '
                              f'bool: \'{x}\'')
@@ -540,7 +540,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                 action='store_const', const=adv_enum[name],
                                 help=help_)
                 # add cmd-line arguments for each parameter of this adv type
-                pp = ParameterParser(init, class_, ext_name=name)
+                pp = _ParameterParser(init, class_, ext_name=name)
                 self._advanced_params[name] = dict()
                 for param, parser_args in pp:
                     self._advanced_params[name][param] = None
@@ -562,7 +562,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     if ('type' in parser_args):  # must be non-bool type
                         self._advanced_params[name][param] = parser_args['type']
                     else:  # must be bool type
-                        self._advanced_params[name][param] = Args.boolConv
+                        self._advanced_params[name][param] = Args._boolConv
                     # finalize option
                     group.add_argument(paramName, **parser_args)
 
@@ -622,7 +622,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                     else:
                         argument_names.add(f'--{arg_name}')
             # parse the parameters
-            pp = ParameterParser(calc_fn)
+            pp = _ParameterParser(calc_fn)
             type_funcs = []
             for param, parser_args in pp:
                 argument_args['metavar'].append(param)
@@ -635,22 +635,22 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                         type_funcs.append(str)
                 elif ('action' in parser_args and
                       parser_args['action'] in ['store_true', 'store_false']):
-                    type_funcs.append(Args.boolConv)
+                    type_funcs.append(Args._boolConv)
 
             if (len(argument_args['metavar']) == 0):
-                argument_args['action'] = Args.bundler_action(None, None,
-                                                              calc_name)
+                argument_args['action'] = Args._bundler_action(None, None,
+                                                               calc_name)
                 # Do not add empty metavar
                 del argument_args['metavar']
             else:
-                tb = Args.type_bundler(type_funcs[0], *type_funcs[1:])
+                tb = Args._type_bundler(type_funcs[0], *type_funcs[1:])
                 if (len(argument_args['metavar']) == 1):
                     ids = argument_args['metavar'][0]
                     argument_args['nargs'] = None
                 else:
                     ids = argument_args['metavar']
-                argument_args['action'] = Args.bundler_action(tb, ids,
-                                                              calc_name)
+                argument_args['action'] = Args._bundler_action(tb, ids,
+                                                               calc_name)
                 argument_args['metavar'] = tuple(argument_args['metavar'])
             # sort argument names by length and then alphabetical
             def sort_len_alph(s): return (len(s), s.lower())
