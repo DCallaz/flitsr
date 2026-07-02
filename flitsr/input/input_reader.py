@@ -23,10 +23,10 @@ class Input(ABC):
             input.register_input(cls)
 
     @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
-                    '`method_level`, and `allow_duplicates` parameters')
+                    '`method_level`, and `duplicate_strategy` parameters')
     @final
     def __init__(self, split_faults=False, method_level=False,
-                 allow_duplicates: DupStrat = DupStrat.REFUSE):
+                 duplicate_strategy: DupStrat = DupStrat.REFUSE):
         """
         Internal constructor for an `Input` type.
 
@@ -35,9 +35,10 @@ class Input(ABC):
           method instead.
         """
         self.method_level = method_level
-        self.allow_duplicates = allow_duplicates
+        self.duplicate_strategy = duplicate_strategy
         self.split_faults = split_faults
-        self.sb = SpectrumBuilder(method_level, allow_duplicates)
+        self.sb = SpectrumBuilder(method_level, split_faults,
+                                  duplicate_strategy)
 
     @staticmethod
     def get_run_file_name(input_path: str):
@@ -69,7 +70,7 @@ class Input(ABC):
     @overload
     @classmethod
     def read_spectrum(cls, input_path: str, split_faults: bool = False,
-                      method_level: bool = False, allow_duplicates:
+                      method_level: bool = False, duplicate_strategy:
                       DupStrat = DupStrat.REFUSE) -> Spectrum: ...
 
     @classmethod
@@ -165,7 +166,7 @@ class Input(ABC):
     @classmethod
     @final
     def read_in(cls, input_path: str, split_faults: bool = False,
-                method_level: bool = False, allow_duplicates:
+                method_level: bool = False, duplicate_strategy:
                 DupStrat = DupStrat.REFUSE) -> Spectrum:
         """
         Read in the spectrum from the given input file. When called from
@@ -180,7 +181,7 @@ class Input(ABC):
             functionality.
           method_level: Whether to read this spectrum in as a method level
             spectrum.
-          allow_duplicates: The policy for allowing duplicate values in the
+          duplicate_strategy: The policy for allowing duplicate values in the
             spectrum.
 
         Returns:
@@ -190,7 +191,7 @@ class Input(ABC):
             reader = Input.get_reader(input_path)
         else:
             reader = cls
-        instance = reader(split_faults, method_level, allow_duplicates)
+        instance = reader(split_faults, method_level, duplicate_strategy)
         return instance._read_spectrum(input_path)
 
     @staticmethod

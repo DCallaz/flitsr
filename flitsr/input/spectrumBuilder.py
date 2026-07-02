@@ -14,7 +14,7 @@ class SpectrumBuilder:
     """ Builds a `Spectrum <flitsr.spectrum.Spectrum>` object."""
 
     def __init__(self, collapse_methods: bool = False, split_faults:
-                 bool = False, allow_duplicates: DuplicateStrategy =
+                 bool = False, duplicate_strategy: DuplicateStrategy =
                  DuplicateStrategy.REFUSE):
         """
         Constructs a `SpectrumBuilder` object to facilitate building a
@@ -22,11 +22,11 @@ class SpectrumBuilder:
 
         Args:
           collapse_methods: Whether to form a method level spectrum.
-          allow_duplicates: The strategy for whether duplicates are allowed,
+          duplicate_strategy: The strategy for whether duplicates are allowed,
             and how they are handled.
         """
         self._collapse_methods = collapse_methods
-        self._allow_duplicates = allow_duplicates
+        self._duplicate_strategy = duplicate_strategy
         self._split_faults = split_faults
         self._method_map: Dict[int, Spectrum.Element] = {}
         self._methods: Dict[Tuple[str, str], Spectrum.Element] = {}
@@ -78,7 +78,7 @@ class SpectrumBuilder:
                    faults: List[Any], index: int = None) -> Spectrum.Element:
         """
         Add a new element to the spectrum, with the given details and faults.
-        Note: the `allow_duplicates <__init__>` parameter to the `__init__`
+        Note: the `duplicate_strategy <__init__>` parameter to the `__init__`
         method will determine if duplicates are retained.
 
         Args:
@@ -130,7 +130,7 @@ class SpectrumBuilder:
                      faults: List[Any], index: int) -> Spectrum.Element:
         """
         Helper method to consistently add element to this builder.
-        Note: the  `allow_duplicates <__init__>` parameter to the `__init__`
+        Note: the  `duplicate_strategy <__init__>` parameter to the `__init__`
         method will determine if duplicates are retained.
 
         Returns:
@@ -145,7 +145,7 @@ class SpectrumBuilder:
         e = Spectrum.Element(details, index, faults)
         # Check for duplicates
         if (e in self._elements):
-            if (self._allow_duplicates is DuplicateStrategy.ALLOW):
+            if (self._duplicate_strategy is DuplicateStrategy.ALLOW):
                 # create updated element with index
                 if (not isinstance(details, Details)):
                     details = Details.constructDetails(details)
@@ -154,11 +154,11 @@ class SpectrumBuilder:
                                  else "") + str(self._duplicates[e] + 1)
                 self._duplicates[e] = self._duplicates[e] + 1
                 e = Spectrum.Element(details, index, faults)
-            elif (self._allow_duplicates is DuplicateStrategy.REFUSE):
+            elif (self._duplicate_strategy is DuplicateStrategy.REFUSE):
                 # raise exception for duplicate
                 raise DuplicateError(f'Element {e} already exists! (Consider '
                                      'allowing or ignoring duplicates)')
-            elif (self._allow_duplicates is DuplicateStrategy.IGNORE):
+            elif (self._duplicate_strategy is DuplicateStrategy.IGNORE):
                 # passively ignore duplicates if DuplicateStrategy.IGNORE
                 pass
         # Record element
@@ -283,8 +283,9 @@ class SpectrumUpdater(SpectrumBuilder):
     Allows updating of an already created spectrum using the `SpectrumBuilder`
     interface.
     """
-    def __init__(self, spectrum: Spectrum):
-        super().__init__(collapse_methods=False)
+    def __init__(self, spectrum: Spectrum, duplicate_strategy:
+                 DuplicateStrategy = DuplicateStrategy.REFUSE):
+        super().__init__(duplicate_strategy=duplicate_strategy)
         self._elements = spectrum._elements[:]
         self._tests = {t.index: t for t in spectrum.tests()[:]}
         self._executions = dict()
