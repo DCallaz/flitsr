@@ -22,13 +22,18 @@ from flitsr.calculations import BUModel, calcs_base
 
 class _ParameterParser(Iterator, Iterable):
     def __init__(self, fn: Callable, class_: Optional[Type] = None,
-                 ext_name: Optional[str] = None):
+                 ext_name: Optional[str] = None,
+                 include_existing: bool = False):
         """
-        Constructs an object that supports parsing of the parameters of the
-        given function/method `fn` to be used in the command-line interface.
+        Constructs an iterable object that supports parsing of the parameters
+        of the given function/method `fn` to be used in the command-line
+        interface.
 
         Args:
-          fn: The function to parse the parameters for.
+          fn: The function/method to parse the parameters for. This should be
+            a flitsr extension method, which contains dunder variables (e.g.
+            "__choices__") added to the method by flitsr annotations for extra
+            information.
           class_: (Optionally) the class of the method to parse the parameters
             for. This is only used for getting the type conversion functions
             which may be shared between multiple methods in the class.
@@ -63,6 +68,7 @@ class _ParameterParser(Iterator, Iterable):
             self.params = self.params[1:]
         self._p_index: int = 0
         self.num_params = len(self.params)
+        self._include_existing = include_existing
 
     # global list of primitive types
     _primitives = (bool, str, int, float, Path)
@@ -87,11 +93,13 @@ class _ParameterParser(Iterator, Iterable):
         to be added to the flitsr command-line interface.
 
         Args:
-          fn: The function/method to collect the parameter from. This should be
-            a flitsr extension method, which contains dunder variables (e.g.
-            "__choices__") added to the method by flitsr annotations for extra
-            information.
-          argspec:
+          param: The parameter to process command-line arguments for.
+          p_index: The index of the parameter in the method's parameter list.
+
+        Returns:
+          A dictionary containing all the information relating to the given
+          parameter. The dictionary is in a format compatible with the
+          parameters for the `argparse.ArgumentParser.add_argument` method.
         """
         parser_args: Dict[str, Any] = {}
         # get the parameter type(s) (if any)
@@ -172,18 +180,26 @@ class _ParameterParser(Iterator, Iterable):
         self._p_index = 0
         return self
 
-    def __next__(self) -> Tuple[str, Dict[str, Any]]:
+    def __next__(self) -> Tuple[str, Optional[Dict[str, Any]]]:
+        existing = False
         try:
             param = self.params[self._p_index]
-            if (hasattr(self.fn, '__existing__')):
+            if (self._include_existing):
+                if (hasattr(self.fn, '__existing__') and
+                        param in self.fn.__existing__):
+                    existing = True
+            elif (hasattr(self.fn, '__existing__')):
                 while (param in self.fn.__existing__):
                     self._p_index += 1
                     param = self.params[self._p_index]
         except IndexError:
             raise StopIteration
-        ret = self._gen_parameter(param, self._p_index)
+        parser_args = None
+        if (not existing):
+            parser_args = self._gen_parameter(param, self._p_index)
         self._p_index += 1
-        return param, ret
+        assert ((parser_args == None) == (existing and self._include_existing))
+        return param, parser_args
 
 
 class Args(argparse.Namespace, metaclass=SingletonMeta):
@@ -540,10 +556,14 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                 action='store_const', const=adv_enum[name],
                                 help=help_)
                 # add cmd-line arguments for each parameter of this adv type
-                pp = _ParameterParser(init, class_, ext_name=name)
+                pp = _ParameterParser(init, class_, ext_name=name,
+                                      include_existing=True)
                 self._advanced_params[name] = dict()
                 for param, parser_args in pp:
                     self._advanced_params[name][param] = None
+                    # skip adding this parameter if it is marked as existing
+                    if (parser_args is None):
+                        continue
                     paramName = '--'+disp_name+'-'+param.replace('_', '-')
                     # check if argument is required
                     if (parser_args.get('required', False) is True):
