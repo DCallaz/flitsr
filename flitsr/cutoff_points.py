@@ -1,7 +1,7 @@
 from flitsr.suspicious import Suspicious
 from flitsr.ranking import Ranking, Rank
 from flitsr.spectrum import Spectrum
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 
 
 def basis(basis_num: int, spectrum: Spectrum,
@@ -15,9 +15,9 @@ def basis(basis_num: int, spectrum: Spectrum,
     while (rank is not None and (seen_basis < basis_num or
                                  first_fault == -1)):
         temp_items: List[Rank] = []
-        next_rank = rank
+        next_rank: Optional[Rank] = rank
         while (next_rank is not None and next_rank.score == rank.score):
-            if (first_fault == -1 and any(next_rank.elem in fault_locs for
+            if (first_fault == -1 and any(next_rank.entity in fault_locs for
                                           fault_locs in faults.values())):
                 first_fault = len(temp_items)
             temp_items.append(next_rank)
@@ -84,10 +84,10 @@ def mba_const_add(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
     size = 0
     while (rank is not None and size+1 <= stop_i and (rank.score > zero or
                                                       f_num == 0)):
-        next_rank = rank
+        next_rank: Optional[Rank] = rank
         fault_num = 0
         while (next_rank is not None and (next_rank.score == rank.score)):
-            if (any(next_rank.elem in fault_locs for fault_locs in
+            if (any(next_rank.entity in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
             new_ranking.extend([next_rank])
@@ -113,10 +113,10 @@ def mba_optimal(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
     size = 0
     while (rank is not None and size+1 <= stop_i and (rank.score > zero or
                                                       f_num == 0)):
-        next_rank = rank
+        next_rank: Optional[Rank] = rank
         fault_num = 0
         while (next_rank is not None and (next_rank.score == rank.score)):
-            if (any(next_rank.elem in fault_locs for fault_locs in
+            if (any(next_rank.entity in fault_locs for fault_locs in
                     faults.values())):
                 fault_num += 1
             new_ranking.extend([next_rank])
@@ -138,9 +138,9 @@ def aba(spectrum: Spectrum, faults: Dict[Any, Set[Spectrum.Element]],
     temp_ranking: List[Rank] = []
     while (rank is not None and rank.score > 0.0):
         fault = False
-        next_rank = rank
+        next_rank: Optional[Rank] = rank
         while (next_rank is not None and next_rank.score == rank.score):
-            if (any(next_rank.elem in fault_locs for fault_locs in
+            if (any(next_rank.entity in fault_locs for fault_locs in
                     faults.values())):
                 fault = True
             temp_ranking.append(next_rank)
@@ -164,9 +164,10 @@ def method(stop_score: float, spectrum: Spectrum,
            ((not by_rank and rank.score > stop_score)
             or (by_rank and size < stop_score) or first_fault == -1)):
         temp_ranking: List[Rank] = []
-        next_rank = rank
-        while (rank is not None and next_rank.score == rank.score):
-            if (first_fault == -1 and any(next_rank.elem in fault_locs for
+        next_rank: Optional[Rank] = rank
+        while (rank is not None and next_rank is not None and
+               next_rank.score == rank.score):
+            if (first_fault == -1 and any(next_rank.entity in fault_locs for
                                           fault_locs in faults.values())):
                 first_fault = len(temp_ranking)
             temp_ranking.append(next_rank)

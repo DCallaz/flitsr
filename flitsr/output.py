@@ -1,12 +1,13 @@
 import sys
-from typing import List, Optional
+from typing import List, Optional, TextIO, Union
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.ranking import Ranking, Rankings
 from flitsr.input import InputType
 
 
 def print_flitsr_ranking(ranking: Optional[Ranking],
-                         elems: List[Spectrum.Element], file=sys.stdout):
+                         elems: List[Spectrum.Element],
+                         file: TextIO = sys.stdout) -> None:
     no_ranking = False
     if (ranking is None):  # make a tempoorary Scores object
         ranking = Ranking()
@@ -24,32 +25,20 @@ def print_flitsr_ranking(ranking: Optional[Ranking],
         print("]", file=file)
 
 
-def print_rankings(rankings: Rankings, csv=False, file=sys.stdout):
-    for (i, ranking) in enumerate(rankings):
-        if (i > 0):
-            print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
-                  file=file)
-        if (csv):
-            print_csv_ranking(ranking, file=file)
-        else:
-            print_flitsr_ranking(ranking, rankings.elements(), file=file)
+def print_rankings(rankings: Rankings, csv: bool = False,
+                   file: Union[str, TextIO] = sys.stdout) -> None:
+    with (open(file) if isinstance(file, str) else file) as file:
+        for (i, ranking) in enumerate(rankings):
+            if (i > 0):
+                print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',
+                      file=file)
+            if (csv):
+                print_csv_ranking(ranking, file=file)
+            else:
+                print_flitsr_ranking(ranking, rankings.elements(), file=file)
 
 
-# TODO: this function does not produce nice looking output
-def print_spectrum(spectrum: Spectrum):
-    for test in spectrum.tests():
-        print(test.name, end=": ")
-        row = spectrum[test]
-        for elem in row:
-            if (row[elem]):
-                print(elem, end=" ")
-        if (test.outcome is Outcome.PASSED):
-            print('+')
-        else:
-            print('-')
-
-
-def print_csv_ranking(ranking: Ranking, file=sys.stdout):
+def print_csv_ranking(ranking: Ranking, file: TextIO = sys.stdout) -> None:
     print("name;suspiciousness_value", file=file)
     for rank in ranking:
         entity = rank.entity
@@ -58,7 +47,7 @@ def print_csv_ranking(ranking: Ranking, file=sys.stdout):
                   ';', rank.score, sep='', file=file)
 
 
-def print_spectrum_csv(spectrum: Spectrum, file=sys.stdout):
+def print_spectrum_csv(spectrum: Spectrum, file: TextIO = sys.stdout) -> None:
     ts = [str(t.name)+' ('+('PASS' if t.outcome is Outcome.PASSED else
                             'FAIL')+')' for t in spectrum.tests()]
     print('Element', *ts, sep=',', file=file)

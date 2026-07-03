@@ -1,6 +1,6 @@
 import sys
 from os import path as osp
-from typing import TextIO, Optional
+from typing import TextIO, Optional, List
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
@@ -31,7 +31,7 @@ class TCM(FileInput):
         else:
             return f"*.{ext}"
 
-    def _construct_details(self, f: TextIO):
+    def _construct_details(self, f: TextIO) -> None:
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -66,7 +66,7 @@ class TCM(FileInput):
                 self.sb.addElement(details, faults)
                 line = f.readline()
 
-    def _construct_tests(self, f: TextIO):
+    def _construct_tests(self, f: TextIO) -> None:
         line = f.readline()
         while (not line == '\n'):
             m = re.fullmatch('([^ ]+) (PASSED|FAILED|ERROR)( .*)?',
@@ -78,7 +78,7 @@ class TCM(FileInput):
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
             line = f.readline()
 
-    def _fill_spectrum(self, f: TextIO):
+    def _fill_spectrum(self, f: TextIO) -> None:
         for t, test in enumerate(self.sb.get_tests()):
             line = f.readline()
             if (line == ''):
@@ -147,7 +147,7 @@ class TCM(FileInput):
         return False
 
     @classmethod
-    def write_spectrum(cls, spectrum: Spectrum, output_path: str):
+    def write_spectrum(cls, spectrum: Spectrum, output_path: str) -> None:
         """ Output the spectrum in TCM format """
         with open(output_path, 'w') as file:
             type_ = cls.get_type()
@@ -170,13 +170,12 @@ class TCM(FileInput):
                 print(file=file)
 
     @classmethod
-    def get_elem_separators(cls):
+    def get_elem_separators(cls) -> List[str]:
         return ['.', ':', ':', ' | ']
 
 
 if __name__ == "__main__":
-    from flitsr.output import print_spectrum
     d = sys.argv[1]
     tinput = TCM()
     spectrum = tinput.read_spectrum(d)
-    print_spectrum(spectrum)
+    print(spectrum.to_matrix())

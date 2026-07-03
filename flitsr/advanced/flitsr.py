@@ -39,7 +39,7 @@ class Flitsr(Ranker):
 
     def remove_faulty_elements(self, spectrum: Spectrum,
                                tests_removed: Set[Spectrum.Test],
-                               faulty: List[Spectrum.Group]):
+                               faulty: List[Spectrum.Entity]):
         """Removes all tests that execute an 'actually' faulty element"""
         toRemove = []
         for test in tests_removed:
@@ -64,7 +64,8 @@ class Flitsr(Ranker):
             ranking = SBFL(**sbfl_args).rank(spectrum, formula)
         return ranking
 
-    def flitsr(self, spectrum: Spectrum, formula: str) -> List[Spectrum.Group]:
+    def flitsr(self, spectrum: Spectrum,
+               formula: str) -> List[Spectrum.Entity]:
         """
         Executes the recursive flitsr algorithm to identify faulty elements
         """
@@ -91,8 +92,8 @@ class Flitsr(Ranker):
             faulty.append(entity)
         return faulty
 
-    def get_inverse_confidence_scores(self, spectrum: Spectrum,
-                                      basis: List[Spectrum.Group]) -> List[int]:
+    def get_inverse_confidence_scores(self, spectrum: Spectrum, basis:
+                                      List[Spectrum.Entity]) -> List[int]:
         """
         Using the given basis and spectrum, calculates the confidence scores
         for each basis element. The confidence scores returned are the inverse
@@ -104,13 +105,14 @@ class Flitsr(Ranker):
             possibles: Set[Spectrum.Group] = set()
             possibles.update(spectrum.get_executed_groups(ts[0]))
             for test in ts[1:]:
-                possibles.intersection_update(spectrum.get_executed_groups(test))
+                possibles.intersection_update(spectrum
+                                              .get_executed_groups(test))
             confs.append(len(possibles))
         return confs
 
-    def flitsr_ordering(self, spectrum: Spectrum, basis: List[Spectrum.Group],
+    def flitsr_ordering(self, spectrum: Spectrum, basis: List[Spectrum.Entity],
                         ranking: Ranking,
-                        flitsr_order='auto') -> List[Spectrum.Group]:
+                        flitsr_order='auto') -> List[Spectrum.Entity]:
         """
         Order the given flitsr basis using the specified ordering strategy.
         Strategies include 'auto', 'conf', 'original', 'reverse', and 'flitsr'.
@@ -198,7 +200,7 @@ class Multi(Flitsr):
         self.cutoff = cutoff
 
     def multiRemove(self, spectrum: Spectrum,
-                    faulty: List[Spectrum.Group]) -> bool:
+                    faulty: List[Spectrum.Entity]) -> bool:
         """
         Remove the elements given by faulty from the spectrum, and remove any
         test cases executing these elements only.
@@ -210,8 +212,12 @@ class Multi(Flitsr):
             executing.update(exe)
 
         # Remove all elements in faulty set
-        for group in faulty:
-            spectrum.remove_group(group, bucket='multi')
+        for entity in faulty:
+            if (isinstance(entity, Spectrum.Group)):
+                spectrum.remove_group(entity, bucket='multi')
+            else:
+                # TODO: Remove element from spectrum?
+                pass
 
         multiFault = False
         for test in executing:

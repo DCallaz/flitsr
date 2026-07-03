@@ -17,7 +17,7 @@ class Input(ABC):
     `DirInput` and `FileInput`.
     """
     @final
-    def __init_subclass__(cls, /, register=True, **kwargs):
+    def __init_subclass__(cls, /, register: bool = True, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
         if (register):
             input.register_input(cls)
@@ -25,7 +25,7 @@ class Input(ABC):
     @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
                     '`method_level`, and `duplicate_strategy` parameters')
     @final
-    def __init__(self, split_faults=False, method_level=False,
+    def __init__(self, split_faults: bool = False, method_level: bool = False,
                  duplicate_strategy: DupStrat = DupStrat.REFUSE):
         """
         Internal constructor for an `Input` type.
@@ -41,7 +41,7 @@ class Input(ABC):
                                   duplicate_strategy)
 
     @staticmethod
-    def get_run_file_name(input_path: str):
+    def get_run_file_name(input_path: str) -> str:
         """
         Return the name of the run file that this input type determines for
         the given input string. Note: this function assumes the given string is
@@ -112,7 +112,7 @@ class Input(ABC):
         pass
 
     @classmethod
-    def write_spectrum(cls, spectrum: Spectrum, output_path: str):
+    def write_spectrum(cls, spectrum: Spectrum, output_path: str) -> None:
         """
         Write the given spectrum in the format of this input type. NOTE: this
         method does not need to be implemented by an input type. If it is not

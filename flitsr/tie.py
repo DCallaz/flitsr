@@ -3,7 +3,7 @@ from itertools import permutations, chain
 from collections import defaultdict
 from math import factorial, ceil
 from typing import List, Any, Optional, Set, Dict, Tuple, Iterable, \
-        Collection, NamedTuple, Union, overload, Literal
+        Collection, NamedTuple, Union, overload, Literal, Iterator, TypeVar
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Rankings, Ranking, Rank
 from flitsr.calculations.bu_model import BUModel
@@ -38,7 +38,7 @@ class Tie:
             # set faulty elements
             self._fault_locs[fault_num] = fault_locs.locs
 
-    def _set_active(self, active: Dict[Any, int]):
+    def _set_active(self, active: Dict[Any, int]) -> None:
         """
         (Re-)set the active faults in this tie to be the ones given.
 
@@ -48,7 +48,7 @@ class Tie:
         """
         self._active_faults = active
 
-    def len(self, collapse=False) -> int:
+    def len(self, collapse: bool = False) -> int:
         """
         Return either the number of groups (if collapsed), or number of
         elements in this tie (if not collapsed).
@@ -80,7 +80,8 @@ class Tie:
 
     @versionchanged(version='2.5.0', reason='Added the `collapse` and '
                     '`no_passive` optional parameters')
-    def elems(self, collapse=False, no_passive=False) -> AnyEntities:
+    def elems(self, collapse: bool = False,
+              no_passive: bool = False) -> AnyEntities:
         """
         Return the set of all the elements (or entities) in this tie. When
         `no_passive` is True, only return elements that are not passive faults.
@@ -101,9 +102,11 @@ class Tie:
                                                   in passive_faults))
             return {e for e in self._elems if e not in passive_locs}
 
+    T = TypeVar('T', bound=Spectrum.Entity)
+
     @staticmethod
-    def _get_fault_locs(fault_dict: AnyEntitiesDict,
-                        faults: Iterable) -> AnyEntities:
+    def _get_fault_locs(fault_dict: Dict[Any, Set[T]],
+                        faults: Iterable[T]) -> Set[T]:
         return set().union(*(fault_dict[k] for k in faults))
 
     @overload
@@ -121,8 +124,7 @@ class Tie:
     def active_faults(self, collapse: bool) -> AnyEntitiesDict: ...
 
     @versionadded(version='2.4.0')
-    def active_faults(self, collapse=False) \
-            -> AnyEntitiesDict:
+    def active_faults(self, collapse: bool = False) -> AnyEntitiesDict:
         """
         Return a dictionary of all faults identified in this tie, along with
         their fault locations (either groups or elements). This is a subset of
@@ -135,7 +137,7 @@ class Tie:
 
     @versionchanged(version='2.5.0', reason='Added the `active` optional '
                     'parameter')
-    def num_faults(self, active=True) -> int:
+    def num_faults(self, active: bool = True) -> int:
         """
         Return the number of faults in this tie. Either returns only the number
         of active faults (default), or the total number of faults if `active`
@@ -148,7 +150,8 @@ class Tie:
 
     @versionchanged(version='2.5.0', reason='Added the `active` optional '
                     'parameter')
-    def num_fault_locs(self, collapse=False, active=False) -> int:
+    def num_fault_locs(self, collapse: bool = False,
+                       active: bool = False) -> int:
         """
         Return the total number of faulty locations (either groups or elements)
         in this tie. By default, returns the locations of both active and
@@ -158,7 +161,7 @@ class Tie:
         in a previous or subsequent tie.
         """
         # first get all the faults to include (active or all)
-        faults: Iterable
+        faults: Iterable[Union[Spectrum.Group, Spectrum.Element]]
         if (active):
             faults = self._active_faults.keys()
         else:
@@ -169,7 +172,7 @@ class Tie:
         else:
             return len(self._get_fault_locs(self._fault_locs, faults))
 
-    def num_active_fault_locs(self, collapse=False) -> int:
+    def num_active_fault_locs(self, collapse: bool = False) -> int:
         """
         Return only the number of active fault locations (either groups or
         elements) in this tie. An active fault location is a fault location
@@ -195,7 +198,7 @@ class Tie:
 
     @deprecated(version='2.4.0', reason='This function has been renamed to '
                 '`Tie.active_fault_locations`.')
-    def fault_groups(self, collapse=False) -> RevAnyEntitiesDict:
+    def fault_groups(self, collapse: bool = False) -> RevAnyEntitiesDict:
         """
         Return all active fault locations (either groups or elements) in
         this tie, with the faults they contain. Active fault locations are
@@ -218,7 +221,8 @@ class Tie:
     def active_fault_locations(self, collapse: bool) -> RevAnyEntitiesDict: ...
 
     @versionadded(version='2.4.0', reason='Renamed from `Tie.fault_groups`.')
-    def active_fault_locations(self, collapse=False) -> RevAnyEntitiesDict:
+    def active_fault_locations(self, collapse: bool =
+                               False) -> RevAnyEntitiesDict:
         """
         Return all active fault locations (either groups or elements) in
         this tie, with the faults they contain. Active fault locations are
@@ -233,7 +237,7 @@ class Tie:
 
     @versionadded(version='2.5.0', reason='Added support for multiple bug '
                   'understanding models')
-    def fault_identify_nums(self, collapse=False) -> Dict[Any, int]:
+    def fault_identify_nums(self, collapse: bool = False) -> Dict[Any, int]:
         """
         Return a dictionary with the number of locations that must be inspected
         (according to the bug understanding model) to identify each of the
@@ -256,7 +260,7 @@ class Tie:
 
     @versionadded(version='2.5.0', reason='Added support for multiple bug '
                   'understanding models')
-    def fault_identify_num(self, fault: Any, collapse=False) -> int:
+    def fault_identify_num(self, fault: Any, collapse: bool = False) -> int:
         """
         Return the number of locations that must be inspected (according to the
         bug understanding model) to identify the given fault in this tie.
@@ -284,7 +288,8 @@ class Tie:
 
     @deprecated(version='2.5.0', reason='Moved to `flitsr.calculations'
                 '.exp_values.effort_exp_val_tie`')
-    def expected_value(self, q, weffort: bool, collapse=False) -> float:
+    def expected_value(self, q: int, weffort: bool,
+                       collapse: bool = False) -> float:
         """
         Calculates the expected value of the qth fault in this tie. The
         expected value can either be in terms of wasted effort (not
@@ -293,11 +298,11 @@ class Tie:
         from flitsr.calculations.exp_values import effort_exp_val_tie
         return effort_exp_val_tie(self, q, weffort, collapse)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._elems)
 
 
-class Ties:
+class Ties(Iterable[Tie]):
     class _RankingIter:
         def __init__(self, ranking: Ranking):
             self.r_iter = iter(ranking)
@@ -313,7 +318,7 @@ class Ties:
             self.cur = next(self.r_iter, None)
             return old_cur
 
-        def cur_score(self):
+        def cur_score(self) -> float:
             if (self.cur is not None):
                 return self.cur.score
             else:
@@ -357,7 +362,7 @@ class Ties:
           all active faults and the number of locations needed to identify
           them.
         """
-        def dflt(): return _CollapsableFault(set(), set())
+        def dflt() -> _CollapsableFault: return _CollapsableFault(set(), set())
         all_faults: Dict[Any, _CollapsableFault] = defaultdict(dflt)
         active_faults: Dict[Any, int] = {}
         for (fault_num, fault_locs) in faults.items():
@@ -429,7 +434,7 @@ class Ties:
         self._num_elems = len(rankings.elements())
 
     @versionadded(version='2.5.0')
-    def set_bug_understanding(self, bu: BUModel):
+    def set_bug_understanding(self, bu: BUModel) -> None:
         """
         Changes the bug understanding model to be the one given by `bu`. This
         updates each of the contained `Tie`'s active and passive faults to
@@ -445,16 +450,16 @@ class Ties:
                 to_inspect[fault] -= len(tie._fault_locs.get(fault, []))
             tie._set_active(active)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tie]:
         return iter(self.ties)
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> Tie:
         return self.ties[index]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.ties)
 
-    def size(self, collapse=False):
+    def size(self, collapse: bool = False) -> int:
         if (collapse):
             return self._num_entities
         else:

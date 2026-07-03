@@ -7,11 +7,11 @@ class DuplicateStrategy(Enum):
     IGNORE = auto()
     REFUSE = auto()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     @staticmethod
-    def from_string(s):
+    def from_string(s: str) -> 'DuplicateStrategy':
         try:
             return DuplicateStrategy[s]
         except KeyError:

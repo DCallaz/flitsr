@@ -35,7 +35,7 @@ class Suspicious():
 
     @staticmethod
     def apply_formula(spec: Spectrum, formula: str,
-                      tiebrk: Tiebrk, reverse=True) -> Ranking:
+                      tiebrk: Tiebrk, reverse: bool = True) -> Ranking:
         """
         Calculate the scores for each of the elements using the given formula.
         Assumes a non-empty spectrum.
@@ -49,10 +49,10 @@ class Suspicious():
         return ranking
 
     @staticmethod
-    def getNames(all_names=False) -> List[str]:
+    def getNames(all_names: bool = False) -> List[str]:
         if (all_names):
-            all_names = dir(Suspicious)
-            names = [x for x in all_names if (not x.startswith("_")
+            _all_names = dir(Suspicious)
+            names = [x for x in _all_names if (not x.startswith("_")
                      and x != "execute" and x != "getNames"
                      and x != "apply_formula" and x != "inf")]
         else:
@@ -328,14 +328,14 @@ class Suspicious():
         """
         return self.ef - (self.ep/(self.tp+1))
 
-    def dstar(self, p=2) -> float:
+    def dstar(self, p: int = 2) -> float:
         """
         Ref: Wong, W. E., Debroy, V., Gao, R., and Li, Y.
         The dstar method for effective software fault localization.
         IEEE Trans. Reliability 63, 1 (2014), 290–308
         """
-        nominator = self.ef**p
-        denominator = self.ep + self.nf
+        nominator: float = self.ef**p
+        denominator: float = self.ep + self.nf
         if (nominator == 0):
             return 0.0
         elif denominator == 0:

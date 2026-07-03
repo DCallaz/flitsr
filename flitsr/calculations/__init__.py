@@ -17,7 +17,7 @@ calcs: Dict[str, Callable] = {}
 calcs_base: Dict[str, Callable] = {}
 
 
-def register_calc(func, name: str):
+def register_calc(func: Callable, name: str) -> None:
     calcs[name] = func
     calcs_base[name] = inspect.unwrap(func)
 
@@ -30,3 +30,5 @@ for module in __all__:
 adv_entry_points = entry_points(group='flitsr.calculation')
 for adv_ep in adv_entry_points:
     adv_ep.load()
+
+__all__.extend(['BUModel', 'calculation', 'parameter'])

@@ -15,7 +15,7 @@ Eff_tie_exp = Callable[[Tie, int, bool, bool], float]
 
 
 def effort_exp_val_tie(tie: Tie, q: int, weffort: bool,
-                       collapse=False) -> float:
+                       collapse: bool = False) -> float:
     """
     Calculates the expected value of the qth fault in the given tie. The
     expected value can either be in terms of wasted effort (not
@@ -41,8 +41,8 @@ def effort_exp_val_tie(tie: Tie, q: int, weffort: bool,
         return _multi_fault_exp_value(tie, q, weffort, collapse)
 
 
-def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
-                   collapse=False, tie_exp_func: Eff_tie_exp =
+def effort_exp_val(ties: Ties, target: int, weffort: bool, avg: bool = False,
+                   collapse: bool = False, tie_exp_func: Eff_tie_exp =
                    effort_exp_val_tie) -> float:
     """
     Calculates the expected value of the nth fault (given by `target`) in the
@@ -93,7 +93,7 @@ def effort_exp_val(ties: Ties, target: int, weffort: bool, avg=False,
 
 
 def _exp_effort_in_tie(tie: Tie, e_vk: Union[int, Fraction], weffort: bool,
-                       collapse=False) -> float:
+                       collapse: bool = False) -> float:
     l = tie.num_active_fault_locs(collapse)  # noqa
     size = tie.len(collapse)  # size = n (total tie size)
     if (weffort):
@@ -106,7 +106,7 @@ def _exp_effort_in_tie(tie: Tie, e_vk: Union[int, Fraction], weffort: bool,
 
 
 def _single_fault_exp_value(tie: Tie, q: int, weffort: bool,
-                            collapse=False) -> float:
+                            collapse: bool = False) -> float:
     # print("single fault")
     assert (tie.num_faults() == 1)
     # should be only one key in _active_faults, so just get it (the next)
@@ -115,7 +115,7 @@ def _single_fault_exp_value(tie: Tie, q: int, weffort: bool,
 
 
 def _single_loc_exp_value(tie: Tie, q: int, weffort: bool,
-                          collapse=False) -> float:
+                          collapse: bool = False) -> float:
     # print("single loc")
     l = tie.num_active_fault_locs(collapse)  # noqa
     assert (tie.num_faults() == l)
@@ -123,7 +123,7 @@ def _single_loc_exp_value(tie: Tie, q: int, weffort: bool,
 
 
 def _multi_fault_exp_value(tie: Tie, q: int, weffort: bool,
-                           collapse=False) -> float:
+                           collapse: bool = False) -> float:
     # print("multi fault")
     l = tie.num_active_fault_locs(collapse)  # noqa
     nums = tie.fault_identify_nums(collapse)

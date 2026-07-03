@@ -10,7 +10,7 @@ class Cluster(ABC):
 
     @abstractmethod
     def cluster(self, inp_file: str, spectrum: Spectrum,
-                method_lvl=False) -> List[Spectrum]:
+                method_lvl: bool = False) -> List[Spectrum]:
         """
         Provides the clustering functionality of this `Cluster` technique. A
         `Cluster` takes a `Spectrum <flitsr.spectrum.Spectrum>` `spectrum` and
@@ -29,5 +29,5 @@ class Cluster(ABC):
         """
         pass
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls) -> None:
         advanced.register_cluster(cls)

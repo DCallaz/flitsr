@@ -17,13 +17,13 @@ class Ranker(ABC):
         """
         Provides the ranking functionality for the `Ranker`. Takes a `Spectrum
         <flitsr.spectrum.Spectrum>` and a `base_metric` and returns a `Ranking
-        <flitsr.ranking.Ranking>` of the elements in the spectrum. Note that the
-        technique does not need to use the `base_metric`.
+        <flitsr.ranking.Ranking>` of the elements in the spectrum. Note that
+        the technique does not need to use the `base_metric`.
 
         Args:
           spectrum: Spectrum: The spectrum whose elements to rank
-          base_metric: str: The name of the SBFL metric to optionally use within
-            the technique to rank the elements.
+          base_metric: str: The name of the SBFL metric to optionally use
+            within the technique to rank the elements.
 
         Returns:
           A `Ranking <flitsr.ranking.Ranking>` of the elements in the
@@ -31,5 +31,5 @@ class Ranker(ABC):
         """
         pass
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls) -> None:
         advanced.register_ranker(cls)

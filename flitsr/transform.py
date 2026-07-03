@@ -11,7 +11,7 @@ from flitsr.input.duplicates import DuplicateStrategy
 
 def convert(input_file: str, output_format: Optional[InputType] = None,
             output_file: Optional[str] = None,
-            allow_dups: DuplicateStrategy = DuplicateStrategy.REFUSE):
+            dup_strat: DuplicateStrategy = DuplicateStrategy.REFUSE):
     """Convert a input file from one spectral format to another"""
     # Check the input file type and set input method
     try:
@@ -19,7 +19,7 @@ def convert(input_file: str, output_format: Optional[InputType] = None,
     except ValueError as e:
         error(e)
     input_format = reader.get_type()
-    spectrum = reader(allow_duplicates=allow_dups).read_spectrum(input_file)
+    spectrum = reader.read_in(input_file, duplicate_strategy=dup_strat)
     # Set the output method if necessary
     if (output_format is None):
         if (input_format is InputType['TCM']):

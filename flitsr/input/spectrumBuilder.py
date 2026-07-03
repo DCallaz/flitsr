@@ -39,7 +39,7 @@ class SpectrumBuilder:
         """ Return the current list of Tests. """
         return [self._tests[key] for key in sorted(self._tests.keys())]
 
-    def getElement(self, index: int):
+    def getElement(self, index: int) -> Spectrum.Element:
         """
         Retreive the element with the specified index.
 
@@ -55,7 +55,8 @@ class SpectrumBuilder:
         """
         return self._method_map[index]
 
-    def addTest(self, name: str, outcome: Outcome, index: int = None):
+    def addTest(self, name: str, outcome: Outcome,
+                index: int = None) -> Spectrum.Test:
         """
         Add a new test to the spectrum with the given name, index, and outcome.
 
@@ -166,7 +167,7 @@ class SpectrumBuilder:
         return e
 
     def addExecution(self, test: Union[Spectrum.Test, int],
-                     elem: Union[Spectrum.Element, int]):
+                     elem: Union[Spectrum.Element, int]) -> None:
         """
         Mark the specified element as executed in the given test.
 
@@ -203,7 +204,8 @@ class SpectrumBuilder:
             self._executions[test] = set()
         self._executions[test].add(elem)
 
-    def addNonExecution(self, test: Spectrum.Test, elem: Spectrum.Element):
+    def addNonExecution(self, test: Spectrum.Test,
+                        elem: Spectrum.Element) -> None:
         """
         Mark the specified element as not executed in the given test.
         NOTE: Adding non-executions is not required for the spectrum
@@ -298,7 +300,7 @@ class SpectrumUpdater(SpectrumBuilder):
                     for elem in group:
                         new_exe.add(elem)
 
-    def remove_test_with_executions(self, test: Spectrum.Test):
+    def remove_test_with_executions(self, test: Spectrum.Test) -> None:
         """
         Remove the given `test` from the spectrum, including any executions
         related to it.
@@ -309,7 +311,8 @@ class SpectrumUpdater(SpectrumBuilder):
         del self._tests[test.index]
         del self._executions[test]
 
-    def copy_test_and_execution(self, test: Spectrum.Test, spectrum: Spectrum):
+    def copy_test_and_execution(self, test: Spectrum.Test,
+                                spectrum: Spectrum) -> None:
         """
         Copy over the given `test` to this spectrum, with the executions given
         in the supplied other `spectrum`.

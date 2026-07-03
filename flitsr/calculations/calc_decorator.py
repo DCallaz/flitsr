@@ -1,9 +1,11 @@
 import inspect
 import time
-from typing import Union, Callable, Any, Collection, Optional, Dict
+from typing import Union, Callable, Any, Collection, Optional, Dict, TypeVar, \
+        Tuple
 from collections import defaultdict
 from functools import wraps
 from flitsr import calculations
+T = TypeVar('T', bound=Callable)
 
 
 def calculation(print_name: Union[str, Callable[..., str]],
@@ -24,7 +26,7 @@ def calculation(print_name: Union[str, Callable[..., str]],
       arg_name: str: The main command line argument name.
       alt_arg_names: str: Alternate command line argument names.
     """
-    def register_calc(fn):
+    def register_calc(fn: T) -> T:
         # first check if fn has required parameters
         fn_unw = inspect.unwrap(fn)
         argspec = inspect.getfullargspec(fn_unw)
@@ -56,7 +58,7 @@ def calculation(print_name: Union[str, Callable[..., str]],
 
 
 def parameter(name: str, type: Optional[Callable[[str], Any]] = None,
-              choices: Optional[Collection[Any]] = None):
+              choices: Optional[Collection[Any]] = None) -> Callable:
     """
     A decorator for functions that perform calculations to specify additional
     information for a parameter of that calculation. Note: this decorator is
@@ -71,7 +73,7 @@ def parameter(name: str, type: Optional[Callable[[str], Any]] = None,
         type required. Will be used by the command-line parser.
       choices: A `Collection` of values which the given parameter can take on.
     """
-    def register_param(fn):
+    def register_param(fn: T) -> T:
         fn_unw = inspect.unwrap(fn)
         if (type is not None):
             if (not hasattr(fn_unw, '__types__')):
@@ -90,7 +92,7 @@ def parameter(name: str, type: Optional[Callable[[str], Any]] = None,
 runtimes: Dict[str, Any] = defaultdict(defaultdict)
 
 
-def timing(func: Callable):
+def timing(func: Callable) -> Callable:
     @wraps(func)
     def wrap(*args, **kwargs):
         start = time.time()
@@ -111,9 +113,9 @@ def timing(func: Callable):
     return wrap
 
 
-def get_runtime(func_name, args: Dict[str, Any]) -> float:
+def get_runtime(func_name: str, args: Dict[str, Any]) -> float:
     return runtimes[func_name][arg_tup(args)]
 
 
-def arg_tup(args):
+def arg_tup(args: Dict[str, Any]) -> Tuple:
     return tuple(sorted(args.items()))

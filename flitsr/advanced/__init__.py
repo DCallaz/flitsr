@@ -12,28 +12,28 @@ if TYPE_CHECKING:
     from flitsr.args import Args
 from deprecated.sphinx import versionadded, versionchanged
 
-_rankers = {}
-_clusters = {}
-_refiners = {}
-all_types = {}
+_rankers: Dict[str, Type[Ranker]] = {}
+_clusters: Dict[str, Type[Cluster]] = {}
+_refiners: Dict[str, Type[Refiner]] = {}
+all_types: Dict[str, Type[Union[Cluster, Ranker, Refiner]]] = {}
 all_types_print = []
 
 
-def register_ranker(cls):
+def register_ranker(cls: Type[Ranker]) -> None:
     if (cls.__name__.upper() in all_types):
         raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _rankers[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
-def register_cluster(cls):
+def register_cluster(cls: Type[Cluster]) -> None:
     if (cls.__name__.upper() in all_types):
         raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _clusters[cls.__name__.upper()] = cls
     all_types[cls.__name__.upper()] = cls
 
 
-def register_refiner(cls):
+def register_refiner(cls: Type[Refiner]) -> None:
     if (cls.__name__.upper() in all_types):
         raise ValueError(f'Duplicate advanced types for name "{cls.__name__}"')
     _refiners[cls.__name__.upper()] = cls
@@ -108,11 +108,12 @@ class Config:
         else:
             self._args = args
 
-    def __str__(self, params: Optional[str] = ""):
+    def __str__(self, params: Optional[str] = "") -> str:
         return self.get_str(filename=True, params=params)
 
     @versionadded(version='2.4.0')
-    def get_str(self, filename=False, params: Optional[str] = None):
+    def get_str(self, filename: bool = False,
+                params: Optional[str] = None) -> str:
         """
         Returns a string description of the advanced types of this config
         object that can be used either in the name of the output file
@@ -138,17 +139,18 @@ class Config:
                         for c in components if c is not None)
         return string
 
-    def _get_args(self, adv_type: AdvType):
+    def _get_args(self, adv_type: AdvType) -> Dict[str, Any]:
         return self._args.get(adv_type.name.upper(), {})
 
-    def _get_params(self, adv_type: AdvType, args: Args):
+    def _get_params(self, adv_type: AdvType, args: Args) -> Dict[str, Any]:
         arg_params = args.get_arg_group(adv_type.name)
         custom_params = self._get_args(adv_type)
         refiner_params = {**arg_params, **custom_params}
         return refiner_params
 
     @versionadded(version='2.4.0')
-    def set_arg(self, adv_type: AdvType, arg_name: str, arg_value: Any):
+    def set_arg(self, adv_type: AdvType, arg_name: str,
+                arg_value: Any) -> None:
         """
         Set the argument given by `arg_name` with `arg_value` for the given
         advanced type.
@@ -277,6 +279,7 @@ class Config:
         # Always add params for non-filename
         if (not filename and params is None):
             params = ""
+        a: str
         if (params is not None and args is not None and len(args) > 0):
             if (params == ""):
                 if (filename):
@@ -296,6 +299,7 @@ class Config:
         else:
             a = ''
         # then get name
+        name: str
         if (filename and hasattr(typ.value, '__print_name__')):
             name = typ.value.__print_name__.lower()
         elif (filename):
@@ -305,12 +309,12 @@ class Config:
         return name + a
 
     @versionadded(version='2.4.0')
-    def __repr__(self, params: Optional[str] = ""):
+    def __repr__(self, params: Optional[str] = "") -> str:
         return self.get_str(filename=False, params=params)
 
     @versionchanged(version='2.4.0',
                     reason='Added the `params` optional argument')
-    def get_file_name(self, params: Optional[str] = None):
+    def get_file_name(self, params: Optional[str] = None) -> str:
         """
         Synonym for `Config.get_str(filename=True, ...) <get_str>`.
 

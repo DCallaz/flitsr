@@ -8,7 +8,7 @@ class Refiner(ABC):
     manipulates and extends it, returning a modified spectrum."""
 
     @abstractmethod
-    def refine(self, spectrum: Spectrum, method_lvl=False) -> Spectrum:
+    def refine(self, spectrum: Spectrum, method_lvl: bool = False) -> Spectrum:
         """
         Provides the functionality for the `Refiner`. Takes a `Spectrum
         <flitsr.spectrum.Spectrum>` and manipulates or extends it, returning a
@@ -25,5 +25,5 @@ class Refiner(ABC):
         """
         pass
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls) -> None:
         advanced.register_refiner(cls)

@@ -2,7 +2,7 @@ import sys
 import re
 import os
 from os import path as osp
-from typing import TextIO
+from typing import TextIO, List
 from shutil import rmtree
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
@@ -12,7 +12,7 @@ from flitsr.input.input_reader import DirInput
 
 class Gzoltar(DirInput):
     @classmethod
-    def search_pattern(self, **kwargs):
+    def search_pattern(self, **kwargs) -> str:
         """
         Returns the search pattern to use in the `run_all` script when
         searching for inputs of the `Gzoltar` type to run on. The format is a
@@ -23,7 +23,7 @@ class Gzoltar(DirInput):
         """
         return 'spectra.csv'
 
-    def _construct_details(self, f: TextIO):
+    def _construct_details(self, f: TextIO) -> None:
         """
         Fills the spectrum object with elements read in from the open file 'f'.
         """
@@ -49,7 +49,7 @@ class Gzoltar(DirInput):
                 details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
                 self.sb.addElement(details, faults)
 
-    def _construct_tests(self, tests_reader: TextIO):
+    def _construct_tests(self, tests_reader: TextIO) -> None:
         tests_reader.readline()
         for line in tests_reader:
             m = re.fullmatch('([^,]+),(PASS|FAIL|ERROR)(,.*)?', line.rstrip())
@@ -59,7 +59,7 @@ class Gzoltar(DirInput):
             else:
                 self.sb.addTest(m.group(1), Outcome[m.group(2)])
 
-    def _fill_spectrum(self, bin_file: TextIO):
+    def _fill_spectrum(self, bin_file: TextIO) -> None:
         for t, line in enumerate(bin_file):
             if (line == ''):
                 error('Incorrect number of matrix lines', f'({t+1})',
@@ -94,7 +94,7 @@ class Gzoltar(DirInput):
                 osp.isfile(osp.join(input_path, "tests.csv")))
 
     @classmethod
-    def write_spectrum(cls, spectrum: Spectrum, directory: str):
+    def write_spectrum(cls, spectrum: Spectrum, directory: str) -> None:
         """ Output the spectrum in Gzoltar format """
         type_ = cls.get_type()
         # First check that the directory exists and is empty
@@ -122,13 +122,12 @@ class Gzoltar(DirInput):
                       file=matrix_file)
 
     @classmethod
-    def get_elem_separators(cls):
+    def get_elem_separators(cls) -> List[str]:
         return ['$', '#', ':', ':']
 
 
 if __name__ == "__main__":
-    from flitsr.output import print_spectrum
     d = sys.argv[1]
     ginput = Gzoltar()
     spectrum = ginput.read_spectrum(d)
-    print_spectrum(spectrum)
+    print(spectrum.to_matrix())

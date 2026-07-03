@@ -30,14 +30,14 @@ class Rank:
         self.score = score
         self.exec = exec_count
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(" + str(self.entity) + ", " + str(self.score) + ")"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
-class Ranking:
+class Ranking(Iterable[Rank]):
     """
     A singular ranking, containing ranked `Spectrum.Entity
     <flitsr.spectrum.Spectrum.Entity>`.
@@ -49,10 +49,11 @@ class Ranking:
         self.entity_map: Dict[Spectrum.Entity, Rank] = {}
         self.place = 0
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> Rank:
         return self._ranks[index]
 
-    def get_rank(self, entity: Spectrum.Entity, check_sub_group=False) -> Rank:
+    def get_rank(self, entity: Spectrum.Entity,
+                 check_sub_group: bool = False) -> Rank:
         """
         Return the `Rank` of the given `Spectrum.Entity
         <flitsr.spectrum.Spectrum.Entity>`. If the `check_sub_group`
@@ -79,7 +80,7 @@ class Ranking:
                         if (isinstance(key, Spectrum.Group) and
                                 key.is_subgroup(entity)):
                             return self.entity_map[key]
-                else:
+                elif (isinstance(entity, Spectrum.Element)):
                     # If an element, check if in any group
                     for key in self.entity_map:
                         if (entity in key):
@@ -87,7 +88,7 @@ class Ranking:
             # if no super-group can be found, raise the KeyError
             raise keyerror
 
-    def sort(self, reverse: bool):
+    def sort(self, reverse: bool) -> None:
         """
         Re-sort this `Ranking` in-place by their scores, using the `Tiebrk`
         method set.
@@ -117,7 +118,8 @@ class Ranking:
                 self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
         self._ranks.sort(key=lambda x: x.score, reverse=reverse)
 
-    def append(self, entity: Spectrum.Entity, score: float, exec_count: int):
+    def append(self, entity: Spectrum.Entity, score: float,
+               exec_count: int) -> None:
         """
         Append the given `entity` to the ranking, with the given `score` and
         execution count `exec_count`.
@@ -131,7 +133,7 @@ class Ranking:
         self._ranks.append(created)
         self.entity_map[entity] = created
 
-    def extend(self, ranks: List[Rank]):
+    def extend(self, ranks: List[Rank]) -> None:
         """
         Extend this `Ranking` by adding all `Rank` in the `List` `ranks`.
 
@@ -155,13 +157,14 @@ class Ranking:
         """
         return entity in self.entity_map
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rank]:
         return iter(self._ranks)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._ranks)
 
-class Rankings:
+
+class Rankings(Iterable[Ranking]):
     """
     A collection of `Ranking` objects, which share a non-overlapping set of
     elements from a `Spectrum <flitsr.spectrum.Spectrum>`.
@@ -191,7 +194,7 @@ class Rankings:
         """ Return a list of all the `Ranking`. """
         return self._rankings
 
-    def append(self, ranking: Ranking):
+    def append(self, ranking: Ranking) -> None:
         """
         Append the given `ranking` to this collection.
 
@@ -200,7 +203,7 @@ class Rankings:
         """
         self._rankings.append(ranking)
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[Ranking]:
         return iter(self._rankings)
 
     def __len__(self) -> int:
@@ -210,7 +213,7 @@ class Rankings:
 orig: Optional[Ranking] = None
 
 
-def set_orig(ranking: Ranking):
+def set_orig(ranking: Ranking) -> None:
     """
     Set the original SBFL `Ranking` to be used in tie-breaking (see `Tiebrk`).
     Args:
@@ -223,7 +226,7 @@ def set_orig(ranking: Ranking):
     orig = copy.deepcopy(ranking)
 
 
-def unset_orig():
+def unset_orig() -> None:
     """ """
     global orig
     orig = None

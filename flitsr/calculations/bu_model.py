@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional, Callable, Dict, Any, Set, Union
+from typing import Optional, Callable, Dict, Any, Set, Union, List
 from argparse import ArgumentTypeError
 
 
@@ -8,11 +8,11 @@ class BUModelEnum(Enum):
     IMPERFECT = auto()
     INEPT = auto()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
-        return self.__str__()
+    def __repr__(self) -> str:
+        return str(self)
 
 
 class BUModel:
@@ -28,24 +28,30 @@ class BUModel:
             self.model = model.model
         self.strategy: Optional[Callable[[int], int]] = strategy
 
-    def is_model(self, model: Union['BUModel', BUModelEnum]):
+    def is_model(self, model: Union['BUModel', BUModelEnum]) -> bool:
         if (isinstance(model, BUModelEnum)):
             return self.model is model
         else:
             return self.model is model.model
 
     @classmethod
-    def __class_getitem__(cls, model):
-        return getattr(cls, model)
+    def __class_getitem__(cls, model: str) -> 'BUModel':
+        model_inst = getattr(cls, model)
+        if (isinstance(model_inst, cls)):
+            return model_inst
+        else:
+            raise AttributeError(f"type object '{cls.__name__}' has no model "
+                                 f"'{model}'")
 
     def get_dict(self, faults: Dict[Any, Set[Any]]) \
             -> Dict[Any, int]:
+        func: Callable[[int], int]
         if (self.model is BUModelEnum.PERFECT):  # perfect
-            def func(x): return 1
+            def func(x: int) -> int: return 1
         elif (self.model is BUModelEnum.INEPT):  # inept
-            def func(x): return x
+            def func(x: int) -> int: return x
         elif (not self.strategy):            # default imperfect (mid-point)
-            def func(x): return x//2
+            def func(x: int) -> int: return x//2
         else:                                # custom imperfect
             func = self.strategy
         bu_dict: Dict[Any, int] = {}
@@ -64,16 +70,16 @@ class BUModel:
         return f'{self.model.name}' + f'{src}'
 
     @classmethod
-    def get_types(cls):
+    def get_types(cls) -> List['BUModel']:
         return [cls.PERFECT, cls.INEPT, cls.IMPERFECT]
 
     def __str__(self) -> str:
         return self.__repr__()
 
     @classmethod
-    def from_string(cls, s):
+    def from_string(cls, s: str) -> 'BUModel':
         try:
-            return getattr(cls, s)
+            return cls.__class_getitem__(s)
         except AttributeError:
             choices = ', '.join(f"'{d}'" for d in list(BUModelEnum))
             raise ArgumentTypeError(f"invalid choice: '{s}' "

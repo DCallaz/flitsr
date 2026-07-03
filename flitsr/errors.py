@@ -1,7 +1,7 @@
 import sys
 
 
-def error(*args, **kwargs):
+def error(*args, **kwargs) -> None:
     """
     Print an error message and exit FLITSR. All arguments and keyword-arguments
     given are in the format of the Python print statement
@@ -11,7 +11,7 @@ def error(*args, **kwargs):
     quit()
 
 
-def warning(*args, **kwargs):
+def warning(*args, **kwargs) -> None:
     """
     Print a warning message and continue. All arguments and keyword-arguments
     given are in the format of the Python print statement

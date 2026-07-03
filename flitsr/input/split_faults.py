@@ -12,7 +12,7 @@ class NoFaultsError(ValueError):
     pass
 
 
-def split_spectrum_faults(spectrum: Spectrum):
+def split_spectrum_faults(spectrum: Spectrum) -> None:
     """
     Splits fault groups that are a combination of two or more sub-faults in
     mutually exclusive parts of the system into separate faults, as well as

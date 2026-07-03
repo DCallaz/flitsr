@@ -1,6 +1,7 @@
 import importlib
 import pkgutil
 import sys
+from typing import Type, Any
 from enum import Enum, auto
 from flitsr import input
 
@@ -12,7 +13,7 @@ class BaseInputType(Enum):
     FILE = auto()
 
 
-def register_input(cls):
+def register_input(cls: Type[Any]) -> None:
     _inputs[cls.__name__.upper()] = cls
 
 #  Exposed imports

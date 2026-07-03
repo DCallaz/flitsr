@@ -1,8 +1,9 @@
 from typing import Union
 from os import DirEntry
 
+
 class File:
-    def __init__(self, file: Union[str, DirEntry]):
+    def __init__(self, file: Union[str, DirEntry[str]]):
         fopen = open(file)
         self.lines = fopen.readlines()
         fopen.close()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+from argparse import ArgumentTypeError, Action
 import argcomplete
 import inspect
 import sys
@@ -20,8 +21,8 @@ from flitsr.input.duplicates import DuplicateStrategy
 from flitsr.calculations import BUModel, calcs_base
 
 
-class _ParameterParser(Iterator, Iterable):
-    def __init__(self, fn: Callable, class_: Optional[Type] = None,
+class _ParameterParser(Iterable[Tuple[str, Optional[Dict[str, Any]]]]):
+    def __init__(self, fn: Callable, class_: Optional[Type[Any]] = None,
                  ext_name: Optional[str] = None,
                  include_existing: bool = False):
         """
@@ -74,7 +75,7 @@ class _ParameterParser(Iterator, Iterable):
     _primitives = (bool, str, int, float, Path)
 
     @staticmethod
-    def _get_base_type(typ) -> List[type]:
+    def _get_base_type(typ: Type[Any]) -> List[Type[Any]]:
         """ function to extract the base type from a typing.Union, etc."""
         if (hasattr(typ, '__origin__')):
             if (typ.__origin__ is Union):
@@ -123,7 +124,7 @@ class _ParameterParser(Iterator, Iterable):
         # add types
         if (paramTypes is not None):
             # function to deal with non-primitives
-            def get_type_conv(name, param):
+            def get_type_conv(name: str, param: str) -> Optional[Any]:
                 if (hasattr(self.class_, f'_{param}')):
                     return getattr(self.class_, f'_{param}')
                 elif (hasattr(self.fn, '__types__') and
@@ -176,7 +177,7 @@ class _ParameterParser(Iterator, Iterable):
                 parser_args['metavar'] = param
         return parser_args
 
-    def __iter__(self) -> Iterator[Tuple[str, Dict[str, Any]]]:
+    def __iter__(self) -> Iterator[Tuple[str, Optional[Dict[str, Any]]]]:
         self._p_index = 0
         return self
 
@@ -198,7 +199,7 @@ class _ParameterParser(Iterator, Iterable):
         if (not existing):
             parser_args = self._gen_parameter(param, self._p_index)
         self._p_index += 1
-        assert ((parser_args == None) == (existing and self._include_existing))
+        assert ((parser_args is None) == (existing and self._include_existing))
         return param, parser_args
 
 
@@ -207,8 +208,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
     The global Singleton holding the specified/default arguments used across
     the flitsr framework.
     """
-    def __init__(self, argv: Optional[List[str]] = None, cmd_line=False,
-                 noparse=False):
+    def __init__(self, argv: Optional[List[str]] = None,
+                 cmd_line: bool = False, noparse: bool = False):
         """
         Initialize the Args Singleton object. Note that this constructor is
         only ever called once for each program run. Other attempts to construct
@@ -236,21 +237,21 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         if (not noparse):
             self._parse_args(argv)
 
-    def _add_params(self, params: argparse.Namespace):
+    def _add_params(self, params: argparse.Namespace) -> None:
         dict_ = vars(params)
         for key in dict_:
             setattr(self, key, dict_[key])
 
     @staticmethod
-    def _check_file(filename):
+    def _check_file(filename: str) -> str:
         """ Check file exists function """
         if (osp.exists(filename)):
             return filename
         else:
-            raise argparse.ArgumentTypeError('Could not find input file:'
-                                             f' \"{filename}\"')
+            raise ArgumentTypeError('Could not find input file: '
+                                    f'\"{filename}\"')
 
-    def _check_type(self, type_comb: str):
+    def _check_type(self, type_comb: str) -> Config:
         """ check FLITSR type combinations function """
         type_sep = type_comb.split('+')
         cluster = None
@@ -260,27 +261,27 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         for t in type_sep:
             m = re.fullmatch("([^(]+)(?:\\(([^)]+)\\))?", t)
             if (m is None):
-                raise argparse.ArgumentTypeError('Invalid type for '
-                                                 f'--all-types: \"{t}\"')
+                raise ArgumentTypeError('Invalid type for --all-types: '
+                                        f'\"{t}\"')
             t = m.group(1).upper()
             if (hasattr(advanced.ClusterType, t)):
                 if (cluster is not None):
-                    raise argparse.ArgumentTypeError('Cannot have two '
-                        f'cluster types: {cluster.name} and {t}')
+                    raise ArgumentTypeError('Cannot have two cluster types: '
+                                            f'{cluster.name} and {t}')
                 cluster = advanced.ClusterType[t]
             elif (hasattr(advanced.RefinerType, t)):
                 if (refiner is not None):
-                    raise argparse.ArgumentTypeError('Cannot have two '
-                        f'refiner types: {refiner.name} and {t}')
+                    raise ArgumentTypeError('Cannot have two refiner types: '
+                                            f'{refiner.name} and {t}')
                 refiner = advanced.RefinerType[t]
             elif (hasattr(advanced.RankerType, t)):
                 if (ranker is not None):
-                    raise argparse.ArgumentTypeError('Cannot have two '
-                        f'ranker types: {ranker.name} and {t}')
+                    raise ArgumentTypeError('Cannot have two ranker types: '
+                                            f'{ranker.name} and {t}')
                 ranker = advanced.RankerType[t]
             else:
-                raise argparse.ArgumentTypeError('Invalid type for '
-                                                 f'--all-types: \"{t}\"')
+                raise ArgumentTypeError('Invalid type for --all-types: '
+                                        f'\"{t}\"')
             if (m.group(2) is None):
                 params = {}
             else:
@@ -290,16 +291,15 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 for k, v in params.items():
                     # check valid param
                     if (k not in self._advanced_params[t]):
-                        raise argparse.ArgumentTypeError('Invalid parameter '
-                                                         f'\"{k}\" for type '
-                                                         f'{t}')
+                        raise ArgumentTypeError('Invalid parameter '
+                                                f'\"{k}\" for type {t}')
                     else:
                         # convert type
                         try:
                             converted = self._advanced_params[t][k](v)
                             params[k] = converted
                         except Exception:
-                            raise argparse.ArgumentTypeError('Invalid value '
+                            raise ArgumentTypeError('Invalid value '
                                 f'\"{v}\" for parameter {k} of type {t}')
             args[t] = params
         adv_type = Config(ranker, cluster, refiner, args)
@@ -314,13 +314,12 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         else:
             all_functions = [function, *functions]
 
-            def bundler(lst: List[str]):
+            def bundler(lst: List[str]) -> List[Any]:
                 ret = []
                 for i in range(len(all_functions)):
                     try:
                         ret.append(all_functions[i](lst[i]))
-                    except (TypeError, ValueError,
-                            argparse.ArgumentTypeError) as e:
+                    except (TypeError, ValueError, ArgumentTypeError) as e:
                         if (len(e.args) > 0):
                             updated_args = (f'argument {i+1}: '+e.args[0],
                                             *e.args[1:])
@@ -332,23 +331,25 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
 
     @overload
     @staticmethod
-    def _bundler_action(bundler: Callable[[str], Any], ids: str,
-                        name: Optional[str] = None): ...
+    def _bundler_action(bundler: Callable[[str], Any], ids: str, name:
+                        Optional[str] = None) -> Type[Action]: ...
 
     @overload
     @staticmethod
-    def _bundler_action(bundler: Callable[[List[str]], List[Any]],
-                        ids: List[str], name: Optional[str] = None): ...
+    def _bundler_action(bundler: Callable[[List[str]], List[Any]], ids:
+                        List[str], name: Optional[str] =
+                        None) -> Type[Action]: ...
 
     @overload
     @staticmethod
-    def _bundler_action(bundler: None, ids: None,
-                        name: Optional[str] = None): ...
+    def _bundler_action(bundler: None, ids: None, name:
+                        Optional[str] = None) -> Type[Action]: ...
 
     @staticmethod
     def _bundler_action(bundler: Union[None, Callable[[str], Any],
                         Callable[[List[str]], List[Any]]], ids: Union[None,
-                        str, List[str]], name: Optional[str] = None):
+                        str, List[str]],
+                        name: Optional[str] = None) -> Type[Action]:
         class BundlerAction(argparse.Action):
             def __call__(self, parser, namespace, values, option_string=None):
                 args: Union[Any, Dict[str, Any]]
@@ -357,8 +358,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 else:
                     try:
                         typed_values = bundler(values)
-                    except (TypeError, ValueError,
-                            argparse.ArgumentTypeError) as e:
+                    except (TypeError, ValueError, ArgumentTypeError) as e:
                         raise argparse.ArgumentError(self, str(e))
                     args = {}
                     if (isinstance(ids, str)):
@@ -558,8 +558,8 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 # add cmd-line arguments for each parameter of this adv type
                 pp = _ParameterParser(init, class_, ext_name=name,
                                       include_existing=True)
-                self._advanced_params[name] = dict()
-                for param, parser_args in pp:
+                parser_args: Optional[Dict[str, Any]]
+                for (param, parser_args) in pp:
                     self._advanced_params[name][param] = None
                     # skip adding this parameter if it is marked as existing
                     if (parser_args is None):
@@ -645,6 +645,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
             pp = _ParameterParser(calc_fn)
             type_funcs = []
             for param, parser_args in pp:
+                assert (parser_args is not None)
                 argument_args['metavar'].append(param)
                 argument_args['nargs'] += 1
                 # print(calc_name, param, parser_args)
@@ -793,7 +794,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         self._add_params(args)
         return self
 
-    def get_arg_group(self, group_name) -> Dict[str, Any]:
+    def get_arg_group(self, group_name: str) -> Dict[str, Any]:
         """
         Return the arguments for the given argument group.
 

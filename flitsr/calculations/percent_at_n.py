@@ -16,7 +16,7 @@ from flitsr.calculations.exp_values import effort_exp_val_tie
 
 @calculation('auc', 'Dislpays the area under the curve produced by the '
              'percentage-at-N calculation', 'auc', 'area-under-curve')
-def auc(ties: Ties, collapse: bool):
+def auc(ties: Ties, collapse: bool) -> float:
     bumps = getBumps(ties, collapse=collapse)
     return auc_calc(combine([(bumps[0], bumps[1:])]))
 
@@ -27,7 +27,7 @@ def auc(ties: Ties, collapse: bool):
              'logarithmic effect causes lower ranks to have a greater effect '
              'on the value, which corresponds to the lower ranks being more '
              'useful to the developer', 'lauc', 'log-area-under-curve')
-def lauc(ties: Ties, collapse: bool):
+def lauc(ties: Ties, collapse: bool) -> float:
     auc_ = auc(ties, collapse)
     optimal = auc_calc([(0.0, 100.0)])+1
     lauc = abs(1-log(optimal-auc_, optimal))
@@ -38,9 +38,9 @@ def lauc(ties: Ties, collapse: bool):
              'percentage-at-N calculation as a percentage of the maximum '
              'possible value (i.e. closest to perfect recall)', 'pauc',
              'percent-area-under-curve')
-def pauc(ties: Ties, collapse: bool):
-    auc_ = auc(ties, collapse)
-    optimal = auc_calc([(0.0, 100.0)])
+def pauc(ties: Ties, collapse: bool) -> float:
+    auc_: float = auc(ties, collapse)
+    optimal: float = auc_calc([(0.0, 100.0)])
     return auc_/optimal
 
 
@@ -55,12 +55,13 @@ def perc(ties: Ties, collapse: bool) -> Iterable[float]:
     return bumps
 
 
-def ci_in(str1: str, col: Collection[str]):
+def ci_in(str1: str, col: Collection[str]) -> bool:
     """ Case insensitive check for strings in a list """
     return str1.casefold() in map(str.casefold, col)
 
 
-def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
+def getBumps(ties: Ties, worst_effort: bool = False,
+             collapse: bool = False) -> List[float]:
     if (len(ties.faults) == 0):
         return [0.0]
     tie_iter = iter(ties)
@@ -80,21 +81,26 @@ def getBumps(ties: Ties, worst_effort=False, collapse=False) -> List[float]:
     return bumps
 
 
-def combine(results: List[Tuple[float, List[float]]]) -> List[Tuple[float, float]]:
-    def err(x):
+def combine(results: List[Tuple[float, List[float]]]) \
+        -> List[Tuple[float, float]]:
+    def err(x: float) -> float:
         return max(10**-6, (math.log((99*x/100) + 1)/math.log(100))*0.1)
     size = len(results)
     total = 0.0
     pointers = [0]*size
     final = [len(r[1]) for r in results]
     combined = []
-    def val(results, pointer, i):
+
+    def val(results: List[Tuple[float, List[float]]], pointer: int,
+            i: int) -> Optional[float]:
         if (pointer < len(results[i][1])):
             return results[i][1][pointer]*100/results[i][0]
+        return None
+
     while (pointers != final):
         # get the minimum next value
-        min_ = min([v for v in (val(results, pointers[i], i) for i in range(size))
-                        if v is not None])
+        min_ = min([v for v in (val(results, pointers[i], i)
+                    for i in range(size)) if v is not None])
         indexes = []
         for i in range(size):
             j = 0
@@ -105,10 +111,10 @@ def combine(results: List[Tuple[float, List[float]]]) -> List[Tuple[float, float
                     break
             if (j > 0):
                 indexes.append((i, j))
-        #curr = [(math.inf if (pointers[i] == len(results[i])) else results[i][pointers[i]])
-                #for i in range(size)]
-        #min_ = min(curr)
-        #indexes = [i for i,x in enumerate(curr) if x - min_ < 10e-4]
+        # curr = [(math.inf if (pointers[i] == len(results[i]))
+        #          else results[i][pointers[i]]) for i in range(size)]
+        # min_ = min(curr)
+        # indexes = [i for i,x in enumerate(curr) if x - min_ < 10e-4]
         for (i, j) in indexes:
             pointers[i] += j
             total += j * (100/(len(results[i][1])*size))
@@ -143,9 +149,12 @@ def read_comb_file(comb_file: str) -> Tuple[List[str], List[str],
     return metrics, modes, points
 
 
-def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
-         incl_metrics=None, flitsrs=None, incl_advs=None,
-         save=None):
+def plot(plot_file: str, log: bool = True, all: bool = False,
+         type: plot_type = plot_type.metric,
+         incl_metrics: Optional[List[str]] = None,
+         flitsrs: Optional[List[str]] = None,
+         incl_advs: Optional[List[str]] = None,
+         save: Optional[str] = None) -> None:
     from matplotlib import pyplot as plt
     comb_points: Dict[Tuple[str, str], List[Tuple[float, float]]] = {}
     metrics, modes, comb_points = read_comb_file(plot_file)
@@ -187,7 +196,10 @@ def plot(plot_file: str, log=True, all=False, type=plot_type.metric,
     plt.close()
 
 
-def plot_all(axs, points, metrics, modes, flitsrs, log):
+def plot_all(axs, points: Dict[Tuple[str, str],
+                               Tuple[List[float], List[float]]],
+             metrics: List[str], modes: List[str],
+             flitsrs: Optional[List[str]], log: bool) -> None:
     import matplotlib.cm as cm
     color = list(cm.rainbow(np.linspace(0, 1, len(metrics))))
     style = [(), (6, 3), (1, 3), (1, 3, 6, 3), (3, 3), (6, 3, 3, 3)]
@@ -221,7 +233,10 @@ def plot_all(axs, points, metrics, modes, flitsrs, log):
     axs.grid()
 
 
-def plot_sep(axs, points, type, metrics, modes, log):
+def plot_sep(axs,
+             points: Dict[Tuple[str, str], Tuple[List[float], List[float]]],
+             type: plot_type, metrics: List[str], modes: List[str],
+             log: bool) -> None:
     if (type == plot_type.metric):
         split, merged = metrics, modes
     else:
@@ -245,14 +260,14 @@ def plot_sep(axs, points, type, metrics, modes, log):
         ax.grid()
 
 
-def plot_log(ax, log):
+def plot_log(ax, log: bool) -> None:
     if (log):
         ax.set_xscale("log")
         ax.set_xticks([0.01, 0.1, 1, 10, 100], [0.01, 0.1, 1, 10, 100])
 
 
 def auc_calc(points: List[Tuple[float, float]],
-             cut_off=101.0) -> float:
+             cut_off: float = 101.0) -> float:
     points = sorted(points, key=lambda x: x[0])  # sort points, sanity check
     auc = 0.0
     if (len(points) == 0 or points[-1][0] != 100.0):
@@ -334,7 +349,7 @@ def get_parser() -> ArgumentParser:
     return parser
 
 
-def main(argv: Optional[List[str]] = None):
+def main(argv: Optional[List[str]] = None) -> None:
     parser = get_parser()
     args = parser.parse_args(argv)
     if (args.mode == "combine"):
