@@ -559,6 +559,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 pp = _ParameterParser(init, class_, ext_name=name,
                                       include_existing=True)
                 parser_args: Optional[Dict[str, Any]]
+                self._advanced_params[name] = dict()
                 for (param, parser_args) in pp:
                     self._advanced_params[name][param] = None
                     # skip adding this parameter if it is marked as existing
