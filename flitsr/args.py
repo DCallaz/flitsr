@@ -772,15 +772,15 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                   Config(advanced.RankerType['MULTI'], **ts)]
             if (args.calcs is None or len(args.calcs) == 0):
                 args.calcs = {
-                    "first": [],
-                    "average": [],
-                    "median": [],
-                    "last": [],
+                    "first": [{}],
+                    "average": [{}],
+                    "median": [{}],
+                    "last": [{}],
                     "weffort": [{'n': 2}, {'n': 3}, {'n': 5}],
-                    "perc@n": [],
+                    "perc@n": [{}],
                     "precision-at": [{'x': 1}, {'x': 5}, {'x': 10}, {'x': "f"}],
                     "recall-at": [{'x': 1}, {'x': 5}, {'x': 10}, {'x': "f"}],
-                    "fault-num": [],
+                    "fault-num": [{}],
                     "all-top": [{'x': 1}, {'x': 5}, {'x': 10}],
                     "one-top": [{'x': 5}]
                     }
