@@ -290,8 +290,8 @@ class Config:
             for k, v in args.items():
                 if (filename):
                     k = k.replace("_", "-")
-                param_set.append(params.replace("{k}", k)
-                                       .replace("{v}", v))
+                param_set.append(params.replace("{k}", str(k))
+                                       .replace("{v}", str(v)))
             if (filename):
                 a = '_' + '_'.join(param_set)
             else:
