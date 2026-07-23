@@ -4,7 +4,7 @@ from flitsr import advanced
 from flitsr.advanced.refiner import Refiner
 from flitsr.advanced.cluster import Cluster
 from flitsr.advanced.ranker import Ranker
-from enum import Enum
+from enum import Enum, EnumType
 import importlib
 from typing import Union, Optional, Any, Dict, Type, TYPE_CHECKING, overload
 import sys
@@ -53,11 +53,17 @@ adv_entry_points = entry_points(group='flitsr.advanced')
 for adv_ep in adv_entry_points:
     adv_ep.load()
 
-RefinerType = Enum('RefinerType', _refiners)  # type:ignore
+
+class StrEnum(Enum):
+    def __str__(self):
+        return self.name
+
+
+RefinerType = Enum('RefinerType', _refiners, type=StrEnum)  # type:ignore
 # module=advanced, qualname='advanced.RefinerType')
-ClusterType = Enum('ClusterType', _clusters)  # type:ignore
+ClusterType = Enum('ClusterType', _clusters, type=StrEnum)  # type:ignore
 # module=advanced, qualname='advanced.ClusterType')
-RankerType = Enum('RankerType', _rankers)  # type:ignore
+RankerType = Enum('RankerType', _rankers, type=StrEnum)  # type:ignore
 # module=advanced, qualname='advanced.RankerType')
 
 AdvType = Union[RefinerType, ClusterType, RankerType]
