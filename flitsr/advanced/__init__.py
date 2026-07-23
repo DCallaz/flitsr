@@ -4,7 +4,7 @@ from flitsr import advanced
 from flitsr.advanced.refiner import Refiner
 from flitsr.advanced.cluster import Cluster
 from flitsr.advanced.ranker import Ranker
-from enum import Enum, EnumType
+from enum import Enum
 import importlib
 from typing import Union, Optional, Any, Dict, Type, TYPE_CHECKING, overload
 import sys
