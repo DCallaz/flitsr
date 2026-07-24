@@ -41,7 +41,7 @@ def main(argv: List[str]):
     d_p = reader.get_run_file_name(args.input)
     # Read the spectrum in and setup parallel if needed
     spectrum = reader.read_in(args.input, args.split, args.method,
-                              args.duplicates)
+                              args.duplicates, args.compute_groups)
     if (spectrum is None or len(spectrum.spectrum) == 0):
         print("ERROR: Incorrectly formatted input file, terminating...",
               file=sys.stderr)

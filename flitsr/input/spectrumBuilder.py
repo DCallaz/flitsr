@@ -1,9 +1,9 @@
-from typing import List, Dict, Any, Set, Tuple, Union
+from typing import List, Dict, Any, Set, Tuple, Union, Optional
 from flitsr.spectrum import Spectrum, Outcome, Details
 from flitsr.input.split_faults import split_spectrum_faults, NoFaultsError
 from flitsr.errors import error
 from flitsr.input.duplicates import DuplicateStrategy
-from deprecated.sphinx import versionchanged
+from deprecated.sphinx import versionchanged, versionadded
 
 
 class DuplicateError(ValueError):
@@ -13,9 +13,12 @@ class DuplicateError(ValueError):
 class SpectrumBuilder:
     """ Builds a `Spectrum <flitsr.spectrum.Spectrum>` object."""
 
+    @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
+                    '`duplicate_strategy`, and `compute_groups` parameters.')
     def __init__(self, collapse_methods: bool = False, split_faults:
                  bool = False, duplicate_strategy: DuplicateStrategy =
-                 DuplicateStrategy.REFUSE):
+                 DuplicateStrategy.REFUSE, compute_groups:
+                 Optional[bool] = None):
         """
         Constructs a `SpectrumBuilder` object to facilitate building a
         `Spectrum <flitsr.spectrum.Spectrum>`.
@@ -28,12 +31,14 @@ class SpectrumBuilder:
         self._collapse_methods = collapse_methods
         self._duplicate_strategy = duplicate_strategy
         self._split_faults = split_faults
+        self._compute_groups = compute_groups
         self._method_map: Dict[int, Spectrum.Element] = {}
         self._methods: Dict[Tuple[str, str], Spectrum.Element] = {}
         self._elements: List[Spectrum.Element] = []
         self._tests: Dict[int, Spectrum.Test] = {}
         self._executions: Dict[Spectrum.Test, Set[Spectrum.Element]] = {}
         self._duplicates: Dict[Spectrum.Element, int] = {}
+        self._groups: Optional[Dict[int, Set[Spectrum.Element]]] = None
 
     def get_tests(self) -> List[Spectrum.Test]:
         """ Return the current list of Tests. """
@@ -192,17 +197,23 @@ class SpectrumBuilder:
             except KeyError:
                 raise TestKeyError()
 
-        # Get the element or raise execption
-        if (isinstance(elem, int)):
-            try:
-                elem = self._method_map[elem]
-            except KeyError:
-                raise ElemKeyError()
+        elem = self._get_elem(elem)
 
         # add execution
         if (test not in self._executions):
             self._executions[test] = set()
         self._executions[test].add(elem)
+
+    def _get_elem(self, elem: Union[Spectrum.Element,
+                                    int]) -> Spectrum.Element:
+        """ Get the element or raise execption. """
+        if (isinstance(elem, int)):
+            try:
+                return self._method_map[elem]
+            except KeyError:
+                raise ElemKeyError()
+        else:
+            return elem
 
     def addNonExecution(self, test: Spectrum.Test,
                         elem: Spectrum.Element) -> None:
@@ -224,6 +235,35 @@ class SpectrumBuilder:
         #     self._executions[test] = {}
         # self._executions[test][elem] = False
         pass
+
+    def _get_group(self, group: int) -> Set[Spectrum.Element]:
+        if (self._groups is None):
+            self._groups = dict()
+        if (group not in self._groups):
+            self._groups[group] = set()
+        return self._groups[group]
+
+    @versionadded(version='2.5.0', reason='Ability to read in spectral groups '
+                  'added in version 2.5.0')
+    def addElementToGroup(self, elem: Union[Spectrum.Element, int],
+                          group: int):
+        """
+        Assign the given element to the group specified by the given group
+        index (an integer).
+
+        Args:
+          elem: The element to assign to the given group. Can be either an
+            `Element <flitsr.spectrum.Spectrum.Element>` object OR an integer
+            representing a valid Element index.
+          group: An integer index for the group to assign the element to; the
+            group does not need to exist before calling this method with the
+            given group index.
+
+        Raises:
+          ElemKeyError: When `elem` is an int and does not refer to a valid
+            element index.
+        """
+        self._get_group(group).add(self._get_elem(elem))
 
     def form_groups(self) -> List[Spectrum.Group]:
         """
@@ -253,7 +293,18 @@ class SpectrumBuilder:
 
     def get_spectrum(self) -> Spectrum:
         """ Return the spectrum from this `SpectrumBuilder`. """
-        groups = self.form_groups()
+        # compute the groups (either if explicit or if needed)
+        if (self._compute_groups is True or (self._compute_groups is None
+                                             and self._groups is None)):
+            groups = self.form_groups()
+        # no groups :- every element on its own
+        elif (self._compute_groups is False):
+            groups = [Spectrum.Group([elem], i)
+                      for i, elem in enumerate(self._elements)]
+        # read in groups
+        elif (self._compute_groups is None and self._groups is not None):
+            groups = [Spectrum.Group(list(elems), ind)
+                      for ind, elems in self._groups.items()]
         spectrum = Spectrum(self._elements, groups, self.get_tests(),
                             self._executions)
         # Split fault groups if necessary

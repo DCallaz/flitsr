@@ -96,6 +96,16 @@ class TCM(FileInput):
                     error('Incorrect number of matrix lines', f'({t})',
                           'in input file, terminating...')
 
+    def _read_groups(self, f: TextIO) -> None:
+        line = f.readline()
+        group_ind = 0
+        while (not line == '\n'):
+            elems = [int(elem_ind) for elem_ind in line.strip().split()]
+            for elem in elems:
+                self.sb.addElementToGroup(elem, group_ind)
+            group_ind += 1
+            line = f.readline()
+
     def _read_spectrum(self, input_path: str) -> Spectrum:
         file = open(input_path)
         exec_checks = {'#tests': False, '#uuts': False, '#matrix': False}
@@ -127,6 +137,9 @@ class TCM(FileInput):
                 # Filling the spectrum
                 self._fill_spectrum(file)
                 exec_checks['#matrix'] = True
+            elif (line.startswith("#groups")):
+                # Getting the (optional) groups of the spectrum
+                self._read_groups(file)
             else:
                 print("ERROR: Incorrectly formatted input file at line:", line,
                       "terminating...", file=sys.stderr)
@@ -158,6 +171,10 @@ class TCM(FileInput):
             print("#uuts", file=file)
             for elem in spectrum.elements():
                 print(elem.output_str(type_=type_), file=file)
+            print(file=file)
+            print("#groups", file=file)
+            for group in spectrum.groups():
+                print(*[elem.index() for elem in group], file=file)
             print(file=file)
             print("#matrix", file=file)
             for test in spectrum.tests():

@@ -512,6 +512,18 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 default=2, help='Sets the precision (number of decimal points) for '
                 'the output of all of the calculations (default: %(default)s)')
 
+        parser.add_argument('--construct-groups', dest='compute_groups',
+                            action=argparse.BooleanOptionalAction,
+                            help='By default, FLITSR will construct ambiguity '
+                            'groups from the input spectrum as long as these '
+                            'groups are not already provided in the input. '
+                            'Specifying `--construct-groups` will force '
+                            'groups to always be constructed, regardless of '
+                            'the input. Likewise `--no-construct-groups` will '
+                            'never construct groups, even if none are given '
+                            'in the input, forming groups of singular '
+                            'elements if no groups are given.')
+
         # Advanced types options
         advanced_groups: List[Tuple[str, Any, Any, Any]] = []
 

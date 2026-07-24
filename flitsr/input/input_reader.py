@@ -1,7 +1,7 @@
 import re
 import inspect
 from os import path as osp
-from typing import List, final, Type, overload
+from typing import List, final, Type, overload, Optional
 from abc import ABC, abstractmethod
 from deprecated.sphinx import versionadded, versionchanged, deprecated
 from flitsr.spectrum import Spectrum
@@ -26,7 +26,8 @@ class Input(ABC):
                     '`method_level`, and `duplicate_strategy` parameters')
     @final
     def __init__(self, split_faults: bool = False, method_level: bool = False,
-                 duplicate_strategy: DupStrat = DupStrat.REFUSE):
+                 duplicate_strategy: DupStrat = DupStrat.REFUSE,
+                 compute_groups: Optional[bool] = None):
         """
         Internal constructor for an `Input` type.
 
@@ -37,8 +38,9 @@ class Input(ABC):
         self.method_level = method_level
         self.duplicate_strategy = duplicate_strategy
         self.split_faults = split_faults
+        self.compute_groups = compute_groups
         self.sb = SpectrumBuilder(method_level, split_faults,
-                                  duplicate_strategy)
+                                  duplicate_strategy, compute_groups)
 
     @staticmethod
     def get_run_file_name(input_path: str) -> str:
@@ -71,7 +73,8 @@ class Input(ABC):
     @classmethod
     def read_spectrum(cls, input_path: str, split_faults: bool = False,
                       method_level: bool = False, duplicate_strategy:
-                      DupStrat = DupStrat.REFUSE) -> Spectrum: ...
+                      DupStrat = DupStrat.REFUSE, compute_groups:
+                      Optional[bool] = None) -> Spectrum: ...
 
     @classmethod
     @deprecated(version='2.5.0', reason='This method is deprecated and will '
@@ -167,7 +170,8 @@ class Input(ABC):
     @final
     def read_in(cls, input_path: str, split_faults: bool = False,
                 method_level: bool = False, duplicate_strategy:
-                DupStrat = DupStrat.REFUSE) -> Spectrum:
+                DupStrat = DupStrat.REFUSE,
+                compute_groups: Optional[bool] = None) -> Spectrum:
         """
         Read in the spectrum from the given input file. When called from
         a concrete `Input` class, simply reads the spectrum using that input
@@ -191,7 +195,8 @@ class Input(ABC):
             reader = Input.get_reader(input_path)
         else:
             reader = cls
-        instance = reader(split_faults, method_level, duplicate_strategy)
+        instance = reader(split_faults, method_level, duplicate_strategy,
+                          compute_groups)
         return instance._read_spectrum(input_path)
 
     @staticmethod
