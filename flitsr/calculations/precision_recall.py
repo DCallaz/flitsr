@@ -2,7 +2,7 @@ from fractions import Fraction
 from typing import Any, Tuple
 from math import comb
 from flitsr.tie import Ties
-from flitsr.calculations.calc_decorator import calculation, parameter
+from flitsr.calculations.calc_decorator import calculation, parameter, timing
 from flitsr.calculations.exp_values import cut_off_exp_val
 
 
@@ -41,6 +41,7 @@ def precision(x: Any, ties: Ties, collapse=False) -> float:
              'point `x`, out of the total number of faults n (i.e. f/n). Can '
              'be specified multiple times', 'recall-at')
 @parameter('x', type=stop_type)
+@timing
 def recall(x: Any, ties: Ties, collapse=False) -> float:
     if (len(ties.faults) == 0):
         return 0.0
