@@ -81,7 +81,7 @@ def natsort(s, _nsre=re.compile(r'(\d+)')):
 class Runall:
     def __init__(self, metrics: Set[str], num_cpus: Optional[int] = None,
                  recover: bool = False, flitsr_args: List[str] = None,
-                 driver: Optional[str] = None):
+                 driver: Optional[str] = None, ranking: bool = False):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
             driver = 'main'
@@ -90,7 +90,10 @@ class Runall:
         self.metrics = metrics
         self.recover = recover
         # set up the args
-        self.args = ["--all"]
+        self.ranking = ranking
+        self.args = []
+        if (not ranking):
+            self.args.append("--all")
         for metric in metrics:
             self.args.extend(["-m", metric])
         if (recover):
@@ -233,8 +236,9 @@ class Runall:
                                 print(file.read(), end='')
                         os.remove(error_file)
             # collect the results files
-            self.collect_results()
-            merge.main([])
+            if (not self.ranking):
+                self.collect_results()
+                merge.main([])
             os.remove("done_inputs.tmp")
             print(f'Done in {osp.normpath(dir_)}')
             os.chdir(basedir)
@@ -349,7 +353,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('-r', '--recover', action='store_true', help='Recover '
                         'from a partial run_all run by re-using existing '
                         'files')
-    parser.add_argument('-a', '--flitsr_arg', nargs='+', action='extend',
+    parser.add_argument('-a', '--flitsr-arg', nargs='+', action='extend',
                         help='Specify an argument to give to the flitsr '
                         'program. NOTE: use -a="<argument>" syntax for '
                         'arguments beginning with a dash ("-")')
@@ -361,6 +365,15 @@ def get_parser() -> argparse.ArgumentParser:
                         'current directory into results file(s). Ignores most '
                         'other options, except those for metrics (see -m and '
                         '-M).')
+
+    parser.add_argument('-R', '--ranking', action='store_true',
+                        help='By default, the run_all script will produce '
+                        'run files for each input and configuration which '
+                        'contain various evaluation metrics. Supplying this '
+                        'option will instead produce ranking files for each '
+                        'input and configuration. NOTE: this option will be '
+                        'overriden by any specific calculations given to '
+                        '`flitsr` by the `-a`/`--flitsr-arg` option.')
 
     argcomplete.autocomplete(parser)
     return parser
@@ -406,7 +419,8 @@ def main(argv: Optional[List[str]] = None):
             quit()
 
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
-                     flitsr_args=args.flitsr_arg, driver=args.driver)
+                     flitsr_args=args.flitsr_arg, driver=args.driver,
+                     ranking=args.ranking)
     run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, base=args.base)
 
