@@ -95,47 +95,52 @@ def read_flitsr_ranking(ranking_file: Union[str, TextIO]) -> Rankings:
         f: TextIO = open(ranking_file)
     else:
         f = ranking_file
-    ranking = Ranking()
-    all_faults: Dict[Any, Set[Spectrum.Element]] = {}
-    elements: List[Spectrum.Element] = []
-    num_locs = 0  # number of reported locations (methods/lines)
-    i = 0  # number of actual lines
     line = f.readline()
+    rankings: List[Ranking] = []
     while (line != ""):
-        line = line.strip()
-        score: Union[int, float]
-        str_score = line[line.index(": ")+2:line.index(" [")]
-        if (str_score.isdigit()):
-            score = int(str_score)
-        else:
-            score = float(str_score)
-        line = f.readline().strip()
-        group_elems = []
-        while (not line.startswith("]")):
-            # read in ranked element (old or new FLITSR format)
-            m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
-            if (m is None):
-                # if normal format fails, try DUA format
-                m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*\\s\\S*\\s\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
-                if (m is None):
-                    raise ValueError("Incorrectly formatted line \"" + line +
-                                     "\" when reading input ranking file")
-            details = m.group(1).split('|')
-            if (m.group(2)):
-                faults = [int(i) if i.isdecimal() else float(i)
-                          for i in m.group(2).split(',')]
+        if (re.fullmatch("<-+ Next Ranking -+>", line)):
+            line = f.readline()
+        ranking = Ranking()
+        rankings.append(ranking)
+        all_faults: Dict[Any, Set[Spectrum.Element]] = {}
+        elements: List[Spectrum.Element] = []
+        num_locs = 0  # number of reported locations (methods/lines)
+        i = 0  # number of actual lines
+        while (line != "" and "Next Ranking" not in line):
+            line = line.strip()
+            score: Union[int, float]
+            str_score = line[line.index(": ")+2:line.index(" [")]
+            if (str_score.isdigit()):
+                score = int(str_score)
             else:
-                faults = []
-            elem = Spectrum.Element(details, len(elements), faults)
-            elements.append(elem)
-            for fault in faults:
-                all_faults.setdefault(fault, set()).add(elem)
-            group_elems.append(elem)
-            i += 1
+                score = float(str_score)
             line = f.readline().strip()
-        group = Spectrum.Group(group_elems)
-        ranking.append(group, score, 0)
-        num_locs += 1
-        line = f.readline().strip()
-    rankings = Rankings(all_faults, elements, [ranking])
-    return rankings
+            group_elems = []
+            while (not line.startswith("]")):
+                # read in ranked element (old or new FLITSR format)
+                m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
+                if (m is None):
+                    # if normal format fails, try DUA format
+                    m = re.fullmatch("\\s*(?:\\([0-9]+\\)\\s*)?(\\S*\\s\\S*\\s\\S*)\\s*(?:\\(FAULT ([0-9.,]+)\\))?", line)
+                    if (m is None):
+                        raise ValueError(f"Incorrectly formatted line \"{line}"
+                                         "\" when reading input ranking file")
+                details = m.group(1).split('|')
+                if (m.group(2)):
+                    faults = [int(i) if i.isdecimal() else float(i)
+                              for i in m.group(2).split(',')]
+                else:
+                    faults = []
+                elem = Spectrum.Element(details, len(elements), faults)
+                elements.append(elem)
+                for fault in faults:
+                    all_faults.setdefault(fault, set()).add(elem)
+                group_elems.append(elem)
+                i += 1
+                line = f.readline().strip()
+            group = Spectrum.Group(group_elems)
+            ranking.append(group, score, 0)
+            num_locs += 1
+            line = f.readline().strip()
+    ret_rankings = Rankings(all_faults, elements, rankings)
+    return ret_rankings
