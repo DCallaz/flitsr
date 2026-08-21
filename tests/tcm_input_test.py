@@ -49,7 +49,6 @@ def test_fill_spectrum(num_tests, num_elems):
     # Filling tests
     test_names = list_strings("[a-z.]+", num_tests)
     test_outcomes = [Outcome(random.randint(0, 1)) for _ in range(num_tests)]
-    print(test_outcomes)
     for i in range(num_tests):
         inp.sb.addTest(test_names[i], test_outcomes[i], index=i)
     matrix = ""

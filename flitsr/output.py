@@ -27,7 +27,7 @@ def print_flitsr_ranking(ranking: Optional[Ranking],
 
 def print_rankings(rankings: Rankings, csv: bool = False,
                    file: Union[str, TextIO] = sys.stdout) -> None:
-    with (open(file) if isinstance(file, str) else file) as file:
+    with (open(file, 'w') if isinstance(file, str) else file) as file:
         for (i, ranking) in enumerate(rankings):
             if (i > 0):
                 print('<', '-'*22, ' Next Ranking ', '-'*22, '>', sep='',

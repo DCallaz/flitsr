@@ -107,10 +107,8 @@ def get_func(calc: Calc):
         return partial(wasted_effort, weffort=True)
     elif (calc is Calc.EXAM):
         return partial(wasted_effort, weffort=False)
-    elif (calc is Calc.RECALL):
-        return partial(prec_rec, precision=False)
-    elif (calc is Calc.PRECISION):
-        return partial(prec_rec, precision=True)
+    elif (calc is Calc.RECALL or calc is Calc.PRECISION):
+        return prec_rec
 
 
 def exact_method(fs: Dict[T, INT_COLLECTION], q: int, elems: Collection[T],
@@ -160,7 +158,9 @@ def wasted_effort(rank: Iterable[T], fs: Faults[T, COLLECTION], k: int,
 
 
 def prec_rec(rank: Iterable[T], fs: Faults[T, COLLECTION], n: int,
-             x: Dict[Any, int], precision=False) -> float:
+             x: Dict[Any, int]) -> float:
+    if (len(fs.faults()) == 0):
+        return 0.0
     to_inspect = x.copy()
     seen: Set[int] = set()
     try:
@@ -174,11 +174,7 @@ def prec_rec(rank: Iterable[T], fs: Faults[T, COLLECTION], n: int,
                         seen.add(fault)
     except StopIteration:
         pass
-    if (precision):
-        return len(seen)/n
-    else:
-        fn = len(fs.faults())
-        return len(seen)/fn
+    return len(seen)
 
 
 def new_method(fs, q, m, weffort=False):

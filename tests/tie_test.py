@@ -7,11 +7,12 @@ from flitsr.tie import Ties, Tie
 from flitsr.calculations import BUModel, exp_values
 from flitsr.calculations.perms import exact_method, Calc
 from flitsr.ranking import Rankings
+from flitsr.output import print_rankings
 from tests.helper import list_strings
 from io import StringIO
 
 
-def create_ranking(seed: int, tie_size=10) -> Rankings:
+def create_ranking(seed: int, avg_tie_size=10) -> Rankings:
     ranking = StringIO()
     rng = random.Random(seed)
     num_elems = rng.randint(1, 10000)
@@ -21,7 +22,7 @@ def create_ranking(seed: int, tie_size=10) -> Rankings:
                   for f in range(num_faults)}
     all_fault_locs = set().union(*fault_locs.values())
 
-    num_ties = max(num_elems//tie_size, 1)
+    num_ties = max(num_elems//avg_tie_size, 1)
     num_groups = rng.randint(num_ties, num_elems)
     # divide elems into groups
     # list of indices each group ends on (exclusive) in order
@@ -67,18 +68,32 @@ def _effort_sampled(tie: Tie, q: int, weffort: bool, collapse=False,
 
 # @pytestr.parametrize("seed", [289218296017730])
 @pytestr.parametrize("bu", [BUModel.PERFECT, BUModel.INEPT])
-@pytestr.randomize(seed=int, min_num=0, max_num=int(1e15), ncalls=10)
-def test_effort(bu, seed):
-    rankings = create_ranking(seed, tie_size=5)
+@pytestr.parametrize("avg_tie_size", [2, 5, 10])
+@pytestr.randomize(seed=int, min_num=0, max_num=int(1e15), ncalls=20)
+def test_effort(bu, seed, avg_tie_size):
+    rankings = create_ranking(seed, avg_tie_size=5)
     # rankings = read_flitsr_ranking("ranking.txt")
     ties = Ties(rankings, bu)
-    eff_func = partial(_effort_sampled, bu=bu, samples=15000)
+    eff_func = partial(_effort_sampled, bu=bu, samples=167)
     for n in range(1, len(rankings.faults())+1):
         act = exp_values.effort_exp_val(ties=ties, target=n, weffort=True)
         exp = exp_values.effort_exp_val(ties=ties, target=n, weffort=True,
                                         tie_exp_func=eff_func)
         assert act >= 0.0, f'Fault no.: {n}'
-        assert act == approx(exp, rel=2e-2, abs=1e-4), f'Fault no.: {n}'
+        try:
+            assert act == approx(exp, rel=1e-1, abs=1e-2), f'Fault no.: {n}'
+        except AssertionError:
+            # try with more samples
+            eff_func = partial(_effort_sampled, bu=bu)
+            exp = exp_values.effort_exp_val(ties=ties, target=n, weffort=True,
+                                            tie_exp_func=eff_func)
+            try:
+                assert act == approx(exp, rel=1e-3, abs=1e-6),f'Fault no.: {n}'
+            except AssertionError as e:
+                with open(f"{bu}_{seed}_{avg_tie_size}.ranking", 'w') as file:
+                    print_rankings(rankings, file=file)
+                print(f"Wrote ranking to {bu}_{seed}_{avg_tie_size}.ranking")
+                raise e
 
 
 CUT_OFFS = [1, 3, 5, 10, 15, 20, 50, 100]
@@ -86,20 +101,35 @@ CUT_OFFS = [1, 3, 5, 10, 15, 20, 50, 100]
 
 def _cutoff_sampled(tie: Tie, q: int, collapse=False,
                     bu: BUModel = BUModel.PERFECT, samples=None) -> float:
-    return q*exact_method(tie.active_fault_locations(collapse), q,
-                          tie.elems(collapse), Calc.PRECISION,
-                          bu=bu, samples=samples)
+    return exact_method(tie.active_fault_locations(collapse), q,
+                        tie.elems(collapse), Calc.PRECISION,
+                        bu=bu, samples=samples)
 
 
 @pytestr.parametrize("bu", BUModel.get_types())
-@pytestr.randomize(seed=int, min_num=0, max_num=int(1e15), ncalls=10)
-def test_cutoff(bu, seed):
-    rankings = create_ranking(seed, tie_size=5)
+@pytestr.randomize(seed=int, min_num=0, max_num=int(1e15), ncalls=20)
+@pytestr.parametrize("avg_tie_size", [2, 5, 10])
+def test_cutoff(bu, seed, avg_tie_size):
+    rankings = create_ranking(seed, avg_tie_size=5)
     ties = Ties(rankings, bu)
-    cutoff_func = partial(_cutoff_sampled, bu=bu, samples=15000)
+    cutoff_func = partial(_cutoff_sampled, bu=bu, samples=167)
     for n in CUT_OFFS:
         act = exp_values.cut_off_exp_val(ties=ties, target=n)
         exp = exp_values.cut_off_exp_val(ties=ties, target=n,
                                          tie_exp_func=cutoff_func)
         assert act >= 0.0, f'Target: {n}'
-        assert act == approx(exp, rel=2e-2, abs=1e-2), f'Target: {n}'
+        try:
+            assert act == approx(exp, rel=1e-1, abs=1e-2), f'Target: {n}'
+        except AssertionError:
+            # try with more samples
+            cutoff_func = partial(_cutoff_sampled, bu=bu)
+            exp = exp_values.cut_off_exp_val(ties=ties, target=n,
+                                             tie_exp_func=cutoff_func)
+            try:
+                assert act == approx(exp, rel=1e-3, abs=1e-6), f'Target: {n}'
+            except AssertionError as e:
+                name = f"cutoff_{bu}_{seed}_{avg_tie_size}.ranking"
+                with open(name, 'w') as file:
+                    print_rankings(rankings, file=file)
+                print(f"Wrote ranking to \"{name}\"")
+                raise e

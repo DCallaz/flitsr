@@ -84,7 +84,8 @@ class Tie:
               no_passive: bool = False) -> AnyEntities:
         """
         Return the set of all the elements (or entities) in this tie. When
-        `no_passive` is True, only return elements that are not passive faults.
+        `no_passive` is True, does not include elements that pertain only to
+        passive faults.
         """
         if (not no_passive):
             if (collapse):
@@ -92,15 +93,29 @@ class Tie:
             else:
                 return self._elems
         else:
-            passive_faults = (set(self._fault_locs.keys())
-                              .difference(self._active_faults.keys()))
+            active = set().union(self._active_faults.keys())
+            # print("active", active)
+            active_locs: Set[Spectrum.Entity] = set()
+            passive_locs: Set[Spectrum.Entity] = set()
+            fault_collapse: Dict[Any, Any]
             if (collapse):
-                passive_locs = set().union(*chain(self._fault_groups[p] for p
-                                                  in passive_faults))
+                fault_collapse = self._fault_groups
             else:
-                passive_locs = set().union(*chain(self._fault_locs[p] for p
-                                                  in passive_faults))
-            return {e for e in self._elems if e not in passive_locs}
+                fault_collapse = self._fault_locs
+            # print("fault_collapse", fault_collapse)
+            for fault, elems in fault_collapse.items():
+                if (fault in active):
+                    active_locs.update(elems)
+                else:
+                    passive_locs.update(elems)
+            # print("active_locs", active_locs)
+            # print("passive_locs", passive_locs)
+            only_passive = passive_locs.difference(active_locs)
+            # print("only_passive", only_passive)
+            if (collapse):
+                return set(self._groups).difference(only_passive)
+            else:
+                return self._elems.difference(only_passive)
 
     T = TypeVar('T', bound=Spectrum.Entity)
 
