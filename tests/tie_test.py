@@ -18,7 +18,8 @@ def create_ranking(seed: int, avg_tie_size=10) -> Rankings:
     num_elems = rng.randint(1, 10000)
     elem_names = list_strings('u[1-9][0-9]{0,5}', num_elems)
     num_faults = rng.randint(1, max(1, min(num_elems//100, 20)))
-    fault_locs = {f: rng.sample(range(0, num_elems), rng.randint(1, 10))
+    max_locs = min(num_elems, 10)
+    fault_locs = {f: rng.sample(range(0, num_elems), rng.randint(1, max_locs))
                   for f in range(num_faults)}
     all_fault_locs = set().union(*fault_locs.values())
 
@@ -56,14 +57,14 @@ def create_ranking(seed: int, avg_tie_size=10) -> Rankings:
 
 
 def _effort_sampled(tie: Tie, q: int, weffort: bool, collapse=False,
-                    bu: BUModel = BUModel.PERFECT, samples=None) -> float:
+                    samples=None) -> float:
     if (weffort):
         calc = Calc.WEFFORT
     else:
         calc = Calc.EXAM
     return exact_method(tie.active_fault_locations(collapse), q,
                         tie.elems(collapse, no_passive=True), calc,
-                        bu=bu, samples=samples)
+                        bu=tie.fault_identify_nums(collapse), samples=samples)
 
 
 # @pytestr.parametrize("seed", [289218296017730])
@@ -74,7 +75,7 @@ def test_effort(bu, seed, avg_tie_size):
     rankings = create_ranking(seed, avg_tie_size=5)
     # rankings = read_flitsr_ranking("ranking.txt")
     ties = Ties(rankings, bu)
-    eff_func = partial(_effort_sampled, bu=bu, samples=167)
+    eff_func = partial(_effort_sampled, samples=167)
     for n in range(1, len(rankings.faults())+1):
         act = exp_values.effort_exp_val(ties=ties, target=n, weffort=True)
         exp = exp_values.effort_exp_val(ties=ties, target=n, weffort=True,
@@ -84,7 +85,7 @@ def test_effort(bu, seed, avg_tie_size):
             assert act == approx(exp, rel=1e-1, abs=1e-2), f'Fault no.: {n}'
         except AssertionError:
             # try with more samples
-            eff_func = partial(_effort_sampled, bu=bu, samples=10000)
+            eff_func = partial(_effort_sampled, samples=10000)
             exp = exp_values.effort_exp_val(ties=ties, target=n, weffort=True,
                                             tie_exp_func=eff_func)
             try:
@@ -99,11 +100,10 @@ def test_effort(bu, seed, avg_tie_size):
 CUT_OFFS = [1, 3, 5, 10, 15, 20, 50, 100]
 
 
-def _cutoff_sampled(tie: Tie, q: int, collapse=False,
-                    bu: BUModel = BUModel.PERFECT, samples=None) -> float:
+def _cutoff_sampled(tie: Tie, q: int, collapse=False, samples=None) -> float:
     return exact_method(tie.active_fault_locations(collapse), q,
                         tie.elems(collapse), Calc.PRECISION,
-                        bu=bu, samples=samples)
+                        bu=tie.fault_identify_nums(collapse), samples=samples)
 
 
 @pytestr.parametrize("bu", BUModel.get_types())
@@ -112,7 +112,7 @@ def _cutoff_sampled(tie: Tie, q: int, collapse=False,
 def test_cutoff(bu, seed, avg_tie_size):
     rankings = create_ranking(seed, avg_tie_size=5)
     ties = Ties(rankings, bu)
-    cutoff_func = partial(_cutoff_sampled, bu=bu, samples=167)
+    cutoff_func = partial(_cutoff_sampled, samples=167)
     for n in CUT_OFFS:
         act = exp_values.cut_off_exp_val(ties=ties, target=n)
         exp = exp_values.cut_off_exp_val(ties=ties, target=n,
@@ -122,7 +122,7 @@ def test_cutoff(bu, seed, avg_tie_size):
             assert act == approx(exp, rel=1e-1, abs=1e-2), f'Target: {n}'
         except AssertionError:
             # try with more samples
-            cutoff_func = partial(_cutoff_sampled, bu=bu, samples=10000)
+            cutoff_func = partial(_cutoff_sampled, samples=10000)
             exp = exp_values.cut_off_exp_val(ties=ties, target=n,
                                              tie_exp_func=cutoff_func)
             try:

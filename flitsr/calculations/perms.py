@@ -6,7 +6,7 @@ from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError
 from typing import Dict, Iterable, Set, Any, TypeVar, Generic, \
-        Optional
+        Optional, Union
 from collections.abc import Collection, KeysView
 from numpy import random, fromiter
 import ast
@@ -112,10 +112,13 @@ def get_func(calc: Calc):
 
 
 def exact_method(fs: Dict[T, INT_COLLECTION], q: int, elems: Collection[T],
-                 calc: Calc, bu=BUModel.PERFECT,
-                 samples: Optional[int] = None):
+                 calc: Calc, bu: Union[BUModel, Dict[Any, int]] =
+                 BUModel.PERFECT, samples: Optional[int] = None):
     fs = Faults(fs)
-    x = bu.get_dict(fs.get_by_faults())
+    if (isinstance(bu, BUModel)):
+        x = bu.get_dict(fs.get_by_faults())
+    else:
+        x = bu
     dist: Dict[float, int] = {}
     perms: Iterable
     mtot: int
