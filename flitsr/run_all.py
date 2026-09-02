@@ -202,9 +202,15 @@ class Runall:
         if (self.input_ranking):
             # set the metrics
             self.base = base
-            self.metrics = {re.sub(translate(self.base.replace("*", "")), "",
-                                   re.sub("^[^_]*_", "", osp.basename(file), 1))
-                            for file in inputs}
+            base = base.replace("*", "")
+
+            def get_metric_name(file):
+                res = re.sub(translate(base), "", osp.basename(file))
+                metric = re.sub("^[^_]*_", "", res, 1)
+                return metric
+            self.metrics = {get_metric_name(file) for file in inputs}
+            print('Found metrics:',
+                  f'{", ".join(sorted(self.metrics, key=natsort))}')
             # collect dirs
             dirs_us = {osp.dirname(osp.dirname(f)) for f in inputs}
         else:
