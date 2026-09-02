@@ -11,7 +11,8 @@ from itertools import chain
 from os import path as osp
 from pathlib import Path
 import shutil
-from fnmatch import fnmatch
+from fnmatch import fnmatch, translate
+from functools import partial
 import re
 from contextlib import redirect_stderr, redirect_stdout
 if sys.version_info < (3, 10):
@@ -81,7 +82,8 @@ def natsort(s, _nsre=re.compile(r'(\d+)')):
 class Runall:
     def __init__(self, metrics: Set[str], num_cpus: Optional[int] = None,
                  recover: bool = False, flitsr_args: List[str] = None,
-                 driver: Optional[str] = None, ranking: bool = False):
+                 driver: Optional[str] = None, output_ranking: bool = False,
+                 input_ranking: bool = False):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
             driver = 'main'
@@ -89,11 +91,15 @@ class Runall:
         self.num_cpus = num_cpus
         self.metrics = metrics
         self.recover = recover
+        self.output_ranking = output_ranking
+        self.input_ranking = input_ranking
+        self.base: Optional[str] = None
         # set up the args
-        self.ranking = ranking
         self.args = []
-        if (not ranking):
+        if (not output_ranking):
             self.args.append("--all")
+        if (input_ranking):
+            self.args.append("-r")
         for metric in metrics:
             self.args.extend(["-m", metric])
         if (recover):
@@ -104,6 +110,16 @@ class Runall:
 
     def run_flitsr(self, input_cov: str):
         args = self.args + [input_cov]
+        if (self.input_ranking):
+            dir_, file = osp.split(input_cov)
+            assert dir_ != '' and file != '' and self.base is not None
+            input_cov = dir_
+            file = re.sub(translate(self.base.replace("*", "")), "", file)
+            # check if type is needed
+            base = ""
+            if ("_" not in file):
+                base = "base_"
+            args.extend(["-o", f"{base}{file}_{dir_}.run"])
         with open(input_cov+".err", 'w') as errfile:
             with redirect_stderr(errfile):
                 # import from flitsr or plugin
@@ -134,7 +150,7 @@ class Runall:
     def collect_results(self):
         for m in self.metrics:
             rs = find('.', type='f', name='*.run', action=osp.normpath)
-            tre = f"(.*)_{m}_.+\\.run"
+            tre = f"(.*)_{re.escape(m)}_.+\\.run"
             try:
                 types = {m.group(1) for m in (re.match(tre, r) for r in rs)
                          if m is not None}
@@ -173,14 +189,27 @@ class Runall:
             inputs_us = find('.', excl_dirs=exclude, incl_dirs=include,
                              depth=depth)
         elif (input_type == BaseInputType.DIR):
+            action_args = {'action': osp.dirname}
+            # if rankings, don't just get dirname, get all ranking files
+            if (self.input_ranking):
+                action_args = {}
             inputs_us = set(find('.', type='f', name=base,
                                  excl_dirs=exclude, incl_dirs=include,
-                                 depth=depth, action=osp.dirname))
+                                 depth=depth, **action_args))  # type:ignore
         elif (input_type == BaseInputType.FILE):
             inputs_us = find('.', type='f', name=base, excl_dirs=exclude,
                              incl_dirs=include, depth=depth)
         inputs = sorted(inputs_us, key=natsort)
-        dirs_us = {osp.dirname(f) for f in inputs}
+        if (self.input_ranking):
+            # set the metrics
+            self.base = base
+            self.metrics = {re.sub(translate(self.base.replace("*", "")), "",
+                                   re.sub("^[^_]*_", "", osp.basename(file), 1))
+                            for file in inputs}
+            # collect dirs
+            dirs_us = {osp.dirname(osp.dirname(f)) for f in inputs}
+        else:
+            dirs_us = {osp.dirname(f) for f in inputs}
         dirs = sorted(dirs_us, key=natsort)
 
         # save base directory
@@ -207,9 +236,13 @@ class Runall:
                 if (len(done_inp) > 0):
                     print('Skipping done inputs:')
                     print(*done_inp, sep=", ")
-            pat = f"{re.escape(dir_)}{re.escape(osp.sep)}[^{re.escape(osp.sep)}]*"
-            proj_inp = list(map(osp.basename, [i for i in inputs if
-                                               re.fullmatch(pat, i)]))
+            sep = re.escape(osp.sep)
+            if (self.input_ranking):
+                pat = f"{re.escape(dir_)}{sep}[^{sep}]*{sep}[^{sep}]*"
+            else:
+                pat = f"{re.escape(dir_)}{sep}[^{sep}]*"
+            proj_inp = list(map(partial(osp.relpath, start=dir_),
+                                [i for i in inputs if re.fullmatch(pat, i)]))
             self.num_inputs = len(proj_inp)
             # Remove done inputs
             proj_inp = sorted(set(proj_inp) - set(done_inp), key=natsort)
@@ -236,7 +269,7 @@ class Runall:
                                 print(file.read(), end='')
                         os.remove(error_file)
             # collect the results files
-            if (not self.ranking):
+            if (not self.output_ranking):
                 self.collect_results()
                 merge.main([])
             os.remove("done_inputs.tmp")
@@ -366,7 +399,7 @@ def get_parser() -> argparse.ArgumentParser:
                         'other options, except those for metrics (see -m and '
                         '-M).')
 
-    parser.add_argument('-R', '--ranking', action='store_true',
+    parser.add_argument('-R', '-ro', '--ranking-output', action='store_true',
                         help='By default, the run_all script will produce '
                         'run files for each input and configuration which '
                         'contain various evaluation metrics. Supplying this '
@@ -374,6 +407,28 @@ def get_parser() -> argparse.ArgumentParser:
                         'input and configuration. NOTE: this option will be '
                         'overriden by any specific calculations given to '
                         '`flitsr` by the `-a`/`--flitsr-arg` option.')
+
+    parser.add_argument('-ri', '--ranking-input', action='store_true',
+                        help='By default, the run_all script expects inputs '
+                        'in the form of coverage files (e.g. in GZoltar or '
+                        'TCM format). Supplying this option will tell the '
+                        'script to instead expect inputs in the form of '
+                        'pre-computed rankings. Such rankings can be in any '
+                        'format recognized by flitsr. You must use the '
+                        '-D/--dir option when using this option'
+                        ' to specify the rankings '
+                        # 'either with different filenames in the same directory, or'
+                        ' grouped by version in directories, where PAT is '
+                        'used to select the rankings. NOTE: PAT is also used '
+                        'to decide metric names, where anything matched by '
+                        '"*" is taken as the metric name; metric names can '
+                        'also include a type, in the form "<type>_<metric>". '
+                        'For example, the PAT "*_ranking.csv" will match '
+                        '"flitsr_tarantula_ranking.csv", with type = "flitsr" '
+                        'and metric = "tarantula"'
+                        # 'When using -f/--file, PAT refers to the *substring* '
+                        # 'of the filename that identifies each version. '
+                        )
 
     argcomplete.autocomplete(parser)
     return parser
@@ -420,7 +475,8 @@ def main(argv: Optional[List[str]] = None):
 
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver,
-                     ranking=args.ranking)
+                     output_ranking=args.ranking_output,
+                     input_ranking=args.ranking_input)
     run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, base=args.base)
 

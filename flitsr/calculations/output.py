@@ -11,7 +11,7 @@ def calculate(rankings: Rankings,
               decimals: int = 2, file: Union[str, TextIO] = sys.stdout,
               bu_model: BUModel = BUModel.PERFECT, collapse: bool = False):
     if (isinstance(file, str)):
-        file = open(file)
+        file = open(file, 'w')
     ties: Ties = Ties(rankings, bu_model)
     for calc, lst_values in calc_args.items():
         calc_fn = calcs[calc]

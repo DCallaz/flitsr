@@ -203,6 +203,14 @@ class _ParameterParser(Iterable[Tuple[str, Optional[Dict[str, Any]]]]):
         return param, parser_args
 
 
+def _fileType(inp: str) -> str:
+    if (osp.exists(osp.dirname(osp.abspath(inp)))):
+        return inp
+    else:
+        raise argparse.ArgumentTypeError(f"can't open {inp}: [Errno 2] No "
+                                         "such file or directory.")
+
+
 class Args(argparse.Namespace, metaclass=SingletonMeta):
     """
     The global Singleton holding the specified/default arguments used across
@@ -407,7 +415,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                 '(GZoltar) containing the coverage collected '
                                 'for the system over the test suite')
         parser.add_argument('-o', '--output', action='store', default=sys.stdout,
-                type=argparse.FileType('w'), help='Specify the output file to use '
+                type=_fileType, help='Specify the output file to use '
                 'for all output (default: STDOUT).')
         parser.add_argument('--csv', action='store_true',
                 help='By default FLITSR will output the ranking in it\'s own '
