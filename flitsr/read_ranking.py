@@ -25,8 +25,42 @@ def read_any_ranking(ranking_file: Union[str, TextIO],
         f.seek(0)
         if (line.startswith("Faulty grouping")):
             return read_flitsr_ranking(f)
-        else:
+        elif (line.startswith("name")):
             return read_gzoltar_ranking(f, method_level)
+        else:
+            return read_transfer_ranking(ranking_file)
+
+
+def read_transfer_ranking(ranking_file: Union[str, TextIO]) -> Rankings:
+    """
+    Read in a TRANSFER-FL formatted ranking.
+    """
+    if (isinstance(ranking_file, str)):
+        f: TextIO = open(ranking_file)
+    else:
+        f = ranking_file
+    ranking = Ranking()
+    all_faults: Dict[Any, Set[Spectrum.Element]] = {}
+    elements: List[Spectrum.Element] = []
+    for _, line in enumerate(f):
+        line = line.strip()
+        l = line.split()
+        score = float(l[1])
+        name = l[0]
+        faults = []
+        if (len(l) > 2):
+            for b in l[2:]:
+                faults.append(int(b))
+        details = name.split('@')
+        # Create the element
+        elem = Spectrum.Element(details, len(elements), faults)
+        elements.append(elem)
+        for fault in faults:
+            all_faults.setdefault(fault, set()).add(elem)
+
+        # Add/Update the method's score
+        ranking.append(elem, score, 0)
+    return Rankings(all_faults, elements, [ranking])
 
 
 def read_gzoltar_ranking(ranking_file: Union[str, TextIO],
