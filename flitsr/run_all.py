@@ -119,7 +119,7 @@ class Runall:
             if ("_" not in file):
                 base = "base_"
             args.extend(["-o", f"{base}{file}_{dir_}.run"])
-        with open(input_cov+".err", 'w') as errfile:
+        with open(input_cov.replace("/", "_")+".err", 'w') as errfile:
             with redirect_stderr(errfile):
                 # import from flitsr or plugin
                 if (importlib.util.find_spec('flitsr.'+self.driver)):
