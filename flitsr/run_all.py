@@ -113,7 +113,6 @@ class Runall:
         if (self.input_ranking):
             dir_, file = osp.split(input_cov)
             assert dir_ != '' and file != '' and self.base is not None
-            input_cov = dir_
             file = re.sub(translate(self.base.replace("*", "")), "", file)
             # check if type is needed
             base = ""
