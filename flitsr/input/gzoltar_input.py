@@ -4,7 +4,7 @@ import os
 from os import path as osp
 from typing import TextIO, List
 from shutil import rmtree
-from flitsr.spectrum import Spectrum, Outcome
+from flitsr.spectrum import Spectrum, Outcome, Details
 from flitsr.input.spectrumBuilder import TestKeyError, ElemKeyError
 from flitsr.errors import error
 from flitsr.input.input_reader import DirInput
@@ -30,15 +30,15 @@ class Gzoltar(DirInput):
         bugs = 0
         assert f.readline() == 'name\n'  # remove header
         for line in f:
-            m = re.fullmatch('([^$]+)\\$([^#]+)#([^:]+):([0-9]+)(?::(.+))?',
-                             line.rstrip())
+            pat = '([^$]+)\\$([^\\$#]+)(\\$[^#]+)?#([^:]+):([0-9]+)(?::(.+))?'
+            m = re.fullmatch(pat, line.rstrip())
             if (m is None):
                 error("Incorrectly formatted line \"" + line +
                       "\" when reading input file")
             else:
                 faults = []
-                if (m.group(5) is not None):
-                    bs = m.group(5).split(':')
+                if (m.group(6) is not None):
+                    bs = m.group(6).split(':')
                     if (not bs[0].isdigit()):
                         faults = [bugs]
                     else:
@@ -46,7 +46,9 @@ class Gzoltar(DirInput):
                         for b in bs:
                             faults.append(int(b))
                     bugs += 1
-                details = [m.group(1)+"."+m.group(2), m.group(3), m.group(4)]
+                details = Details(pname=m.group(1)+"."+m.group(2),
+                                  classname=m.group(3), method=m.group(4),
+                                  line_no=m.group(5))
                 self.sb.addElement(details, faults)
 
     def _construct_tests(self, tests_reader: TextIO) -> None:

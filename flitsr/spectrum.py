@@ -38,12 +38,15 @@ class Details(RecordClass):
     Args:
       pname: Either the full name of the element (if no other information
         is given), or the path name.
+      classname: The (optional) name of the class, useful when different
+        from the file name.
       method: The method name of the element.
       line_no: The line number of the element.
       extra: Any additional information related to this element; May include an
         index for duplicate elements.
     """
     pname: str
+    classname: Optional[str] = None
     method: Optional[str] = None
     line_no: Optional[int] = None
     extra: Optional[str] = None
@@ -90,6 +93,8 @@ class Details(RecordClass):
     def __eq__(self, other: Any) -> bool:
         return (isinstance(other, Details) and
                 self.pname == other.pname and  # pnames must be exactly equal
+                (self.classname is None or other.classname is None or
+                 self.classname == other.classname) and  # classes can be diff.
                 self.line_no == other.line_no and  # lines must be exactly eql
                 self.extra == other.extra and  # extras must be exactly equal
                 (self.method is None or other.method is None or
@@ -162,8 +167,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
         An element object holds information pertaining to a single spectral
         element (line, method, class, etc...).
         """
-        __slots__ = ('_index', 'details', 'method', 'path', 'line', 'faults',
-                     'hash')
+        __slots__ = ('_index', 'details', 'faults', 'hash')
 
         def __init__(self, details: Union[Details, List[str]], index: int,
                      faults: List[Any]):
@@ -172,12 +176,21 @@ class Spectrum(Iterable['Spectrum.Execution']):
             if (not isinstance(details, Details)):
                 details = Details.constructDetails(details)
             self.details = details
-            self.method = self.details.method
-            self.path = self.details.pname
-            self.line = self.details.line_no
 
             self.faults = faults
             self.hash = self.details.hash()
+
+        @property
+        def path(self):
+            return self.details.pname
+
+        @property
+        def method(self):
+            return self.details.method
+
+        @property
+        def line(self):
+            return self.details.line_no
 
         def isFaulty(self) -> bool:
             """

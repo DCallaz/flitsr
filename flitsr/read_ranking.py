@@ -1,6 +1,6 @@
 import re
-from typing import Tuple, List, Set, Union, Any, Dict, TextIO
-from flitsr.spectrum import Spectrum
+from typing import Tuple, List, Set, Union, Any, Dict, TextIO, Optional
+from flitsr.spectrum import Spectrum, Details
 from flitsr.ranking import Ranking, Rankings
 from flitsr.errors import error
 
@@ -81,7 +81,7 @@ def read_gzoltar_ranking(ranking_file: Union[str, TextIO],
         f = ranking_file
     ranking = Ranking()
     bugs = 0
-    methods: Dict[Tuple[str, str], Spectrum.Element] = {}
+    methods: Dict[Tuple[str, Optional[str]], Spectrum.Element] = {}
     all_faults: Dict[Any, Set[Spectrum.Element]] = {}
     elements: List[Spectrum.Element] = []
     f.readline()
@@ -90,7 +90,7 @@ def read_gzoltar_ranking(ranking_file: Union[str, TextIO],
         score = float(line[line.index(";")+1:])
         name = line[:line.index(";")]
         l = name.strip().split(':')
-        r = re.search("(.*)\\$(.*)#([^:]*)", l[0])
+        r = re.search("([^\\$]+)\\$([^\\$#]+)(\\$[^#]+)?#([^:]*)", l[0])
         if (r is None):
             raise ValueError("Incorrectly formatted line \"" + line +
                              "\" when reading input ranking file")
@@ -103,15 +103,19 @@ def read_gzoltar_ranking(ranking_file: Union[str, TextIO],
                 for b in l[2:]:
                     faults.append(int(b))
             bugs += 1
-        details = [r.group(1)+"."+r.group(2), r.group(3), l[1]]
+        details = Details(pname=r.group(1)+"."+r.group(2),
+                          classname=r.group(3), method=r.group(4),
+                          line_no=l[1])
         # Create or fetch the element
-        if (not method_level or (details[0], details[1]) not in methods):
+        meth_id = (details.pname+("" if details.classname is None else
+                                  "$"+details.classname), details.method)
+        if (not method_level or meth_id not in methods):
             elem = Spectrum.Element(details, len(elements), faults)
             elements.append(elem)
             if (method_level):
-                methods[(details[0], details[1])] = elem
+                methods[meth_id] = elem
         else:
-            elem = methods[(details[0], details[1])]
+            elem = methods[meth_id]
             for fault in faults:
                 if (fault not in elem.faults):
                     elem.faults.append(fault)
