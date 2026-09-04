@@ -2,6 +2,7 @@ import re
 from typing import Tuple, List, Set, Union, Any, Dict, TextIO
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, Rankings
+from flitsr.errors import error
 
 
 def read_any_ranking(ranking_file: Union[str, TextIO],
@@ -21,14 +22,20 @@ def read_any_ranking(ranking_file: Union[str, TextIO],
     """
     with (open(ranking_file) if isinstance(ranking_file, str)
           else ranking_file) as f:
-        line = f.readline()
+        line = f.readline().strip()
         f.seek(0)
-        if (line.startswith("Faulty grouping")):
-            return read_flitsr_ranking(f)
-        elif (line.startswith("name")):
-            return read_gzoltar_ranking(f, method_level)
-        else:
-            return read_transfer_ranking(ranking_file)
+        try:
+            if (line.startswith("Faulty grouping")):
+                return read_flitsr_ranking(f)
+            elif (re.fullmatch("(name|Line|\\w+);([Ss]us[\\w ]*)", line)):
+                return read_gzoltar_ranking(f, method_level)
+            elif (re.fullmatch("[\\w.]+@[0-9]+\\s+[0-9.]+", line)):
+                return read_transfer_ranking(ranking_file)
+            else:
+                error(f"Unrecognized ranking format for file: {ranking_file}")
+        except Exception as e:
+            error(f"{type(e).__name__} exception occurred while reading in "
+                  f"ranking \"{ranking_file}\": {e}")
 
 
 def read_transfer_ranking(ranking_file: Union[str, TextIO]) -> Rankings:

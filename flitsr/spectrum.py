@@ -81,6 +81,20 @@ class Details(RecordClass):
                 line = int(details[1])
         return cls(pname=path, method=method, line_no=line, extra=extra)
 
+    def hash(self) -> int:
+        """ Compute the hash value of this Details object"""
+        # ignore the method in the hash (otherwise comparing two objects where
+        # one has it and one doesn't could be non-equal
+        return hash((self.pname, self.line_no, self.extra))
+
+    def __eq__(self, other: Any) -> bool:
+        return (isinstance(other, Details) and
+                self.pname == other.pname and  # pnames must be exactly equal
+                self.line_no == other.line_no and  # lines must be exactly eql
+                self.extra == other.extra and  # extras must be exactly equal
+                (self.method is None or other.method is None or
+                 self.method == other.method))  # methods can be different
+
 
 class Spectrum(Iterable['Spectrum.Execution']):
     """An implementation for a program spectrum."""
@@ -149,7 +163,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
         element (line, method, class, etc...).
         """
         __slots__ = ('_index', 'details', 'method', 'path', 'line', 'faults',
-                     'tup', 'hash')
+                     'hash')
 
         def __init__(self, details: Union[Details, List[str]], index: int,
                      faults: List[Any]):
@@ -163,8 +177,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
             self.line = self.details.line_no
 
             self.faults = faults
-            self.tup = tuple(self.details)
-            self.hash = hash(self.tup)
+            self.hash = self.details.hash()
 
         def isFaulty(self) -> bool:
             """
@@ -192,7 +205,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
             return 1
 
         def __str__(self) -> str:
-            return "|".join(str(i) for i in self.tup if i) + \
+            return "|".join(str(i) for i in self.details if i) + \
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
@@ -234,7 +247,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
 
         def __eq__(self, other: Any) -> bool:
             return (isinstance(other, Spectrum.Element) and
-                    self.tup == other.tup)
+                    self.details == other.details)
 
         def __hash__(self) -> int:
             return self.hash
@@ -253,7 +266,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
               True if this `Spectrum.Element` is equal to `other`, False
               otherwise.
             """
-            return self.tup == other.tup
+            return self.details == other.details
 
     class Group(Entity):
         """

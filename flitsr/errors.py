@@ -1,7 +1,8 @@
 import sys
+from typing import NoReturn
 
 
-def error(*args, **kwargs) -> None:
+def error(*args, **kwargs) -> NoReturn:
     """
     Print an error message and exit FLITSR. All arguments and keyword-arguments
     given are in the format of the Python print statement
