@@ -142,6 +142,9 @@ def exact_method(fs: Dict[T, INT_COLLECTION], q: int, elems: Collection[T],
 
 def wasted_effort(rank: Iterable[T], fs: Faults[T, COLLECTION], k: int,
                   x: Dict[Any, int], weffort=False) -> int:
+    # sanity check
+    if (k <= 0):
+        return 0
     to_inspect = x.copy()
     seen: Set[int] = set()
     tot = 0

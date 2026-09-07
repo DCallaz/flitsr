@@ -1,4 +1,6 @@
 from enum import Enum, auto
+from itertools import chain
+from collections import Counter
 from typing import Optional, Callable, Dict, Any, Set, Union, List
 from argparse import ArgumentTypeError
 
@@ -43,8 +45,15 @@ class BUModel:
             raise AttributeError(f"type object '{cls.__name__}' has no model "
                                  f"'{model}'")
 
-    def get_dict(self, faults: Dict[Any, Set[Any]]) \
+    def get_dict(self, faults: Dict[Any, Set[Any]], by_loc=False) \
             -> Dict[Any, int]:
+        """
+        Return a dictionary of the number of fault locations necessary to
+        localize each of the faults given in `faults`. When `by_loc` is False,
+        `faults` refers to a dictionary with keys as the faults, and values as
+        a set of fault locations for each fault, when True, keys are fault
+        locations, and values are the faults at each location.
+        """
         func: Callable[[int], int]
         if (self.model is BUModelEnum.PERFECT):  # perfect
             def func(x: int) -> int: return 1
@@ -55,8 +64,13 @@ class BUModel:
         else:                                # custom imperfect
             func = self.strategy
         bu_dict: Dict[Any, int] = {}
-        for fault, fault_locs in faults.items():
-            bu_dict[fault] = max(1, func(len(fault_locs)))
+        if (by_loc is True):
+            faults_by_loc = chain.from_iterable(faults.values())
+            for fault, count in Counter(faults_by_loc).items():
+                bu_dict[fault] = max(1, func(count))
+        else:
+            for fault, fault_locs in faults.items():
+                bu_dict[fault] = max(1, func(len(fault_locs)))
         return bu_dict
 
     def __repr__(self) -> str:

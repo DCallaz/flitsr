@@ -267,9 +267,11 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
         refiner = None
         args: Dict[str, Dict[str, Any]] = {}
         for t in type_sep:
+            if (t == ""):
+                continue
             m = re.fullmatch("([^(]+)(?:\\(([^)]+)\\))?", t)
             if (m is None):
-                raise ArgumentTypeError('Invalid type for --all-types: '
+                raise ArgumentTypeError('Invalid type for --types: '
                                         f'\"{t}\"')
             t = m.group(1).upper()
             if (hasattr(advanced.ClusterType, t)):
@@ -288,7 +290,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                                             f'{ranker.name} and {t}')
                 ranker = advanced.RankerType[t]
             else:
-                raise ArgumentTypeError('Invalid type for --all-types: '
+                raise ArgumentTypeError('Invalid type for --types: '
                                         f'\"{t}\"')
             if (m.group(2) is None):
                 params = {}
