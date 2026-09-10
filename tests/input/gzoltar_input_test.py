@@ -9,8 +9,9 @@ from flitsr.spectrum import Outcome
 
 
 @pytestr.randomize(entries=nonempty_list_of(str),
-                   choices=list_strings("([a-z.]+)\\$([a-z]+)#([a-z(),]+)"
-                                        ":[0-9]+(:[0-9]+)?", 1000), ncalls=20)
+                   choices=list_strings("([a-z.]+)\\$([a-z.]+\\$)?([a-z]+)"
+                                        "#([a-z(),]+):[0-9]+(:[0-9]+)?", 1000),
+                   ncalls=20)
 def test_detail_construction(entries):
     inp = Gzoltar()
     entries = set(entries)

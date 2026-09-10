@@ -131,6 +131,9 @@ class Input(ABC):
                                   f"{cls.__name__} format")
 
     @classmethod
+    @deprecated(version='2.5.0', reason='This method is no longer used within '
+                'flitsr to print out elements. Element printing should now be '
+                'handled directly when writing each spectrum type.')
     def get_elem_separators(cls) -> List[str]:
         """
         Method to get the separators used for printing out elements when

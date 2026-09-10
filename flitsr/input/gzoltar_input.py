@@ -81,11 +81,14 @@ class Gzoltar(DirInput):
 
     def _read_spectrum(self, input_path: str) -> Spectrum:
         # Getting the details of the elements
-        self._construct_details(open(input_path+"/spectra.csv"))
+        with open(input_path+"/spectra.csv") as spectra_file:
+            self._construct_details(spectra_file)
         # Getting the details of the tests
-        self._construct_tests(open(input_path+"/tests.csv"))
+        with open(input_path+"/tests.csv") as test_file:
+            self._construct_tests(test_file)
         # Constructing the spectrum
-        self._fill_spectrum(open(input_path+"/matrix.txt"))
+        with open(input_path+"/matrix.txt") as matrix_file:
+            self._fill_spectrum(matrix_file)
         return self.sb.get_spectrum()
 
     @staticmethod
@@ -113,9 +116,8 @@ class Gzoltar(DirInput):
                       "FAIL", "", "", sep=",", file=test_file)
         with open(osp.join(directory, "spectra.csv"), 'w') as units_file:
             print("name", file=units_file)
-            # TODO: change _elements below to elements()
-            for elem in spectrum._elements:
-                print(elem.output_str(type_=type_), file=units_file)
+            for elem in spectrum.elements():
+                print(cls.get_elem_str(elem), file=units_file)
         with open(osp.join(directory, "matrix.txt"), 'w') as matrix_file:
             for test in spectrum.tests():
                 for elem in spectrum._elements:
@@ -123,9 +125,14 @@ class Gzoltar(DirInput):
                 print('+' if test.outcome is Outcome.PASS else '-',
                       file=matrix_file)
 
-    @classmethod
-    def get_elem_separators(cls) -> List[str]:
-        return ['$', '#', ':', ':']
+    @staticmethod
+    def get_elem_str(elem: Spectrum.Element) -> str:
+        ds = elem.details
+        path, _, file = ds.pname.rpartition('.')
+        cls_str = f"${ds.classname}" if ds.classname else ""
+        fs = (f":{':'.join(str(f) for f in elem.faults)}" if elem.isFaulty()
+              else "")
+        return f"{path}${file}{cls_str}#{ds.method}:{ds.line_no}{fs}"
 
 
 if __name__ == "__main__":

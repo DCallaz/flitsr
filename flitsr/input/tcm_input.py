@@ -1,6 +1,6 @@
 import sys
 from os import path as osp
-from typing import TextIO, Optional, List
+from typing import TextIO, Optional
 import re
 import mmap
 from flitsr.spectrum import Spectrum, Outcome
@@ -163,14 +163,13 @@ class TCM(FileInput):
     def write_spectrum(cls, spectrum: Spectrum, output_path: str) -> None:
         """ Output the spectrum in TCM format """
         with open(output_path, 'w') as file:
-            type_ = cls.get_type()
             print("#tests", file=file)
             for test in spectrum.tests():
                 print(test.name, test.outcome.name, file=file)
             print(file=file)
             print("#uuts", file=file)
             for elem in spectrum.elements():
-                print(elem.output_str(type_=type_), file=file)
+                print(cls.get_elem_str(elem), file=file)
             print(file=file)
             print("#groups", file=file)
             for group in spectrum.groups():
@@ -186,9 +185,21 @@ class TCM(FileInput):
                         first = False
                 print(file=file)
 
-    @classmethod
-    def get_elem_separators(cls) -> List[str]:
-        return ['.', ':', ':', ' | ']
+    @staticmethod
+    def get_elem_str(elem: Spectrum.Element) -> str:
+        def pifnn(component, prefix=""):
+            """
+            Return the given component with the given prefix before it if the
+            component is not None, else return the empty string.
+            """
+            if (component is None):
+                return ""
+            return f"{prefix}{component}"
+        ds = elem.details
+        fs = (f" | {' | '.join(str(f) for f in elem.faults)}"
+              if elem.isFaulty() else "")
+        return (f"{pifnn(ds.pname)}{pifnn(ds.classname, ':')}"
+                f"{pifnn(ds.method, ':')}{pifnn(ds.line_no, ':')}{fs}")
 
 
 if __name__ == "__main__":

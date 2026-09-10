@@ -222,6 +222,8 @@ class Spectrum(Iterable['Spectrum.Execution']):
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
+        @deprecated(version='2.5.0', reason='This functionality has been '
+                    'moved to the writing of each individual spectrum type.')
         def output_str(self, type_: 'InputType',
                        incl_faults: bool = True) -> str:
             """
@@ -238,22 +240,14 @@ class Spectrum(Iterable['Spectrum.Execution']):
                 The string representation of this `Spectrum.Element`
 
             """
-            seps = type_.value.get_elem_separators()
-            gstring = ''
-            path_part = self.details.pname.rpartition('.')
-            if (path_part[0] != '' and path_part[2] != ''):
-                gstring = path_part[0] + seps[0] + path_part[2]
-            elif (path_part[0] != '' or path_part[2] != ''):
-                gstring = path_part[0] + path_part[2]
-            if (self.details.method):
-                gstring += ((seps[1] if (gstring != '') else '') +
-                            self.details.method)
-            if (self.details.line_no):
-                gstring += ((seps[2] if (gstring != '') else '') +
-                            str(self.details.line_no))
-            if (incl_faults and self.isFaulty()):
-                gstring += seps[3] + seps[3].join(str(x) for x in self.faults)
-            return gstring
+            from flitsr.input.gzoltar_input import Gzoltar
+            from flitsr.input.tcm_input import TCM
+            if (type_ is InputType['GZOLTAR']):
+                return Gzoltar.get_elem_str(self)
+            elif (type_ is InputType['TCM']):
+                return TCM.get_elem_str(self)
+            else:
+                raise NotImplementedError()
 
         def __repr__(self) -> str:
             return str(self)

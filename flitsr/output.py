@@ -3,6 +3,7 @@ from typing import List, Optional, TextIO, Union
 from flitsr.spectrum import Spectrum, Outcome
 from flitsr.ranking import Ranking, Rankings
 from flitsr.input import InputType
+from flitsr.input.gzoltar_input import Gzoltar
 
 
 def print_flitsr_ranking(ranking: Optional[Ranking],
@@ -43,16 +44,15 @@ def print_csv_ranking(ranking: Ranking, file: TextIO = sys.stdout) -> None:
     for rank in ranking:
         entity = rank.entity
         for elem in entity:
-            print(elem.output_str(type_=InputType['GZOLTAR']),
-                  ';', rank.score, sep='', file=file)
+            print(Gzoltar.get_elem_str(elem), ';', rank.score, sep='',
+                  file=file)
 
 
 def print_spectrum_csv(spectrum: Spectrum, file: TextIO = sys.stdout) -> None:
     ts = [str(t.name)+' ('+('PASS' if t.outcome is Outcome.PASSED else
                             'FAIL')+')' for t in spectrum.tests()]
     print('Element', *ts, sep=',', file=file)
-    # TODO: change _elements below to elements()
-    for elem in spectrum._elements:
+    for elem in spectrum.elements():
         # print(elem, end=',', file=file)
         tests = ['X' if spectrum[t][elem] else '' for t in spectrum.tests()]
         print(elem, *tests, sep=',', file=file)
