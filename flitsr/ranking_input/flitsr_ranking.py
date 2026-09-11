@@ -7,6 +7,7 @@ from flitsr.spectrum import Spectrum
 
 
 class FlitsrRanking(RankingInput):
+    """ The ``flitsr`` `RankingInput` type."""
     @classmethod
     def _read_ranking(cls, f: TextIO, method_level=False) -> Rankings:
         """
@@ -21,8 +22,6 @@ class FlitsrRanking(RankingInput):
             rankings.append(ranking)
             all_faults: Dict[Any, Set[Spectrum.Element]] = {}
             elements: List[Spectrum.Element] = []
-            num_locs = 0  # number of reported locations (methods/lines)
-            i = 0  # number of actual lines
             while (line != "" and "Next Ranking" not in line):
                 line = line.strip()
                 score: Union[int, float]
@@ -59,11 +58,9 @@ class FlitsrRanking(RankingInput):
                     for fault in faults:
                         all_faults.setdefault(fault, set()).add(elem)
                     group_elems.append(elem)
-                    i += 1
                     line = f.readline().strip()
                 group = Spectrum.Group(group_elems)
                 ranking.append(group, score, 0)
-                num_locs += 1
                 line = f.readline().strip()
         ret_rankings = Rankings(all_faults, elements, rankings)
         return ret_rankings

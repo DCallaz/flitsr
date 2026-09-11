@@ -7,6 +7,7 @@ from flitsr.spectrum import Spectrum
 
 
 class TransferFLRanking(RankingInput):
+    """ The Transfer-FL `RankingInput` type."""
     @classmethod
     def _read_ranking(cls, f: TextIO, method_level=False) -> Rankings:
         """

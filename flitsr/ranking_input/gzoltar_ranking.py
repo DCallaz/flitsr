@@ -7,6 +7,7 @@ from flitsr.spectrum import Details, Spectrum
 
 
 class GzoltarRanking(RankingInput):
+    """ The Gzoltar `RankingInput` type."""
     @classmethod
     def _read_ranking(cls, f: TextIO, method_level=False) -> Rankings:
         """

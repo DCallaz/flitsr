@@ -16,7 +16,7 @@ format, and TransferFL ranking format. The API for reading in rankings is given 
    flitsr.ranking_input.GzoltarRanking
    flitsr.ranking_input.TransferFLRanking
 
-Calling the `read_any_ranking <flitsr.ranking_input.RankingInput.read_any_ranking>`
+Calling the `RankingInput.read_any_ranking <flitsr.ranking_input.RankingInput.read_any_ranking>`
 method will automatically select the necessary ranking format based on the input
 file. The structure for each input format is given below.
 
@@ -34,6 +34,9 @@ The ``flitsr`` ranking format has the following structure:
    .
    .
 
+Where ``<element name>`` is in the format: "``<path name>|<file name>|<method
+name>|<line number>``", where any of the components are optional.
+
 GZoltar ranking format
 -------------------------------------------------------------------------------
 
@@ -47,8 +50,8 @@ The GZoltar ranking format has the following structure:
    .
    .
 
-Where ``<element name>`` is of the format: ``<java package name>$<class
-name>#<method name>:<line number>``.
+Where ``<element name>`` is of the format: "``<java package name>$<class
+name>#<method name>:<line number>``".
 
 TransferFL ranking format
 -------------------------------------------------------------------------------
@@ -62,5 +65,13 @@ The TransferFL ranking format has the following structure:
    .
    .
 
-Where ``<element name>`` is of the format: ``<package/path name>.<class/file
-name>@<method name>@<line number>``.
+Where ``<element name>`` is of the format: "``<package/path name>.<class/file
+name>@<method name>@<line number>``".
+
+
+Creating your own ranking input type
+-------------------------------------------------------------------------------
+
+The ranking input types given on this page are the ones already integrated in
+FLITSR, however, ``flitsr`` allows you to define your own ranking input type
+using *plugins*. See :doc:`ranking_input_ext` for more information.

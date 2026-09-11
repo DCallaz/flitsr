@@ -32,8 +32,8 @@ class RankingInput(ABC):
             method level.
 
         Returns:
-          A `Rankings <flitsr.ranking.Rankings>` object containing the single
-          read-in ranking.
+          A `Rankings <flitsr.ranking.Rankings>` object containing the read-in
+          ranking(s).
         """
         with (open(ranking_file) if isinstance(ranking_file, str)
               else ranking_file) as rinput:
@@ -73,7 +73,17 @@ class RankingInput(ABC):
     @classmethod
     @abstractmethod
     def _read_ranking(cls, ranking_file: TextIO) -> Rankings:
-        """Read in the ranking in the format of the given RankingInput type."""
+        """
+        Abstract method for reading in the given ranking in the format of this
+        `~flitsr.ranking_input.RankingInput` type.
+
+        Args:
+          ranking_file: The ranking file to read in.
+
+        Returns:
+          A `~flitsr.ranking.Rankings` object constructed from the
+          corresponding `ranking_file` input.
+        """
 
     @staticmethod
     @abstractmethod
@@ -85,10 +95,10 @@ class RankingInput(ABC):
         recognized by the implementing class, and False otherwise.
 
         Args:
-          input_path: str: The input file to check for format.
+          ranking_file: The ranking input file to check for format.
 
         Returns:
-          True if the input path refers to input in the format that this
+          True if the input refers to a ranking in the format that this
           ranking input type can read, or False otherwise.
 
         Note:
