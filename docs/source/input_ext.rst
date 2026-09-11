@@ -36,12 +36,16 @@ or `~flitsr.input.FileInput` as a custom input type that reads in directories or
 files respectively.
 
 .. note::
-   Your custom input type must implement all abstract methods, and may optionally
-   implement any of the non-abstract, and non-final methods such as
+   Your custom input type must implement all abstract methods, and may
+   optionally implement any of the non-abstract, non-final methods such as
    `~flitsr.input.Input.search_pattern`, `~flitsr.input.Input.write_spectrum`,
-   and `~flitsr.input.Input.get_elem_separators`.
+   and `~flitsr.input.Input.get_run_file_name`.
 
-The main method to implement is the `Input._read_spectrum
-<flitsr.input.Input._read_spectrum>` method as given here:
+The two methods that must be implemented are the `~flitsr.input.Input._read_spectrum`,
+and `~flitsr.input.Input.check_format` methods, which are given here:
+
 
 .. autofunction:: flitsr.input.Input._read_spectrum
+
+.. autofunction:: flitsr.input.Input.check_format
+   :no-index:

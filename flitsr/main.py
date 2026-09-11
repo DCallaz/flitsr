@@ -14,6 +14,7 @@ from flitsr.errors import error
 from flitsr.advanced import Config
 from flitsr.calculations import BUModel
 from flitsr.calculations.output import calculate
+from flitsr.ranking_input import RankingInput
 
 
 def compute_cutoff(cutoff: str, ranking: Ranking, spectrum: Spectrum,
@@ -47,8 +48,8 @@ def main(argv: Optional[List[str]] = None):
     args: Args = Args(argv, cmd_line=True)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
-        from flitsr.read_ranking import read_any_ranking
-        rankings = read_any_ranking(args.input, method_level=args.method)
+        rankings = RankingInput.read_any_ranking(args.input,
+                                                 method_level=args.method)
         output(rankings, args.calcs, decimals=args.decimals,
                file=args.output, bu_model=args.bug_understanding,
                collapse=args.collapse, csv=args.csv)

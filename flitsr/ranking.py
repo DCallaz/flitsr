@@ -88,7 +88,7 @@ class Ranking(Iterable[Rank]):
             # if no super-group can be found, raise the KeyError
             raise keyerror
 
-    def sort(self, reverse: bool) -> None:
+    def sort(self, reverse: bool = True) -> None:
         """
         Re-sort this `Ranking` in-place by their scores, using the `Tiebrk`
         method set.
@@ -113,7 +113,6 @@ class Ranking(Iterable[Rank]):
                     # if sorting by orig fails, print a warning and continue
                     warning("Could not sort by original ranking, despite it "
                             "being set")
-                    pass
             else:  # if no orig, still sort by current execution count
                 self._ranks.sort(key=lambda x: x.exec, reverse=reverse)
         self._ranks.sort(key=lambda x: x.score, reverse=reverse)
@@ -172,16 +171,37 @@ class Rankings(Iterable[Ranking]):
     def __init__(self, faults: Dict[Any, Set[Spectrum.Element]],
                  elements: List[Spectrum.Element],
                  rankings: Optional[Iterable[Ranking]] = None):
+        """
+        Create a new `Rankings` object with the given faults, elements, and
+        (optionally) `Ranking`'s. `Ranking`'s can also be added later with the
+        `Rankings.append` method.
+
+        Args:
+          faults: A dictionary with all the identified faults in the program.
+            See `~flitsr.spectrum.Spectrum.get_faults` for format.
+          elements: The list of all `~flitsr.spectrum.Spectrum.Element`'s in
+            the program (even if they do not appear in this set of rankings.
+            Used for identifying unranked elements.
+          rankings: An iterable of `Ranking`'s, which this `Rankings` object
+            will wrap. Can also be extended at a later time.
+
+        Note:
+          If given, the set of `Ranking`'s will be re-sorted using their
+          `Ranking.sort` methods to ensure all rankings are in a sorted state.
+        """
         self._faults = faults
         self._all_elems = elements
         self._rankings: List[Ranking] = []
         if (rankings is not None):
             self._rankings.extend(rankings)
+            # sort the rankings just in-case
+            for ranking in self._rankings:
+                ranking.sort()
 
     def faults(self) -> Dict[Any, Set[Spectrum.Element]]:
         """
         Return a dictionary of all faults in these rankings. See
-        `Spectrum.get_faults <flitsr.spectrum.Spectrum.get_faults>` for a
+        `~flitsr.spectrum.Spectrum.get_faults` for a
         description of the return value.
         """
         return copy.deepcopy(self._faults)
@@ -196,11 +216,16 @@ class Rankings(Iterable[Ranking]):
 
     def append(self, ranking: Ranking) -> None:
         """
-        Append the given `ranking` to this collection.
+        Append the given `Ranking` to this collection.
 
         Args:
-          ranking: Ranking: The ranking to add.
+          ranking: The ranking to add.
+
+        Note:
+          The given `Ranking` will be re-sorted using its `Ranking.sort`
+          method, to ensure a sorted state.
         """
+        ranking.sort()  # sort the ranking just in-case
         self._rankings.append(ranking)
 
     def __iter__(self) -> Iterator[Ranking]:

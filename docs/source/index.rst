@@ -42,6 +42,7 @@ debugging tool, the following sections are for you:
 .. toctree::
    base_tool
    input_types
+   ranking_input_types
    adv_types
    api
    :caption: For developers
@@ -73,6 +74,7 @@ sections provide information on what can be extended in ``flitsr`` and how:
 .. toctree::
    flitsr_plugins
    input_ext
+   ranking_input_ext
    adv_type_ext
    calc_ext
    driver
