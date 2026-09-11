@@ -20,15 +20,15 @@ from flitsr.input.input_reader import Input
 from flitsr.errors import error
 from flitsr.advanced import Config, RankerType, ClusterType
 from flitsr.output import print_spectrum_csv
+from flitsr.ranking_input import RankingInput
 
 
 def main(argv: List[str]):
     args: Args = Args(argv, cmd_line=True)
     # If only a ranking is given, print out metrics and return
     if (args.ranking):
-        from flitsr.read_ranking import read_any_ranking
-        rankings = read_any_ranking(args.input,
-                                    method_level=args.method)
+        rankings = RankingInput.read_any_ranking(args.input,
+                                                 method_level=args.method)
         output(rankings, args.calcs, decimals=args.decimals,
                file=args.output, bu_model=args.bug_understanding,
                collapse=args.collapse, csv=args.csv)
