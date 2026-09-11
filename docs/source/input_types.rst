@@ -5,7 +5,7 @@ Input types
 only requires the collected coverage information from the execution of the test
 suite over a system. ``flitsr`` currently supports two types of spectral input:
 :ref:`TCM <input-tcm>` and :ref:`GZoltar <input-gzoltar>`. ``flitsr`` also
-supports reading in a :ref:`ranking <input-ranking>`.
+supports reading in a ranking (see :doc:`ranking_input_types`).
 
 .. _input-tcm:
 
@@ -104,53 +104,13 @@ all the implemented input types is given below:
    flitsr.input.TCM
    flitsr.input.Gzoltar
 
-.. _input-ranking:
-
-Ranking input
------------------------------------------------------------------------------------------
+Ranking input types
+-------------------------------------------------------------------------------
 
 Besides from the spectral formats, ``flitsr`` also supports reading in a
-pre-generated *ranking* of a technique. There are currently two formats that
-``flitsr`` supports: its own ``flitsr`` ranking format, and GZoltar ranking
-format. The API for reading in rankings is given below:
+pre-generated *ranking* of a technique. For more information, see
+:doc:`ranking_input_types`.
 
-.. toctree::
-
-   read_ranking
-
-Calling the `read_any_ranking <flitsr.read_ranking.read_any_ranking>` method
-will automatically select the necessary ranking format based on the input file.
-The structure for the two input formats are given below.
-
-``flitsr`` ranking format
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``flitsr`` ranking format has the following structure:
-
-.. code-block::
-
-   Faulty grouping: <score> [
-     <element name> [(FAULT <bugId>)]
-   ]
-   .
-   .
-   .
-
-GZoltar ranking format
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The GZoltar ranking format has the following structure:
-
-.. code-block::
-
-   name;suspiciousness_value
-   <element name>[:<bugId>];<score>
-   .
-   .
-   .
-
-Where ``<element name>`` is of the format: ``<java package name>$<class
-name>#<method name>:<line number>``.
 
 Creating your own input type
 -------------------------------------------------------------------------------

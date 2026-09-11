@@ -15,8 +15,9 @@ def register_ranking_input(cls: Type[Any]) -> None:
 from flitsr.ranking_input.ranking_reader import RankingInput  # noqa
 from flitsr.ranking_input.flitsr_ranking import FlitsrRanking  # noqa
 from flitsr.ranking_input.gzoltar_ranking import GzoltarRanking  # noqa
+from flitsr.ranking_input.transfer_ranking import TransferFLRanking  # noqa
 __all__ = ['RankingInput', 'RankingInputType', 'FlitsrRanking',
-           'GzoltarRanking']
+           'GzoltarRanking', 'TransferFLRanking']
 
 # load local inputs
 __all = [m[1] for m in pkgutil.iter_modules(ranking_input.__path__)]
