@@ -754,6 +754,9 @@ class Spectrum(Iterable['Spectrum.Execution']):
         """
         Returns a dictionary of all the faults in this spectrum, with the
         values being all the locations of each fault.
+
+        Returns:
+          A `dict` in the format ``{<fault_num>: set(<faulty element>,...)}``.
         """
         actual_faults: Dict[Any, Set[Spectrum.Element]] = dict()
         for group in self.groups():

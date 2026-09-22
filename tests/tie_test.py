@@ -2,7 +2,7 @@ import random
 from pytest import mark as pytestr
 from pytest import approx
 from functools import partial
-from flitsr.read_ranking import read_flitsr_ranking
+from flitsr.ranking_input import FlitsrRanking
 from flitsr.tie import Ties, Tie
 from flitsr.calculations import BUModel, exp_values
 from flitsr.calculations.perms import exact_method, Calc
@@ -52,7 +52,7 @@ def create_ranking(seed: int, avg_tie_size=10) -> Rankings:
         print(']', file=ranking)
         start = end
     ranking.seek(0)
-    ret_ranking = read_flitsr_ranking(ranking)
+    ret_ranking = FlitsrRanking._read_ranking(ranking)
     return ret_ranking
 
 
