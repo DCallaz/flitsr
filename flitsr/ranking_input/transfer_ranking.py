@@ -39,4 +39,5 @@ class TransferFLRanking(RankingInput):
     @staticmethod
     def _check_format(ranking_file: TextIO) -> bool:
         line = ranking_file.readline().strip()
-        return re.fullmatch("[\\w.]+@[0-9]+\\s+[0-9.]+", line) is not None
+        return re.fullmatch("[\\w.]+@[0-9]+\\s+[0-9.]+(\\s+[0-9]+)?",
+                            line) is not None
