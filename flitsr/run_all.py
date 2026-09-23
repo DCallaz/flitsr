@@ -83,7 +83,7 @@ class Runall:
     def __init__(self, metrics: Set[str], num_cpus: Optional[int] = None,
                  recover: bool = False, flitsr_args: List[str] = None,
                  driver: Optional[str] = None, output_ranking: bool = False,
-                 input_ranking: bool = False):
+                 input_ranking: bool = False, collect_results: bool = True):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
             driver = 'main'
@@ -94,6 +94,7 @@ class Runall:
         self.output_ranking = output_ranking
         self.input_ranking = input_ranking
         self.base: Optional[str] = None
+        self.collect = collect_results and (not output_ranking)
         # set up the args
         self.args = []
         if (not output_ranking):
@@ -274,7 +275,7 @@ class Runall:
                                 print(file.read(), end='')
                         os.remove(error_file)
             # collect the results files
-            if (not self.output_ranking):
+            if (self.collect):
                 self.collect_results()
                 merge.main([])
             os.remove("done_inputs.tmp")
@@ -398,18 +399,23 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('-p', '--driver', help='Specify an alternate flitsr '
                         'driver to use for running')
 
-    parser.add_argument('-C', '--collect-results', action='store_true',
-                        help='Only collect already generated run files in the '
-                        'current directory into results file(s). Ignores most '
-                        'other options, except those for metrics (see -m and '
-                        '-M).')
+    parser.add_argument('-C', '--collect-results',
+                        action=argparse.BooleanOptionalAction,
+                        help='For the positive of this option '
+                        '(--collect-results), only collects already generated '
+                        'run files in the current directory into results '
+                        'file(s). Ignores most other options, except those '
+                        'for metrics (see -m and -M). For the negative '
+                        '(--no-collect-results), runs as usual, but does not '
+                        'do this final result collection.')
 
     parser.add_argument('-R', '-ro', '--ranking-output', action='store_true',
                         help='By default, the run_all script will produce '
                         'run files for each input and configuration which '
                         'contain various evaluation metrics. Supplying this '
                         'option will instead produce ranking files for each '
-                        'input and configuration. NOTE: this option will be '
+                        'input and configuration, and will not attempt to '
+                        'collect the results. NOTE: this option will be '
                         'overriden by any specific calculations given to '
                         '`flitsr` by the `-a`/`--flitsr-arg` option.')
 
@@ -451,7 +457,7 @@ def main(argv: Optional[List[str]] = None):
         metrics.difference_update(args.exclude_metrics)
 
     # Process stand-alone results collection (i.e. -C)
-    if (args.collect_results):
+    if (args.collect_results is True):
         run_all = Runall(metrics)
         run_all.collect_results()
         return
@@ -481,7 +487,8 @@ def main(argv: Optional[List[str]] = None):
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver,
                      output_ranking=args.ranking_output,
-                     input_ranking=args.ranking_input)
+                     input_ranking=args.ranking_input,
+                     collect_results=args.collect_results)
     run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, base=args.base)
 
