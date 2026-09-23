@@ -3,11 +3,11 @@ from typing import List, Dict, Any, Set, Sequence, Tuple, Callable, \
         Union, Iterable, Iterator, Optional, TYPE_CHECKING, TypeVar, \
         overload, Literal
 from bitarray import bitarray
-import numpy as np
 from enum import Enum
 from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from flitsr.input import InputType
+    import numpy as np
 from deprecated.sphinx import deprecated, versionadded
 from recordclass import RecordClass
 
@@ -224,7 +224,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
 
         @deprecated(version='2.5.0', reason='This functionality has been '
                     'moved to the writing of each individual spectrum type.')
-        def output_str(self, type_: 'InputType',
+        def output_str(self, type_: InputType,
                        incl_faults: bool = True) -> str:
             """
             Returns the string representation of this `Spectrum.Element` that
@@ -240,6 +240,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
                 The string representation of this `Spectrum.Element`
 
             """
+            from flitsr.input import InputType
             from flitsr.input.gzoltar_input import Gzoltar
             from flitsr.input.tcm_input import TCM
             if (type_ is InputType['GZOLTAR']):
@@ -891,6 +892,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
           A numpy matrix representing the spectrum, and numpy array
           representing the error vector.
         """
+        import numpy as np
         # If no matrix already, create one
         if (not hasattr(self, '_matrix')):
             # Use all test cases and most elements

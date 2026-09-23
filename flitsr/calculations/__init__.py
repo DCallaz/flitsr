@@ -24,8 +24,10 @@ def register_calc(func: Callable, name: str) -> None:
 
 # load local calculations
 __all__ = [m[1] for m in pkgutil.iter_modules(calculations.__path__)]
+exclusions = ['perms']
 for module in __all__:
-    importlib.import_module('.'+module, package=__name__)
+    if (module not in exclusions):
+        importlib.import_module('.'+module, package=__name__)
 # load plugin calculations
 adv_entry_points = entry_points(group='flitsr.calculation')
 for adv_ep in adv_entry_points:

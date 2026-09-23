@@ -2,7 +2,6 @@
 import math
 from math import log
 import ast
-import numpy as np
 from argparse import ArgumentParser
 import argcomplete
 from enum import Enum
@@ -200,7 +199,8 @@ def plot_all(axs, points: Dict[Tuple[str, str],
                                Tuple[List[float], List[float]]],
              metrics: List[str], modes: List[str],
              flitsrs: Optional[List[str]], log: bool) -> None:
-    import matplotlib.cm as cm
+    import numpy as np
+    from matplotlib import cm
     color = list(cm.rainbow(np.linspace(0, 1, len(metrics))))
     style = [(), (6, 3), (1, 3), (1, 3, 6, 3), (3, 3), (6, 3, 3, 3)]
     marker = ['D', 'o', '^', '8', 's', 'p', '*', 'x', '+', 'v', '<', '>', 'P',
