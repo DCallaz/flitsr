@@ -194,7 +194,7 @@ class Merge:
         self._collect_results(recurse, dirs, rel)
 
     def _get_results_files(self, dirs, rel):
-        results_check = re.compile("^(?:([\\w_-]*)_)?(\\w+)\\.results$")
+        results_check = re.compile("^(?:([\\w_-]*)_)?([\\w-]+)\\.results$")
         for d in dirs:
             self.files.setdefault(d, {})
             for file in os.scandir(osp.normpath(d)):
@@ -284,7 +284,11 @@ class Merge:
                                              percs))
                     print("\t\t", calc+": ", comb, sep='', file=outfiles.perc)
             else:
-                avg = self.avgs[mode][metric][calc]
+                try:
+                    avg = self.avgs[mode][metric][calc]
+                except KeyError as e:
+                    raise ValueError(f"Could not find \"{calc}\" calculation "
+                                     f"for {mode} {metric}")
                 result = round(self.eval(mode, metric, calc, only_sums, percs),
                                dec)
                 sign_disp = ""
