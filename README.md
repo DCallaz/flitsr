@@ -8,7 +8,7 @@ repository](https://github.com/DCallaz/flitsr).
 
 ## Setup
 ### Requirements
-* `python3` (> `3.6`)
+* `python3` (> `3.8`)
 * `java` (optional; used for parallel techniques)
 * `matplotlib` (optional; used for evaluation plotting)
 ### Installation
