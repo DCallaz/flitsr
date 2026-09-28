@@ -22,6 +22,7 @@ else:
 
 import argparse
 import argcomplete
+from flitsr.argparse_extras import BooleanOptionalAction
 
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
@@ -439,7 +440,7 @@ def get_parser() -> argparse.ArgumentParser:
                         'driver to use for running')
 
     parser.add_argument('-C', '--collect-results',
-                        action=argparse.BooleanOptionalAction,
+                        action=BooleanOptionalAction,
                         help='For the positive of this option '
                         '(--collect-results), only collects already generated '
                         'run files in the current directory into results '

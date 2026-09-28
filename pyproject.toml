@@ -11,8 +11,7 @@ authors = [
 description="An automatic fault finding/localization tool for multiple faults"
 readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
-license-files = ["LICENSE"]
+license = {name = "MIT", file = "LICENSE"}
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",

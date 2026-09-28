@@ -1,7 +1,8 @@
 # PYTHON_ARGCOMPLETE_OK
 from itertools import permutations
 import math
-from enum import StrEnum, auto
+from enum import auto
+from flitsr.enum_extras import StrEnum
 from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError

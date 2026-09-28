@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 from argparse import ArgumentTypeError, Action
 import argcomplete
+from flitsr.argparse_extras import BooleanOptionalAction
 import inspect
 import sys
 import re
@@ -523,7 +524,7 @@ class Args(argparse.Namespace, metaclass=SingletonMeta):
                 'the output of all of the calculations (default: %(default)s)')
 
         parser.add_argument('--construct-groups', dest='compute_groups',
-                            action=argparse.BooleanOptionalAction,
+                            action=BooleanOptionalAction,
                             help='By default, FLITSR will construct ambiguity '
                             'groups from the input spectrum as long as these '
                             'groups are not already provided in the input. '
