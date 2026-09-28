@@ -42,6 +42,7 @@ debugging tool, the following sections are for you:
 .. toctree::
    base_tool
    input_types
+   ranking_input_types
    adv_types
    api
    :caption: For developers

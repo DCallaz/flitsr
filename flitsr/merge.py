@@ -1,21 +1,23 @@
 # PYTHON_ARGCOMPLETE_OK
-import re
-from flitsr.calculations.percent_at_n import combine
-import os
+
 import locale
+import os
+import re
+from argparse import Action, ArgumentParser, ArgumentTypeError, FileType
+from collections import namedtuple
 from functools import cmp_to_key
-from os import path as osp
 from io import TextIOWrapper
-from scipy.stats import wilcoxon
-from argparse import ArgumentParser, Action, FileType, ArgumentTypeError
+from numbers import Real
+from os import path as osp
+from typing import Collection, Dict, List, Optional, Set, Tuple
+
 import argcomplete
+
+from flitsr import advanced
+from flitsr.calculations.percent_at_n import combine
+from flitsr.errors import warning
 from flitsr.file import File
 from flitsr.suspicious import Suspicious
-from flitsr.errors import warning
-from flitsr import advanced
-from typing import Set, Dict, List, Tuple, Collection, Optional
-from numbers import Real
-from collections import namedtuple
 
 PERC_N = "percentage at n"
 
@@ -57,6 +59,7 @@ class Avg:
             return sum_/self.adds
 
     def significance(self, avg: 'Avg'):
+        from scipy.stats import wilcoxon
         # if number of observations differ, no significance
         if (len(self.all) != len(avg.all)):
             return ('equal', 1.0)
@@ -191,7 +194,7 @@ class Merge:
         self._collect_results(recurse, dirs, rel)
 
     def _get_results_files(self, dirs, rel):
-        results_check = re.compile("^(?:([\\w_-]*)_)?(\\w+)\\.results$")
+        results_check = re.compile("^(?:([\\w_-]*)_)?([\\w-]+)\\.results$")
         for d in dirs:
             self.files.setdefault(d, {})
             for file in os.scandir(osp.normpath(d)):
@@ -281,7 +284,11 @@ class Merge:
                                              percs))
                     print("\t\t", calc+": ", comb, sep='', file=outfiles.perc)
             else:
-                avg = self.avgs[mode][metric][calc]
+                try:
+                    avg = self.avgs[mode][metric][calc]
+                except KeyError as e:
+                    raise ValueError(f"Could not find \"{calc}\" calculation "
+                                     f"for {mode} {metric}")
                 result = round(self.eval(mode, metric, calc, only_sums, percs),
                                dec)
                 sign_disp = ""

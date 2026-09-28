@@ -3,8 +3,8 @@ from flitsr.suspicious import Suspicious
 
 def explorer(activityMatrix, errorVector, numcomp, sbflMetric, numUniverse, maxUniverse, pBernoulli = 0):
 
-    rankingList = []
-    universe = []
+    rankingList = []  # type:ignore
+    universe = []  # type:ignore
     maxRefinement = maxUniverse
     numRef = 0
     if np.isclose(errorVector.sum(), 0):

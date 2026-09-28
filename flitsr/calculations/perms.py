@@ -1,7 +1,8 @@
 # PYTHON_ARGCOMPLETE_OK
 from itertools import permutations
 import math
-from enum import Enum, auto
+from enum import auto
+from flitsr.enum_extras import StrEnum
 from fractions import Fraction
 import argparse
 from argparse import ArgumentTypeError
@@ -22,7 +23,7 @@ COLLECTION = TypeVar('COLLECTION', bound=Collection, covariant=True)
 MAX_ITERS = math.factorial(10)
 
 
-class Calc(Enum):
+class Calc(StrEnum):
     PRECISION = auto()
     RECALL = auto()
     WEFFORT = auto()

@@ -112,7 +112,6 @@ class Input(ABC):
           Using the SpectrumBuilder object provided in ``self.sb`` to
           construct the Spectrum is strongly advised.
         """
-        pass
 
     @classmethod
     def write_spectrum(cls, spectrum: Spectrum, output_path: str) -> None:

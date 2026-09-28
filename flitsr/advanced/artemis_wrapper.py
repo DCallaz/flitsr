@@ -1,6 +1,5 @@
 from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, Tiebrk
-from flitsr.advanced.artemis_impl import artemis
 from flitsr.advanced.ranker import Ranker
 from flitsr.advanced.attributes import existing
 
@@ -20,6 +19,7 @@ class Artemis(Ranker):
         self.tiebrk = tiebrk
 
     def rank(self, spectrum: Spectrum, metric: str) -> Ranking:
+        from flitsr.advanced.artemis_impl import artemis
         elements = spectrum.groups()
         matrix, errVector = spectrum.to_matrix()
         rankingList = artemis.explorer(matrix, errVector, spectrum.locs(),

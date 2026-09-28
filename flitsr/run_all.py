@@ -22,6 +22,7 @@ else:
 
 import argparse
 import argcomplete
+from flitsr.argparse_extras import BooleanOptionalAction
 
 from flitsr.suspicious import Suspicious
 from flitsr import advanced
@@ -80,10 +81,11 @@ def natsort(s, _nsre=re.compile(r'(\d+)')):
 
 
 class Runall:
-    def __init__(self, metrics: Set[str], num_cpus: Optional[int] = None,
-                 recover: bool = False, flitsr_args: List[str] = None,
+    def __init__(self, metrics: Optional[Set[str]],
+                 num_cpus: Optional[int] = None, recover: bool = False,
+                 flitsr_args: Optional[List[str]] = None,
                  driver: Optional[str] = None, output_ranking: bool = False,
-                 input_ranking: bool = False):
+                 input_ranking: bool = False, collect_results: bool = True):
         self.num_inputs = -1  # Progress bar counter
         if (driver is None):
             driver = 'main'
@@ -94,14 +96,16 @@ class Runall:
         self.output_ranking = output_ranking
         self.input_ranking = input_ranking
         self.base: Optional[str] = None
+        self.collect = collect_results and (not output_ranking)
         # set up the args
         self.args = []
         if (not output_ranking):
             self.args.append("--all")
         if (input_ranking):
             self.args.append("-r")
-        for metric in metrics:
-            self.args.extend(["-m", metric])
+        if (metrics is not None):
+            for metric in metrics:
+                self.args.extend(["-m", metric])
         if (recover):
             self.args.append("--no-override")
         if (flitsr_args is not None):
@@ -113,7 +117,8 @@ class Runall:
         if (self.input_ranking):
             dir_, file = osp.split(input_cov)
             assert dir_ != '' and file != '' and self.base is not None
-            file = re.sub(translate(self.base.replace("*", "")), "", file)
+            for bp in self.base.split("*"):
+                file = re.sub(translate(bp).replace("\\Z", ""), "", file)
             # check if type is needed
             base = ""
             if ("_" not in file):
@@ -146,8 +151,35 @@ class Runall:
         if (cur == self.num_inputs):
             print()
 
+    def collect_all_results(self):
+        rs = list(find('.', type='f', name='*.run', action=osp.normpath))
+        dirs_us = {osp.dirname(r) for r in rs}
+        dirs = sorted(dirs_us, key=natsort)
+
+        # get the metrics if none
+        if (self.metrics is None):
+            pat = "(?:[^_]+)_([^_]+)_.*\\.run"
+            self.metrics = {m.group(1) for m in (re.match(pat, r) for r in rs)
+                            if m is not None}
+            print('Found metrics:',
+                  f'{", ".join(sorted(self.metrics, key=natsort))}')
+
+        # save base directory
+        basedir = Path(os.curdir).absolute()
+
+        # iterate over each directory
+        for dir_ in dirs:
+            # Initial housekeeping
+            print(f'Collecting results in {osp.normpath(dir_)}')
+            os.chdir(osp.normpath(dir_))
+            # collect results
+            self.collect_results()
+            # post housekeeping
+            print(f'Done in {osp.normpath(dir_)}')
+            os.chdir(basedir)
+
     def collect_results(self):
-        for m in self.metrics:
+        for m in self.metrics:  # type:ignore # (should not be empty by here)
             rs = find('.', type='f', name='*.run', action=osp.normpath)
             tre = f"(.*)_{re.escape(m)}_.+\\.run"
             try:
@@ -155,7 +187,6 @@ class Runall:
                          if m is not None}
             except AttributeError:
                 warning("Could not collect types")
-                pass
             for t in sorted(types, key=natsort):
                 with redirect_stdout(open(f'{t}_{m}.results', 'w')):
                     runs = sorted(find('.', type='f', depth=0,
@@ -168,6 +199,25 @@ class Runall:
                             print(file.read(), end='')
                         os.remove(run)
                         print("--------------------------")
+
+    def set_ranking_metrics(self, base, inputs):
+        """
+        Sets the metrics to be used when reading in rankings, taken from the
+        given filename base and inputs.
+        """
+        base_parts = base.split("*")
+
+        def get_metric_name(file):
+            res = osp.basename(file)
+            for bp in base_parts:
+                res = re.sub(translate(bp).replace("\\Z", ""), "", res)
+            metric = re.sub("^[^_]*_", "", res, 1)
+            return metric
+        # set the metrics
+        self.metrics = {get_metric_name(file) for file in inputs}
+        print(base, base_parts, self.metrics, list(inputs))
+        print('Found metrics:',
+              f'{", ".join(sorted(self.metrics, key=natsort))}')
 
     def run(self, input_type: Optional[BaseInputType],
             include: Optional[List[str]] = [],
@@ -200,17 +250,8 @@ class Runall:
                              incl_dirs=include, depth=depth)
         inputs = sorted(inputs_us, key=natsort)
         if (self.input_ranking):
-            # set the metrics
             self.base = base
-            base = base.replace("*", "")
-
-            def get_metric_name(file):
-                res = re.sub(translate(base), "", osp.basename(file))
-                metric = re.sub("^[^_]*_", "", res, 1)
-                return metric
-            self.metrics = {get_metric_name(file) for file in inputs}
-            print('Found metrics:',
-                  f'{", ".join(sorted(self.metrics, key=natsort))}')
+            self.set_ranking_metrics(base, inputs)
             # collect dirs
             dirs_us = {osp.dirname(osp.dirname(f)) for f in inputs}
         else:
@@ -274,7 +315,7 @@ class Runall:
                                 print(file.read(), end='')
                         os.remove(error_file)
             # collect the results files
-            if (not self.output_ranking):
+            if (self.collect):
                 self.collect_results()
                 merge.main([])
             os.remove("done_inputs.tmp")
@@ -398,18 +439,23 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('-p', '--driver', help='Specify an alternate flitsr '
                         'driver to use for running')
 
-    parser.add_argument('-C', '--collect-results', action='store_true',
-                        help='Only collect already generated run files in the '
-                        'current directory into results file(s). Ignores most '
-                        'other options, except those for metrics (see -m and '
-                        '-M).')
+    parser.add_argument('-C', '--collect-results',
+                        action=BooleanOptionalAction,
+                        help='For the positive of this option '
+                        '(--collect-results), only collects already generated '
+                        'run files in the current directory into results '
+                        'file(s). Ignores most other options, except those '
+                        'for metrics (see -m and -M). For the negative '
+                        '(--no-collect-results), runs as usual, but does not '
+                        'do this final result collection.')
 
     parser.add_argument('-R', '-ro', '--ranking-output', action='store_true',
                         help='By default, the run_all script will produce '
                         'run files for each input and configuration which '
                         'contain various evaluation metrics. Supplying this '
                         'option will instead produce ranking files for each '
-                        'input and configuration. NOTE: this option will be '
+                        'input and configuration, and will not attempt to '
+                        'collect the results. NOTE: this option will be '
                         'overriden by any specific calculations given to '
                         '`flitsr` by the `-a`/`--flitsr-arg` option.')
 
@@ -450,11 +496,20 @@ def main(argv: Optional[List[str]] = None):
     if (args.exclude_metrics is not None):
         metrics.difference_update(args.exclude_metrics)
 
+    # Check for dir input if ranking input
+    if (args.ranking_input is True and args.base is None):
+        parser.error("You must use the -D/--dir option when reading in "
+                     "rankings")
+
     # Process stand-alone results collection (i.e. -C)
-    if (args.collect_results):
-        run_all = Runall(metrics)
-        run_all.collect_results()
+    if (args.collect_results is True):
+        # use the default args.metrics to detect when no metrics are given
+        run_all = Runall(metrics=args.metrics,
+                         input_ranking=args.ranking_input)
+        run_all.collect_all_results()
         return
+    else:
+        collect_results = (args.collect_results is not False)
 
     # Process incl & excl (remove trailing slashes)
     if (args.include is not None):
@@ -481,7 +536,8 @@ def main(argv: Optional[List[str]] = None):
     run_all = Runall(metrics, num_cpus=args.num_cpus, recover=args.recover,
                      flitsr_args=args.flitsr_arg, driver=args.driver,
                      output_ranking=args.ranking_output,
-                     input_ranking=args.ranking_input)
+                     input_ranking=args.ranking_input,
+                     collect_results=collect_results)
     run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, base=args.base)
 
