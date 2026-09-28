@@ -461,6 +461,8 @@ def main(argv: Optional[List[str]] = None):
         run_all = Runall(metrics)
         run_all.collect_results()
         return
+    else:
+        collect_results = (args.collect_results is not False)
 
     # Process incl & excl (remove trailing slashes)
     if (args.include is not None):
@@ -488,7 +490,7 @@ def main(argv: Optional[List[str]] = None):
                      flitsr_args=args.flitsr_arg, driver=args.driver,
                      output_ranking=args.ranking_output,
                      input_ranking=args.ranking_input,
-                     collect_results=args.collect_results)
+                     collect_results=collect_results)
     run_all.run(args.inp_type, include=args.include, exclude=args.exclude,
                 depth=args.depth, base=args.base)
 
