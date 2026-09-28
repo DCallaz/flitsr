@@ -6,7 +6,7 @@ from flitsr.spectrum import Spectrum
 from flitsr.ranking import Ranking, Tiebrk
 
 
-class Suspicious():
+class Suspicious:
     """
     An implementation of ranking metric used for
     fault localization
@@ -30,8 +30,14 @@ class Suspicious():
         self.np = tp - ep
 
     def execute(self, metric: str) -> float:
-        func = getattr(self, metric)
-        return func()
+        if (hasattr(self, metric)):
+            func = getattr(self, metric)
+            return func()
+        elif (metric in plugin_metrics):
+            func = plugin_metrics[metric]
+            return func(self.ef, self.tf, self.ep, self.tp)
+        else:
+            raise ValueError(f"Invalid metric \"{metric}\"")
 
     @staticmethod
     def apply_formula(spec: Spectrum, formula: str,
@@ -55,6 +61,10 @@ class Suspicious():
             names = [x for x in _all_names if (not x.startswith("_")
                      and x != "execute" and x != "getNames"
                      and x != "apply_formula" and x != "inf")]
+            # add plugins
+            plugin_names = list(plugin_metrics.keys())
+            if (len(plugin_names) != 0):
+                names.extend(plugin_names)
         else:
             names = ['artemis', 'barinel', 'dstar', 'gp13', 'harmonic',
                      'hyperbolic', 'jaccard', 'naish2', 'ochiai', 'overlap',
@@ -381,6 +391,16 @@ class Suspicious():
             h = self.ep/(self.ep + self.ef)
         return h**(self.ep) * (1-h)**(11)
 
+
+# load plugin SBFL metrics
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+metric_entry_points = entry_points(group='flitsr.metric')
+plugin_metrics = {}
+for metric_ep in metric_entry_points:
+    plugin_metrics[metric_ep.name] = metric_ep.load()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prints the pre-selected "
