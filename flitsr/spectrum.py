@@ -29,7 +29,7 @@ class Outcome(Enum):
     ERROR = 2
 
 
-@versionadded(version='2.5.0')
+@versionadded(version='3.0.0')
 class Details(RecordClass):
     """
     The information pertaining to and uniquely identifying a
@@ -222,7 +222,7 @@ class Spectrum(Iterable['Spectrum.Execution']):
                    (" (FAULT {})".format(",".join(str(x) for x in self.faults))
                     if self.faults else "")
 
-        @deprecated(version='2.5.0', reason='This functionality has been '
+        @deprecated(version='3.0.0', reason='This functionality has been '
                     'moved to the writing of each individual spectrum type.')
         def output_str(self, type_: InputType,
                        incl_faults: bool = True) -> str:

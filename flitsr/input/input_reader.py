@@ -22,7 +22,7 @@ class Input(ABC):
         if (register):
             input.register_input(cls)
 
-    @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
+    @versionchanged(version='3.0.0', reason='Added the `split_faults`, '
                     '`method_level`, and `duplicate_strategy` parameters')
     @final
     def __init__(self, split_faults: bool = False, method_level: bool = False,
@@ -77,7 +77,7 @@ class Input(ABC):
                       Optional[bool] = None) -> Spectrum: ...
 
     @classmethod
-    @deprecated(version='2.5.0', reason='This method is deprecated and will '
+    @deprecated(version='3.0.0', reason='This method is deprecated and will '
                 'be removed in a future release. Consider using the `read_in` '
                 'method instead.')
     @final
@@ -87,7 +87,7 @@ class Input(ABC):
         """
         return cls.read_in(*args, **kwargs)
 
-    @versionadded(version='2.5.0')
+    @versionadded(version='3.0.0')
     @abstractmethod
     def _read_spectrum(self, input_path: str) -> Spectrum:
         """
@@ -130,7 +130,7 @@ class Input(ABC):
                                   f"{cls.__name__} format")
 
     @classmethod
-    @deprecated(version='2.5.0', reason='This method is no longer used within '
+    @deprecated(version='3.0.0', reason='This method is no longer used within '
                 'flitsr to print out elements. Element printing should now be '
                 'handled directly when writing each spectrum type.')
     def get_elem_separators(cls) -> List[str]:
@@ -223,7 +223,7 @@ class Input(ABC):
 
     @classmethod
     @abstractmethod
-    @versionadded(version='2.5.0')
+    @versionadded(version='3.0.0')
     def base_input_type(self) -> BaseInputType:
         """
         The type (file or directory) expected for this Input method. For

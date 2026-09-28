@@ -13,7 +13,7 @@ class DuplicateError(ValueError):
 class SpectrumBuilder:
     """ Builds a `Spectrum <flitsr.spectrum.Spectrum>` object."""
 
-    @versionchanged(version='2.5.0', reason='Added the `split_faults`, '
+    @versionchanged(version='3.0.0', reason='Added the `split_faults`, '
                     '`duplicate_strategy`, and `compute_groups` parameters.')
     def __init__(self, collapse_methods: bool = False, split_faults:
                  bool = False, duplicate_strategy: DuplicateStrategy =
@@ -243,8 +243,8 @@ class SpectrumBuilder:
             self._groups[group] = set()
         return self._groups[group]
 
-    @versionadded(version='2.5.0', reason='Ability to read in spectral groups '
-                  'added in version 2.5.0')
+    @versionadded(version='3.0.0', reason='Ability to read in spectral groups '
+                  'added in version 3.0.0')
     def addElementToGroup(self, elem: Union[Spectrum.Element, int],
                           group: int):
         """

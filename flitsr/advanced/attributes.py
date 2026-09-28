@@ -47,7 +47,7 @@ def choices(param: str, choices: Collection[Any]):
     return partial(_add_choices, param=param, choices=choices)
 
 
-@versionadded(version='2.5.0')
+@versionadded(version='3.0.0')
 def parameter(name: str, type: Optional[Callable[[str], Any]] = None,
               choices: Optional[Collection[Any]] = None,
               existing: bool = False):

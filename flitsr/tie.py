@@ -78,7 +78,7 @@ class Tie:
     @overload
     def elems(self, collapse: bool, no_passive: bool) -> AnyEntities: ...
 
-    @versionchanged(version='2.5.0', reason='Added the `collapse` and '
+    @versionchanged(version='3.0.0', reason='Added the `collapse` and '
                     '`no_passive` optional parameters')
     def elems(self, collapse: bool = False,
               no_passive: bool = False) -> AnyEntities:
@@ -150,7 +150,7 @@ class Tie:
         else:
             return {k: self._fault_locs[k] for k in self._active_faults}
 
-    @versionchanged(version='2.5.0', reason='Added the `active` optional '
+    @versionchanged(version='3.0.0', reason='Added the `active` optional '
                     'parameter')
     def num_faults(self, active: bool = True) -> int:
         """
@@ -163,7 +163,7 @@ class Tie:
         else:
             return len(self._fault_locs)
 
-    @versionchanged(version='2.5.0', reason='Added the `active` optional '
+    @versionchanged(version='3.0.0', reason='Added the `active` optional '
                     'parameter')
     def num_fault_locs(self, collapse: bool = False,
                        active: bool = False) -> int:
@@ -250,7 +250,7 @@ class Tie:
                 ret_dict[loc].add(fault)
         return dict(ret_dict)
 
-    @versionadded(version='2.5.0', reason='Added support for multiple bug '
+    @versionadded(version='3.0.0', reason='Added support for multiple bug '
                   'understanding models')
     def fault_identify_nums(self, collapse: bool = False) -> Dict[Any, int]:
         """
@@ -273,7 +273,7 @@ class Tie:
                 active_fault_group_nums[fault] = num_groups
             return active_fault_group_nums
 
-    @versionadded(version='2.5.0', reason='Added support for multiple bug '
+    @versionadded(version='3.0.0', reason='Added support for multiple bug '
                   'understanding models')
     def fault_identify_num(self, fault: Any, collapse: bool = False) -> int:
         """
@@ -301,7 +301,7 @@ class Tie:
         num_groups = ceil(loc_ratio * num_fault_groups)
         return num_groups
 
-    @deprecated(version='2.5.0', reason='Moved to `flitsr.calculations'
+    @deprecated(version='3.0.0', reason='Moved to `flitsr.calculations'
                 '.exp_values.effort_exp_val_tie`')
     def expected_value(self, q: int, weffort: bool,
                        collapse: bool = False) -> float:
@@ -399,7 +399,7 @@ class Ties(Iterable[Tie]):
                 active_faults[fault_num] = to_inspect[fault_num]
         return dict(all_faults), active_faults
 
-    @versionchanged(version='2.5.0', reason='Added the `bu` parameter for '
+    @versionchanged(version='3.0.0', reason='Added the `bu` parameter for '
                     'specifying the bug understanding model')
     def __init__(self, rankings: Rankings, bu: BUModel = BUModel.PERFECT):
         """
@@ -448,7 +448,7 @@ class Ties(Iterable[Tie]):
         self._num_entities = len(seen_entities)
         self._num_elems = len(rankings.elements())
 
-    @versionadded(version='2.5.0')
+    @versionadded(version='3.0.0')
     def set_bug_understanding(self, bu: BUModel) -> None:
         """
         Changes the bug understanding model to be the one given by `bu`. This
