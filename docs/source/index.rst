@@ -14,7 +14,8 @@ Test Suite Reduction) algorithm, a state-of-the-art technology that allows
 ``flitsr`` to find *multiple* faults at once.
 
 The ``flitsr`` tool integrates with test suite information from both
-`coverage.py <https://coverage.readthedocs.io/en/>`__ or `GZoltar <https://gzoltar.com/>`__.
+`coverage.py <https://coverage.readthedocs.io/en/>`__ (using `coverage-sbfl
+<https://pypi.org/project/coverage-sbfl/>`__) or `GZoltar <https://gzoltar.com/>`__.
 
 Quick start
 -------------------------------------------------------------------------------
