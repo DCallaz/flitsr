@@ -215,7 +215,6 @@ class Runall:
             return metric
         # set the metrics
         self.metrics = {get_metric_name(file) for file in inputs}
-        print(base, base_parts, self.metrics, list(inputs))
         print('Found metrics:',
               f'{", ".join(sorted(self.metrics, key=natsort))}')
 
