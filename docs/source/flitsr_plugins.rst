@@ -93,7 +93,7 @@ To create an :doc:`advanced type <adv_types>` plugin, use the ``flitsr.advanced`
 Input types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To create an :doc:`input type <adv_types>` plugin, use the ``flitsr.input``
+To create an :doc:`input type <input_ext>` plugin, use the ``flitsr.input``
 *entry point*:
 
 .. code-block:: toml
@@ -101,6 +101,30 @@ To create an :doc:`input type <adv_types>` plugin, use the ``flitsr.input``
 
   [project.entry-points.'flitsr.input']
   test_inp = "my_flitsr_plugin.plugin:CustomInput"
+
+Ranking input types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create a :doc:`input type <ranking_input_ext>` plugin, use the
+``flitsr.ranking_input`` *entry point*:
+
+.. code-block:: toml
+  :caption: pyproject.toml
+
+  [project.entry-points.'flitsr.ranking_input']
+  test_rinp = "my_flitsr_plugin.plugin:CustomRanking"
+
+SBFL/Suspiciousness metrics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create an :doc:`SBFL metric <metric_ext>` plugin, use the ``flitsr.metric``
+*entry point*:
+
+.. code-block:: toml
+  :caption: pyproject.toml
+
+  [project.entry-points.'flitsr.metric']
+  my_metric = "my_flitsr_plugin.plugin:custom_metric_function"
 
 Calculations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

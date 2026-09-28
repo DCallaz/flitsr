@@ -72,8 +72,10 @@ sections provide information on what can be extended in ``flitsr`` and how:
 
 .. toctree::
    flitsr_plugins
-   input_ext
    adv_type_ext
+   input_ext
+   ranking_input_ext
+   metric_ext
    calc_ext
    driver
    :caption: Extending flitsr
